@@ -62,11 +62,16 @@ export const useRealReturnsData = () => {
 
         if (error) throw error;
         
-        // Type assertion to ensure status is properly typed
+        // Type assertion to ensure proper typing
         const typedData = (data || []).map(item => ({
           ...item,
-          status: item.status as 'requested' | 'approved' | 'in_transit' | 'completed'
-        }));
+          status: item.status as 'requested' | 'approved' | 'in_transit' | 'completed',
+          return_items: (item.return_items || []).map((returnItem: any) => ({
+            ...returnItem,
+            action: returnItem.action as 'refund' | 'exchange'
+          })) as ReturnItem[],
+          ai_suggestions: (item.ai_suggestions || []) as AISuggestion[]
+        })) as Return[];
         
         setReturns(typedData);
         setError(null);
@@ -99,11 +104,16 @@ export const useRealReturnsData = () => {
 
       if (error) throw error;
       
-      // Type assertion to ensure status is properly typed
+      // Type assertion to ensure proper typing
       const typedData = (data || []).map(item => ({
         ...item,
-        status: item.status as 'requested' | 'approved' | 'in_transit' | 'completed'
-      }));
+        status: item.status as 'requested' | 'approved' | 'in_transit' | 'completed',
+        return_items: (item.return_items || []).map((returnItem: any) => ({
+          ...returnItem,
+          action: returnItem.action as 'refund' | 'exchange'
+        })) as ReturnItem[],
+        ai_suggestions: (item.ai_suggestions || []) as AISuggestion[]
+      })) as Return[];
       
       setReturns(typedData);
       setError(null);
