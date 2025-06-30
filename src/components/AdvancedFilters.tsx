@@ -199,7 +199,7 @@ const AdvancedFilters = ({ filters, onFiltersChange, onExport }: AdvancedFilters
                     <SelectItem value="all">All Confidence Levels</SelectItem>
                     <SelectItem value="high">High (90%+)</SelectItem>
                     <SelectItem value="medium">Medium (70-89%)</SelectItem>
-                    <SelectItem value="low">Low (&lt;70%)</SelectItem>
+                    <SelectItem value="low">Low (under 70%)</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
