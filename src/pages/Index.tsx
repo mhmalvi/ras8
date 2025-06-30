@@ -1,18 +1,20 @@
-
 import { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Bell, Settings, TrendingUp, AlertCircle, CheckCircle, Clock } from 'lucide-react';
+import { Bell, Settings, TrendingUp, AlertCircle, CheckCircle, Clock, RefreshCw } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { SidebarProvider, SidebarTrigger, SidebarInset } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/AppSidebar";
 import DashboardStats from "@/components/DashboardStats";
 import MetricsChart from "@/components/MetricsChart";
 import NotificationCenter from "@/components/NotificationCenter";
+import { useRealTimeNotifications } from "@/hooks/useRealTimeUpdates";
 
 const Index = () => {
+  const { notifications, unreadCount } = useRealTimeNotifications();
+
   // Recent activities data
   const recentActivities = [
     {
@@ -86,13 +88,19 @@ const Index = () => {
                   <PopoverTrigger asChild>
                     <Button variant="outline" size="sm" className="relative">
                       <Bell className="h-4 w-4" />
-                      <span className="absolute -top-1 -right-1 h-2 w-2 bg-red-500 rounded-full"></span>
+                      {unreadCount > 0 && (
+                        <span className="absolute -top-1 -right-1 h-2 w-2 bg-red-500 rounded-full"></span>
+                      )}
                     </Button>
                   </PopoverTrigger>
                   <PopoverContent className="w-80 p-0" align="end">
                     <NotificationCenter />
                   </PopoverContent>
                 </Popover>
+                <Button variant="outline" size="sm">
+                  <RefreshCw className="h-4 w-4 mr-2" />
+                  Sync Data
+                </Button>
                 <Link to="/settings">
                   <Button variant="outline" size="sm">
                     <Settings className="h-4 w-4 mr-2" />
