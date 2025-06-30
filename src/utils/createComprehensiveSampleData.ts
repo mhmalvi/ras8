@@ -5,7 +5,7 @@ interface SampleMerchant {
   shop_domain: string;
   access_token: string;
   plan_type: string;
-  settings: object;
+  settings: any; // Changed from object to any to match Json type
 }
 
 interface SampleReturn {
