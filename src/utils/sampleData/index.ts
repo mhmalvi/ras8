@@ -13,19 +13,34 @@ export const createComprehensiveSampleData = async (): Promise<CreateDataResult>
     console.log('Starting comprehensive sample data creation...');
 
     // First, clear any existing sample data to avoid conflicts
-    await clearAllSampleData();
+    const clearResult = await clearAllSampleData();
+    if (!clearResult.success) {
+      console.warn('Warning during data clearing:', clearResult.error);
+      // Continue anyway - clearing issues shouldn't block creation
+    }
 
     // Create merchants
     console.log('Creating merchants...');
     const merchants = await createSampleMerchants();
     console.log(`Created ${merchants.length} merchants`);
 
-    const merchantIds = merchants.map(m => m.id);
+    if (!merchants || merchants.length === 0) {
+      throw new Error('Failed to create merchants - no merchants returned');
+    }
+
+    const merchantIds = merchants.map(m => m.id).filter(id => id);
+    if (merchantIds.length === 0) {
+      throw new Error('No valid merchant IDs found');
+    }
 
     // Create returns
     console.log('Creating returns...');
     const returns = await createSampleReturns(merchantIds);
     console.log(`Created ${returns.length} returns`);
+
+    if (!returns || returns.length === 0) {
+      throw new Error('Failed to create returns - no returns returned');
+    }
 
     // Create return items
     console.log('Creating return items...');
@@ -47,23 +62,29 @@ export const createComprehensiveSampleData = async (): Promise<CreateDataResult>
     const billingCount = await createSampleBilling(merchants);
     console.log(`Created ${billingCount} billing records`);
 
+    const summary = {
+      merchants: merchants.length,
+      returns: returns.length,
+      returnItems: returnItemsCount,
+      aiSuggestions: aiSuggestionsCount,
+      analyticsEvents: analyticsCount,
+      billingRecords: billingCount
+    };
+
+    console.log('Sample data creation completed successfully:', summary);
+
     return {
       success: true,
-      summary: {
-        merchants: merchants.length,
-        returns: returns.length,
-        returnItems: returnItemsCount,
-        aiSuggestions: aiSuggestionsCount,
-        analyticsEvents: analyticsCount,
-        billingRecords: billingCount
-      }
+      summary
     };
 
   } catch (error) {
     console.error('Error creating sample data:', error);
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+    
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Unknown error occurred'
+      error: errorMessage
     };
   }
 };
