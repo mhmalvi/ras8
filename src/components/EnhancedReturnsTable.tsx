@@ -9,7 +9,7 @@ import { useToast } from "@/hooks/use-toast";
 import { exportToCSV } from "./ExportUtils";
 import AdvancedFilters from "./AdvancedFilters";
 import { FilterState } from "@/types/FilterTypes";
-import { useReturnsData } from "@/hooks/useDatabaseSync";
+import { useReturnsData } from "@/hooks/useReturnsData";
 
 const EnhancedReturnsTable = () => {
   const { toast } = useToast();
