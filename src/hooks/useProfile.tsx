@@ -20,34 +20,34 @@ export const useProfile = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
+  const fetchProfile = async () => {
     if (!user) {
       setProfile(null);
       setLoading(false);
       return;
     }
 
-    const fetchProfile = async () => {
-      try {
-        const { data, error } = await supabase
-          .from('profiles')
-          .select('*')
-          .eq('id', user.id)
-          .single();
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', user.id)
+        .single();
 
-        if (error) throw error;
-        
-        setProfile(data);
-        setError(null);
-      } catch (err) {
-        console.error('Error fetching profile:', err);
-        setError(err instanceof Error ? err.message : 'Unknown error');
-        setProfile(null);
-      } finally {
-        setLoading(false);
-      }
-    };
+      if (error) throw error;
+      
+      setProfile(data);
+      setError(null);
+    } catch (err) {
+      console.error('Error fetching profile:', err);
+      setError(err instanceof Error ? err.message : 'Unknown error');
+      setProfile(null);
+    } finally {
+      setLoading(false);
+    }
+  };
 
+  useEffect(() => {
     fetchProfile();
   }, [user]);
 
@@ -77,6 +77,7 @@ export const useProfile = () => {
     profile,
     loading,
     error,
-    updateProfile
+    updateProfile,
+    refetch: fetchProfile
   };
 };

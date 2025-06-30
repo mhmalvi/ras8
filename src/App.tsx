@@ -19,6 +19,7 @@ import Automations from "./pages/Automations";
 import CustomerPortal from "./pages/CustomerPortal";
 import Settings from "./pages/Settings";
 import Auth from "./pages/Auth";
+import TestData from "./pages/TestData";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
