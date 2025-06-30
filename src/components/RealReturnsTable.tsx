@@ -1,13 +1,13 @@
-
 import { useState, useMemo } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { CheckCircle, XCircle, Clock, Package, Sparkles, Download, Loader2 } from "lucide-react";
+import { CheckCircle, XCircle, Clock, Package, Sparkles, Download, Loader2, Brain } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useRealReturnsData } from "@/hooks/useRealReturnsData";
+import { useAIInsights } from "@/hooks/useAIInsights";
 
 interface RealReturnsTableProps {
   searchTerm: string;
@@ -17,7 +17,9 @@ interface RealReturnsTableProps {
 const RealReturnsTable = ({ searchTerm, statusFilter }: RealReturnsTableProps) => {
   const { toast } = useToast();
   const [selectedReturn, setSelectedReturn] = useState<any>(null);
+  const [generatingAI, setGeneratingAI] = useState<string | null>(null);
   const { returns, loading, error, refetch } = useRealReturnsData();
+  const { generateInsightForReturn } = useAIInsights();
 
   // Enhanced filtering logic
   const filteredReturns = useMemo(() => {
@@ -77,6 +79,34 @@ const RealReturnsTable = ({ searchTerm, statusFilter }: RealReturnsTableProps) =
     return namePart.split('.').map(part => 
       part.charAt(0).toUpperCase() + part.slice(1)
     ).join(' ');
+  };
+
+  const handleGenerateAI = async (returnItem: any) => {
+    if (returnItem.ai_suggestions && returnItem.ai_suggestions.length > 0) {
+      toast({
+        title: "AI recommendation already exists",
+        description: "This return already has an AI recommendation."
+      });
+      return;
+    }
+
+    setGeneratingAI(returnItem.id);
+    try {
+      await generateInsightForReturn(returnItem);
+      await refetch(); // Refresh data to show new AI suggestion
+      toast({
+        title: "AI recommendation generated",
+        description: "New AI suggestion has been created for this return."
+      });
+    } catch (error) {
+      toast({
+        title: "Error generating AI recommendation",
+        description: "Please try again or check your OpenAI API configuration.",
+        variant: "destructive"
+      });
+    } finally {
+      setGeneratingAI(null);
+    }
   };
 
   if (loading) {
@@ -187,7 +217,20 @@ const RealReturnsTable = ({ searchTerm, statusFilter }: RealReturnsTableProps) =
                         </div>
                       </div>
                     ) : (
-                      <span className="text-xs text-slate-400">No suggestions</span>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleGenerateAI(returnItem)}
+                        disabled={generatingAI === returnItem.id}
+                        className="text-xs text-slate-400 hover:text-purple-600"
+                      >
+                        {generatingAI === returnItem.id ? (
+                          <Loader2 className="h-3 w-3 animate-spin" />
+                        ) : (
+                          <Brain className="h-3 w-3" />
+                        )}
+                        {generatingAI === returnItem.id ? 'Generating...' : 'Generate AI'}
+                      </Button>
                     )}
                   </TableCell>
                   <TableCell className="text-right">
@@ -233,7 +276,7 @@ const RealReturnsTable = ({ searchTerm, statusFilter }: RealReturnsTableProps) =
                                   <h4 className="font-medium text-purple-900">AI Recommendation</h4>
                                 </div>
                                 <div className="space-y-2">
-                                  <p className="text-sm">{selectedReturn.ai_suggestions[0].suggested_product_name}</p>
+                                  <p className="text-sm font-medium">{selectedReturn.ai_suggestions[0].suggested_product_name}</p>
                                   <p className="text-xs text-slate-600">{selectedReturn.ai_suggestions[0].reasoning}</p>
                                   <div className="flex items-center justify-between">
                                     <span className="text-sm text-purple-600">
