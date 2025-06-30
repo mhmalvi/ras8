@@ -3,6 +3,7 @@ import { SidebarProvider, SidebarTrigger, SidebarInset } from "@/components/ui/s
 import { AppSidebar } from "@/components/AppSidebar";
 import RealDashboardStats from "@/components/RealDashboardStats";
 import MetricsChart from "@/components/MetricsChart";
+import AIInsightsCard from "@/components/AIInsightsCard";
 import UserMenu from "@/components/UserMenu";
 import { useAuth } from "@/contexts/AuthContext";
 import { useProfile } from "@/hooks/useProfile";
@@ -51,6 +52,10 @@ const Index = () => {
               
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                 <MetricsChart />
+                <AIInsightsCard />
+              </div>
+
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                 <div className="bg-white rounded-lg border p-6">
                   <h3 className="text-lg font-semibold text-slate-900 mb-4">Getting Started</h3>
                   <div className="space-y-3">
@@ -66,6 +71,21 @@ const Index = () => {
                       <span className="text-sm text-slate-600">Set up return policies</span>
                       <Button variant="outline" size="sm">Setup</Button>
                     </div>
+                  </div>
+                </div>
+
+                <div className="bg-white rounded-lg border p-6">
+                  <h3 className="text-lg font-semibold text-slate-900 mb-4">Quick Actions</h3>
+                  <div className="space-y-3">
+                    <Button className="w-full justify-start" variant="outline">
+                      Generate AI recommendations for pending returns
+                    </Button>
+                    <Button className="w-full justify-start" variant="outline">
+                      Export returns data
+                    </Button>
+                    <Button className="w-full justify-start" variant="outline">
+                      View customer portal
+                    </Button>
                   </div>
                 </div>
               </div>
