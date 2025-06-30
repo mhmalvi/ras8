@@ -8,21 +8,7 @@ import { CheckCircle, XCircle, Clock, Package, Sparkles, Download } from "lucide
 import { useToast } from "@/hooks/use-toast";
 import { exportToCSV } from "./ExportUtils";
 import AdvancedFilters from "./AdvancedFilters";
-
-interface FilterState {
-  search: string;
-  status: string;
-  reason: string;
-  dateRange: {
-    from: Date | undefined;
-    to: Date | undefined;
-  };
-  amountRange: {
-    min: string;
-    max: string;
-  };
-  aiConfidence: string;
-}
+import { FilterState } from "@/types/FilterTypes";
 
 const EnhancedReturnsTable = () => {
   const { toast } = useToast();
