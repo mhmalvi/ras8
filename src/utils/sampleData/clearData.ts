@@ -6,30 +6,31 @@ export const clearAllSampleData = async () => {
     console.log('Clearing all sample data...');
 
     // Delete in reverse order to respect foreign key constraints
-    const tables = [
-      'analytics_events',
-      'billing_records', 
-      'ai_suggestions',
-      'return_items',
-      'returns',
-      'merchants'
+    // Use explicit table names to satisfy TypeScript
+    const clearOperations = [
+      { table: 'analytics_events' as const, name: 'analytics_events' },
+      { table: 'billing_records' as const, name: 'billing_records' }, 
+      { table: 'ai_suggestions' as const, name: 'ai_suggestions' },
+      { table: 'return_items' as const, name: 'return_items' },
+      { table: 'returns' as const, name: 'returns' },
+      { table: 'merchants' as const, name: 'merchants' }
     ];
 
-    for (const table of tables) {
+    for (const operation of clearOperations) {
       try {
         const { error } = await supabase
-          .from(table)
+          .from(operation.table)
           .delete()
           .neq('id', '00000000-0000-0000-0000-000000000000');
         
         if (error) {
-          console.warn(`Warning clearing ${table}:`, error.message);
+          console.warn(`Warning clearing ${operation.name}:`, error.message);
           // Continue with other tables even if one fails
         } else {
-          console.log(`Cleared ${table} successfully`);
+          console.log(`Cleared ${operation.name} successfully`);
         }
       } catch (tableError) {
-        console.warn(`Error clearing ${table}:`, tableError);
+        console.warn(`Error clearing ${operation.name}:`, tableError);
         // Continue with other tables
       }
     }
