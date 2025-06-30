@@ -18,7 +18,7 @@ export const createSampleAISuggestions = async (returns: any[]): Promise<number>
         return_id: returnItem.id,
         suggestion_type: 'product_exchange',
         suggested_product_name: SUGGESTION_PRODUCTS[Math.floor(Math.random() * SUGGESTION_PRODUCTS.length)],
-        confidence_score: Math.floor(Math.random() * 30) + 70,
+        confidence_score: Math.round((Math.random() * 0.3 + 0.7) * 100) / 100, // Generate 0.70 - 1.00 with 2 decimal places
         reasoning: REASONING_TEMPLATES[Math.floor(Math.random() * REASONING_TEMPLATES.length)],
         accepted: Math.random() > 0.4 ? (Math.random() > 0.7 ? true : false) : null
       });
