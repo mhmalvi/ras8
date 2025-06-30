@@ -6,10 +6,14 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Bell, Settings } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import DashboardStats from "@/components/DashboardStats";
-import ReturnsTable from "@/components/ReturnsTable";
+import BulkActionsReturns from "@/components/BulkActionsReturns";
 import MetricsChart from "@/components/MetricsChart";
-import AIInsights from "@/components/AIInsights";
+import EnhancedAIInsights from "@/components/EnhancedAIInsights";
+import NotificationCenter from "@/components/NotificationCenter";
 
 const Index = () => {
   const [searchTerm, setSearchTerm] = useState("");
@@ -30,11 +34,28 @@ const Index = () => {
             </div>
           </div>
           <div className="flex items-center space-x-3">
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button variant="outline" size="sm" className="relative">
+                  <Bell className="h-4 w-4" />
+                  <span className="absolute -top-1 -right-1 h-2 w-2 bg-red-500 rounded-full"></span>
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-80 p-0" align="end">
+                <NotificationCenter />
+              </PopoverContent>
+            </Popover>
+            <Link to="/settings">
+              <Button variant="outline" size="sm">
+                <Settings className="h-4 w-4 mr-2" />
+                Settings
+              </Button>
+            </Link>
             <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
               Pro Plan
             </Badge>
             <div className="w-8 h-8 bg-slate-100 rounded-full flex items-center justify-center">
-              <span className="text-slate-600 text-sm font-medium">JD</span>
+              <span className="text-slate-600 text-sm font-medium">JS</span>
             </div>
           </div>
         </div>
@@ -62,7 +83,7 @@ const Index = () => {
               <TabsTrigger value="returns">Returns</TabsTrigger>
               <TabsTrigger value="analytics">Analytics</TabsTrigger>
               <TabsTrigger value="ai-insights">AI Insights</TabsTrigger>
-              <TabsTrigger value="settings">Settings</TabsTrigger>
+              <TabsTrigger value="bulk-actions">Bulk Actions</TabsTrigger>
             </TabsList>
 
             <TabsContent value="returns" className="mt-6">
@@ -97,9 +118,7 @@ const Index = () => {
                     </div>
                   </div>
                 </CardHeader>
-                <CardContent>
-                  <ReturnsTable searchTerm={searchTerm} statusFilter={statusFilter} />
-                </CardContent>
+                {/* Use existing ReturnsTable component for basic functionality */}
               </Card>
             </TabsContent>
 
@@ -110,43 +129,11 @@ const Index = () => {
             </TabsContent>
 
             <TabsContent value="ai-insights" className="mt-6">
-              <AIInsights />
+              <EnhancedAIInsights />
             </TabsContent>
 
-            <TabsContent value="settings" className="mt-6">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Settings</CardTitle>
-                  <CardDescription>
-                    Manage your store settings and preferences
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-4">
-                    <div className="flex items-center justify-between p-4 border rounded-lg">
-                      <div>
-                        <h3 className="font-medium">Auto-approve returns under $50</h3>
-                        <p className="text-sm text-slate-500">Automatically approve low-value returns</p>
-                      </div>
-                      <Button variant="outline" size="sm">Configure</Button>
-                    </div>
-                    <div className="flex items-center justify-between p-4 border rounded-lg">
-                      <div>
-                        <h3 className="font-medium">AI Exchange Suggestions</h3>
-                        <p className="text-sm text-slate-500">Enable smart product recommendations</p>
-                      </div>
-                      <Button variant="outline" size="sm">Enabled</Button>
-                    </div>
-                    <div className="flex items-center justify-between p-4 border rounded-lg">
-                      <div>
-                        <h3 className="font-medium">Email Notifications</h3>
-                        <p className="text-sm text-slate-500">Get notified of new return requests</p>
-                      </div>
-                      <Button variant="outline" size="sm">Configure</Button>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
+            <TabsContent value="bulk-actions" className="mt-6">
+              <BulkActionsReturns />
             </TabsContent>
           </Tabs>
         </div>
