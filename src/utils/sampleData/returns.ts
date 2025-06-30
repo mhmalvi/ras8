@@ -4,6 +4,10 @@ import type { SampleReturn } from './types';
 import { RETURN_REASONS, CUSTOMER_EMAILS } from './constants';
 
 export const createSampleReturns = async (merchantIds: string[]): Promise<any[]> => {
+  if (!merchantIds || merchantIds.length === 0) {
+    throw new Error('No merchant IDs provided for creating returns');
+  }
+
   const sampleReturns: SampleReturn[] = [];
   const statuses: ('requested' | 'approved' | 'in_transit' | 'completed')[] = [
     'requested', 'approved', 'in_transit', 'completed'
@@ -27,11 +31,24 @@ export const createSampleReturns = async (merchantIds: string[]): Promise<any[]>
     }
   });
 
-  const { data: returns, error } = await supabase
-    .from('returns')
-    .insert(sampleReturns)
-    .select();
+  try {
+    const { data: returns, error } = await supabase
+      .from('returns')
+      .insert(sampleReturns)
+      .select();
 
-  if (error) throw error;
-  return returns;
+    if (error) {
+      console.error('Error creating returns:', error);
+      throw new Error(`Failed to create returns: ${error.message}`);
+    }
+
+    if (!returns || returns.length === 0) {
+      throw new Error('No returns were created');
+    }
+
+    return returns;
+  } catch (error) {
+    console.error('Returns creation failed:', error);
+    throw error;
+  }
 };
