@@ -34,6 +34,11 @@ const App = () => (
             <Route path="/landing" element={<Landing />} />
             <Route path="/auth" element={<Auth />} />
             <Route path="/customer-portal" element={<CustomerPortal />} />
+            <Route path="/test-data" element={
+              <ProtectedRoute>
+                <TestData />
+              </ProtectedRoute>
+            } />
             <Route path="/" element={
               <ProtectedRoute>
                 <Index />
