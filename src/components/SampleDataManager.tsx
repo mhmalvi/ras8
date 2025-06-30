@@ -3,22 +3,40 @@ import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Loader2, DatabaseIcon, Trash2, CheckCircle, AlertCircle } from 'lucide-react';
+import { Loader2, DatabaseIcon, Trash2, CheckCircle, AlertCircle, Info } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { createComprehensiveSampleData, clearAllSampleData } from '@/utils/createComprehensiveSampleData';
 
 const SampleDataManager = () => {
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<any>(null);
+  const [debugInfo, setDebugInfo] = useState<string[]>([]);
   const { toast } = useToast();
 
   const handleCreateData = async () => {
     setLoading(true);
     setResult(null);
+    setDebugInfo([]);
+    
+    // Capture console logs for debugging
+    const originalLog = console.log;
+    const originalError = console.error;
+    const logs: string[] = [];
+    
+    console.log = (...args) => {
+      logs.push(args.join(' '));
+      originalLog(...args);
+    };
+    
+    console.error = (...args) => {
+      logs.push(`ERROR: ${args.join(' ')}`);
+      originalError(...args);
+    };
     
     try {
       const result = await createComprehensiveSampleData();
       setResult(result);
+      setDebugInfo(logs);
       
       if (result.success) {
         toast({
@@ -33,12 +51,17 @@ const SampleDataManager = () => {
         });
       }
     } catch (error) {
+      const errorMsg = error instanceof Error ? error.message : 'Unknown error';
+      setDebugInfo(logs);
       toast({
         title: "Error creating sample data",
-        description: error instanceof Error ? error.message : 'Unknown error',
+        description: errorMsg,
         variant: "destructive"
       });
     } finally {
+      // Restore original console functions
+      console.log = originalLog;
+      console.error = originalError;
       setLoading(false);
     }
   };
@@ -51,6 +74,7 @@ const SampleDataManager = () => {
       
       if (result.success) {
         setResult(null);
+        setDebugInfo([]);
         toast({
           title: "Sample data cleared successfully!",
           description: "All test data has been removed from the database.",
@@ -108,6 +132,22 @@ const SampleDataManager = () => {
             <AlertCircle className="h-4 w-4" />
             <AlertDescription>
               <strong>Error:</strong> {result.error}
+            </AlertDescription>
+          </Alert>
+        )}
+
+        {debugInfo.length > 0 && (
+          <Alert>
+            <Info className="h-4 w-4" />
+            <AlertDescription>
+              <strong>Debug Information:</strong>
+              <div className="mt-2 text-xs max-h-40 overflow-y-auto bg-slate-50 p-2 rounded">
+                {debugInfo.map((log, index) => (
+                  <div key={index} className="font-mono text-xs">
+                    {log}
+                  </div>
+                ))}
+              </div>
             </AlertDescription>
           </Alert>
         )}
