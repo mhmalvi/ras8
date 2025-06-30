@@ -5,7 +5,7 @@ interface SampleMerchant {
   shop_domain: string;
   access_token: string;
   plan_type: string;
-  settings: any; // Changed from object to any to match Json type
+  settings: any;
 }
 
 interface SampleReturn {
@@ -40,23 +40,27 @@ export const createComprehensiveSampleData = async () => {
   try {
     console.log('Starting comprehensive sample data creation...');
 
-    // Sample merchants
+    // First, clear any existing sample data to avoid conflicts
+    await clearAllSampleData();
+
+    // Sample merchants with unique domains
+    const timestamp = Date.now();
     const sampleMerchants: SampleMerchant[] = [
       {
-        shop_domain: 'techgear-store.myshopify.com',
-        access_token: 'sample_access_token_1',
+        shop_domain: `techgear-store-${timestamp}.myshopify.com`,
+        access_token: `sample_access_token_1_${timestamp}`,
         plan_type: 'growth',
         settings: { auto_approve_exchanges: true, email_notifications: true }
       },
       {
-        shop_domain: 'fashion-boutique.myshopify.com',
-        access_token: 'sample_access_token_2',
+        shop_domain: `fashion-boutique-${timestamp}.myshopify.com`,
+        access_token: `sample_access_token_2_${timestamp}`,
         plan_type: 'pro',
         settings: { auto_approve_exchanges: false, email_notifications: true }
       },
       {
-        shop_domain: 'home-essentials.myshopify.com',
-        access_token: 'sample_access_token_3',
+        shop_domain: `home-essentials-${timestamp}.myshopify.com`,
+        access_token: `sample_access_token_3_${timestamp}`,
         plan_type: 'starter',
         settings: { auto_approve_exchanges: true, email_notifications: false }
       }
@@ -69,7 +73,10 @@ export const createComprehensiveSampleData = async () => {
       .insert(sampleMerchants)
       .select();
 
-    if (merchantError) throw merchantError;
+    if (merchantError) {
+      console.error('Merchant error:', merchantError);
+      throw merchantError;
+    }
     console.log(`Created ${merchants.length} merchants`);
 
     // Sample returns for each merchant
@@ -107,7 +114,7 @@ export const createComprehensiveSampleData = async () => {
     // Generate returns for each merchant
     merchantIds.forEach((merchantId, merchantIndex) => {
       for (let i = 0; i < 15; i++) {
-        const daysAgo = Math.floor(Math.random() * 60); // Random date within last 60 days
+        const daysAgo = Math.floor(Math.random() * 60);
         const createdAt = new Date();
         createdAt.setDate(createdAt.getDate() - daysAgo);
 
@@ -117,7 +124,7 @@ export const createComprehensiveSampleData = async () => {
           customer_email: customerEmails[Math.floor(Math.random() * customerEmails.length)],
           status: statuses[Math.floor(Math.random() * statuses.length)],
           reason: returnReasons[Math.floor(Math.random() * returnReasons.length)],
-          total_amount: parseFloat((Math.random() * 300 + 20).toFixed(2)),
+          total_amount: Math.round((Math.random() * 300 + 20) * 100) / 100, // Round to 2 decimal places
           created_at: createdAt.toISOString()
         });
       }
@@ -130,7 +137,10 @@ export const createComprehensiveSampleData = async () => {
       .insert(sampleReturns)
       .select();
 
-    if (returnsError) throw returnsError;
+    if (returnsError) {
+      console.error('Returns error:', returnsError);
+      throw returnsError;
+    }
     console.log(`Created ${returns.length} returns`);
 
     // Sample return items
@@ -154,14 +164,14 @@ export const createComprehensiveSampleData = async () => {
     ];
 
     returns.forEach(returnItem => {
-      const numItems = Math.floor(Math.random() * 3) + 1; // 1-3 items per return
+      const numItems = Math.floor(Math.random() * 3) + 1;
       for (let i = 0; i < numItems; i++) {
         sampleReturnItems.push({
           return_id: returnItem.id,
           product_id: `PROD-${Math.floor(Math.random() * 10000)}`,
           product_name: productNames[Math.floor(Math.random() * productNames.length)],
           quantity: Math.floor(Math.random() * 2) + 1,
-          price: parseFloat((Math.random() * 150 + 10).toFixed(2)),
+          price: Math.round((Math.random() * 150 + 10) * 100) / 100, // Round to 2 decimal places
           action: Math.random() > 0.6 ? 'exchange' : 'refund'
         });
       }
@@ -172,7 +182,10 @@ export const createComprehensiveSampleData = async () => {
       .from('return_items')
       .insert(sampleReturnItems);
 
-    if (itemsError) throw itemsError;
+    if (itemsError) {
+      console.error('Return items error:', itemsError);
+      throw itemsError;
+    }
     console.log(`Created ${sampleReturnItems.length} return items`);
 
     // Sample AI suggestions
@@ -204,12 +217,12 @@ export const createComprehensiveSampleData = async () => {
     ];
 
     returns.forEach(returnItem => {
-      if (Math.random() > 0.3) { // 70% chance of AI suggestion
+      if (Math.random() > 0.3) {
         sampleAISuggestions.push({
           return_id: returnItem.id,
           suggestion_type: 'product_exchange',
           suggested_product_name: suggestionProducts[Math.floor(Math.random() * suggestionProducts.length)],
-          confidence_score: Math.floor(Math.random() * 30) + 70, // 70-99% confidence
+          confidence_score: Math.floor(Math.random() * 30) + 70,
           reasoning: reasoningTemplates[Math.floor(Math.random() * reasoningTemplates.length)],
           accepted: Math.random() > 0.4 ? (Math.random() > 0.7 ? true : false) : null
         });
@@ -221,7 +234,10 @@ export const createComprehensiveSampleData = async () => {
       .from('ai_suggestions')
       .insert(sampleAISuggestions);
 
-    if (suggestionsError) throw suggestionsError;
+    if (suggestionsError) {
+      console.error('AI suggestions error:', suggestionsError);
+      throw suggestionsError;
+    }
     console.log(`Created ${sampleAISuggestions.length} AI suggestions`);
 
     // Sample analytics events
@@ -259,7 +275,10 @@ export const createComprehensiveSampleData = async () => {
       .from('analytics_events')
       .insert(analyticsEvents);
 
-    if (analyticsError) throw analyticsError;
+    if (analyticsError) {
+      console.error('Analytics error:', analyticsError);
+      throw analyticsError;
+    }
     console.log(`Created ${analyticsEvents.length} analytics events`);
 
     // Create sample billing records
@@ -277,7 +296,10 @@ export const createComprehensiveSampleData = async () => {
       .from('billing_records')
       .insert(billingRecords);
 
-    if (billingError) throw billingError;
+    if (billingError) {
+      console.error('Billing error:', billingError);
+      throw billingError;
+    }
     console.log(`Created ${billingRecords.length} billing records`);
 
     return {
@@ -296,7 +318,7 @@ export const createComprehensiveSampleData = async () => {
     console.error('Error creating sample data:', error);
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Unknown error'
+      error: error instanceof Error ? error.message : 'Unknown error occurred'
     };
   }
 };
@@ -319,7 +341,7 @@ export const clearAllSampleData = async () => {
     console.error('Error clearing sample data:', error);
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Unknown error'
+      error: error instanceof Error ? error.message : 'Unknown error occurred'
     };
   }
 };
