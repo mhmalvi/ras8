@@ -105,12 +105,12 @@ export const useReturnsData = () => {
         },
         product: returnItem.return_items?.[0]?.product_name || "Unknown Product",
         reason: returnItem.reason,
-        value: `$${returnItem.total_amount}`,
+        value: `$${returnItem.total_amount.toString()}`,
         status: returnItem.status,
         aiSuggestion: returnItem.ai_suggestions?.[0]?.suggested_product_name || "No suggestion",
         date: new Date(returnItem.created_at).toLocaleDateString(),
         confidence: returnItem.ai_suggestions?.[0]?.confidence_score || 0,
-        numericValue: parseFloat(returnItem.total_amount),
+        numericValue: returnItem.total_amount,
         created_at: returnItem.created_at
       })) || [];
       
