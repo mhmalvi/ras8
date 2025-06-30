@@ -4,6 +4,12 @@ import type { SampleReturnItem } from './types';
 import { PRODUCT_NAMES } from './constants';
 
 export const createSampleReturnItems = async (returns: any[]): Promise<number> => {
+  if (!returns || returns.length === 0) {
+    throw new Error('No returns provided for creating return items');
+  }
+
+  console.log(`Creating return items for ${returns.length} returns`);
+
   const sampleReturnItems: SampleReturnItem[] = [];
 
   returns.forEach(returnItem => {
@@ -20,10 +26,33 @@ export const createSampleReturnItems = async (returns: any[]): Promise<number> =
     }
   });
 
-  const { error } = await supabase
-    .from('return_items')
-    .insert(sampleReturnItems);
+  try {
+    console.log(`Inserting ${sampleReturnItems.length} return items:`, sampleReturnItems.slice(0, 2)); // Log first 2 for debugging
+    
+    const { error } = await supabase
+      .from('return_items')
+      .insert(sampleReturnItems);
 
-  if (error) throw error;
-  return sampleReturnItems.length;
+    if (error) {
+      console.error('Supabase error creating return items:', error);
+      console.error('Error details:', {
+        message: error.message,
+        details: error.details,
+        hint: error.hint,
+        code: error.code
+      });
+      throw new Error(`Failed to create return items: ${error.message}`);
+    }
+
+    console.log(`Successfully created ${sampleReturnItems.length} return items`);
+    return sampleReturnItems.length;
+  } catch (error) {
+    console.error('Return items creation failed:', error);
+    if (error instanceof Error) {
+      console.error('Error name:', error.name);
+      console.error('Error message:', error.message);
+      console.error('Error stack:', error.stack);
+    }
+    throw error;
+  }
 };

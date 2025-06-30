@@ -8,6 +8,8 @@ export const createSampleReturns = async (merchantIds: string[]): Promise<any[]>
     throw new Error('No merchant IDs provided for creating returns');
   }
 
+  console.log('Creating returns for merchant IDs:', merchantIds);
+
   const sampleReturns: SampleReturn[] = [];
   const statuses: ('requested' | 'approved' | 'in_transit' | 'completed')[] = [
     'requested', 'approved', 'in_transit', 'completed'
@@ -32,23 +34,38 @@ export const createSampleReturns = async (merchantIds: string[]): Promise<any[]>
   });
 
   try {
+    console.log(`Inserting ${sampleReturns.length} returns:`, sampleReturns.slice(0, 2)); // Log first 2 for debugging
+    
     const { data: returns, error } = await supabase
       .from('returns')
       .insert(sampleReturns)
       .select();
 
     if (error) {
-      console.error('Error creating returns:', error);
+      console.error('Supabase error creating returns:', error);
+      console.error('Error details:', {
+        message: error.message,
+        details: error.details,
+        hint: error.hint,
+        code: error.code
+      });
       throw new Error(`Failed to create returns: ${error.message}`);
     }
 
     if (!returns || returns.length === 0) {
+      console.error('No returns returned from insert operation');
       throw new Error('No returns were created');
     }
 
+    console.log(`Successfully created ${returns.length} returns`);
     return returns;
   } catch (error) {
     console.error('Returns creation failed:', error);
+    if (error instanceof Error) {
+      console.error('Error name:', error.name);
+      console.error('Error message:', error.message);
+      console.error('Error stack:', error.stack);
+    }
     throw error;
   }
 };
