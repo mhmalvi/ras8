@@ -13,6 +13,7 @@ import { SidebarProvider, SidebarTrigger, SidebarInset } from "@/components/ui/s
 import { AppSidebar } from "@/components/AppSidebar";
 import DashboardStats from "@/components/DashboardStats";
 import BulkActionsReturns from "@/components/BulkActionsReturns";
+import ReturnsTable from "@/components/ReturnsTable";
 import MetricsChart from "@/components/MetricsChart";
 import EnhancedAIInsights from "@/components/EnhancedAIInsights";
 import NotificationCenter from "@/components/NotificationCenter";
@@ -90,7 +91,37 @@ const Index = () => {
                 </TabsList>
 
                 <TabsContent value="returns" className="mt-6">
-                  <BulkActionsReturns />
+                  <div className="space-y-6">
+                    <Card>
+                      <CardHeader>
+                        <CardTitle>Filter Returns</CardTitle>
+                        <CardDescription>Search and filter return requests</CardDescription>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="flex gap-4">
+                          <Input
+                            placeholder="Search by order, customer, or email..."
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                            className="flex-1"
+                          />
+                          <Select value={statusFilter} onValueChange={setStatusFilter}>
+                            <SelectTrigger className="w-48">
+                              <SelectValue placeholder="Filter by status" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="all">All Status</SelectItem>
+                              <SelectItem value="requested">Requested</SelectItem>
+                              <SelectItem value="approved">Approved</SelectItem>
+                              <SelectItem value="in_transit">In Transit</SelectItem>
+                              <SelectItem value="completed">Completed</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      </CardContent>
+                    </Card>
+                    <ReturnsTable searchTerm={searchTerm} statusFilter={statusFilter} />
+                  </div>
                 </TabsContent>
 
                 <TabsContent value="analytics" className="mt-6">
