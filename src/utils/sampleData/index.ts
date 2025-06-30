@@ -13,6 +13,7 @@ export const createComprehensiveSampleData = async (): Promise<CreateDataResult>
     console.log('Starting comprehensive sample data creation...');
 
     // First, clear any existing sample data to avoid conflicts
+    console.log('Clearing existing data...');
     const clearResult = await clearAllSampleData();
     if (!clearResult.success) {
       console.warn('Warning during data clearing:', clearResult.error);
@@ -22,7 +23,7 @@ export const createComprehensiveSampleData = async (): Promise<CreateDataResult>
     // Create merchants
     console.log('Creating merchants...');
     const merchants = await createSampleMerchants();
-    console.log(`Created ${merchants.length} merchants`);
+    console.log(`Created ${merchants.length} merchants:`, merchants.map(m => ({ id: m.id, domain: m.shop_domain })));
 
     if (!merchants || merchants.length === 0) {
       throw new Error('Failed to create merchants - no merchants returned');
@@ -32,6 +33,7 @@ export const createComprehensiveSampleData = async (): Promise<CreateDataResult>
     if (merchantIds.length === 0) {
       throw new Error('No valid merchant IDs found');
     }
+    console.log('Merchant IDs:', merchantIds);
 
     // Create returns
     console.log('Creating returns...');
@@ -80,7 +82,10 @@ export const createComprehensiveSampleData = async (): Promise<CreateDataResult>
 
   } catch (error) {
     console.error('Error creating sample data:', error);
+    console.error('Error stack:', error instanceof Error ? error.stack : 'No stack trace');
+    
     const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+    console.error('Final error message:', errorMessage);
     
     return {
       success: false,

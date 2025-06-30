@@ -26,23 +26,38 @@ export const createSampleMerchants = async (): Promise<any[]> => {
   ];
 
   try {
+    console.log('Inserting merchants:', sampleMerchants);
+    
     const { data: merchants, error } = await supabase
       .from('merchants')
       .insert(sampleMerchants)
       .select();
 
     if (error) {
-      console.error('Error creating merchants:', error);
+      console.error('Supabase error creating merchants:', error);
+      console.error('Error details:', {
+        message: error.message,
+        details: error.details,
+        hint: error.hint,
+        code: error.code
+      });
       throw new Error(`Failed to create merchants: ${error.message}`);
     }
 
     if (!merchants || merchants.length === 0) {
+      console.error('No merchants returned from insert operation');
       throw new Error('No merchants were created');
     }
 
+    console.log('Successfully created merchants:', merchants);
     return merchants;
   } catch (error) {
     console.error('Merchants creation failed:', error);
+    if (error instanceof Error) {
+      console.error('Error name:', error.name);
+      console.error('Error message:', error.message);
+      console.error('Error stack:', error.stack);
+    }
     throw error;
   }
 };

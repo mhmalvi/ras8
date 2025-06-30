@@ -4,6 +4,12 @@ import type { SampleAISuggestion } from './types';
 import { SUGGESTION_PRODUCTS, REASONING_TEMPLATES } from './constants';
 
 export const createSampleAISuggestions = async (returns: any[]): Promise<number> => {
+  if (!returns || returns.length === 0) {
+    throw new Error('No returns provided for creating AI suggestions');
+  }
+
+  console.log(`Creating AI suggestions for ${returns.length} returns`);
+
   const sampleAISuggestions: SampleAISuggestion[] = [];
 
   returns.forEach(returnItem => {
@@ -19,10 +25,33 @@ export const createSampleAISuggestions = async (returns: any[]): Promise<number>
     }
   });
 
-  const { error } = await supabase
-    .from('ai_suggestions')
-    .insert(sampleAISuggestions);
+  try {
+    console.log(`Inserting ${sampleAISuggestions.length} AI suggestions:`, sampleAISuggestions.slice(0, 2)); // Log first 2 for debugging
+    
+    const { error } = await supabase
+      .from('ai_suggestions')
+      .insert(sampleAISuggestions);
 
-  if (error) throw error;
-  return sampleAISuggestions.length;
+    if (error) {
+      console.error('Supabase error creating AI suggestions:', error);
+      console.error('Error details:', {
+        message: error.message,
+        details: error.details,
+        hint: error.hint,
+        code: error.code
+      });
+      throw new Error(`Failed to create AI suggestions: ${error.message}`);
+    }
+
+    console.log(`Successfully created ${sampleAISuggestions.length} AI suggestions`);
+    return sampleAISuggestions.length;
+  } catch (error) {
+    console.error('AI suggestions creation failed:', error);
+    if (error instanceof Error) {
+      console.error('Error name:', error.name);
+      console.error('Error message:', error.message);
+      console.error('Error stack:', error.stack);
+    }
+    throw error;
+  }
 };
