@@ -11,6 +11,7 @@ interface Return {
   reason: string;
   total_amount: number;
   created_at: string;
+  updated_at: string;
   merchant_id: string;
   return_items?: ReturnItem[];
   ai_suggestions?: AISuggestion[];
@@ -61,7 +62,13 @@ export const useRealReturnsData = () => {
 
         if (error) throw error;
         
-        setReturns(data || []);
+        // Type assertion to ensure status is properly typed
+        const typedData = (data || []).map(item => ({
+          ...item,
+          status: item.status as 'requested' | 'approved' | 'in_transit' | 'completed'
+        }));
+        
+        setReturns(typedData);
         setError(null);
       } catch (err) {
         console.error('Error fetching returns:', err);
@@ -92,7 +99,13 @@ export const useRealReturnsData = () => {
 
       if (error) throw error;
       
-      setReturns(data || []);
+      // Type assertion to ensure status is properly typed
+      const typedData = (data || []).map(item => ({
+        ...item,
+        status: item.status as 'requested' | 'approved' | 'in_transit' | 'completed'
+      }));
+      
+      setReturns(typedData);
       setError(null);
     } catch (err) {
       console.error('Error refetching returns:', err);
