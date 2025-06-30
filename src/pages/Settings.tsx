@@ -1,74 +1,37 @@
 
 import { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Progress } from "@/components/ui/progress";
-import { Bell, CreditCard, Settings as SettingsIcon, Zap, Crown, Star } from 'lucide-react';
+import { Separator } from "@/components/ui/separator";
+import { ArrowLeft, CreditCard, Bell, User, Shield, Zap, Download } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import { useToast } from "@/hooks/use-toast";
 
 const Settings = () => {
-  const [currentPlan, setCurrentPlan] = useState("Growth");
-  const [usageCount, setUsageCount] = useState(287);
-  const [usageLimit] = useState(500);
-  const [notifications, setNotifications] = useState({
-    newReturns: true,
-    aiSuggestions: true,
-    usageAlerts: true,
-    weeklyReport: false
-  });
   const { toast } = useToast();
+  const [emailNotifications, setEmailNotifications] = useState(true);
+  const [smsNotifications, setSmsNotifications] = useState(false);
+  const [currentPlan] = useState('pro');
+  const [usage] = useState({ current: 425, limit: 500 });
 
-  const plans = [
-    {
-      name: "Starter",
-      price: "$29",
-      limit: "100 returns/month",
-      features: ["Basic returns management", "Email notifications", "Basic analytics"],
-      icon: Zap,
-      color: "text-blue-600"
-    },
-    {
-      name: "Growth",
-      price: "$79",
-      limit: "500 returns/month",
-      features: ["Advanced AI suggestions", "Priority support", "Custom branding", "Advanced analytics"],
-      icon: Star,
-      color: "text-purple-600"
-    },
-    {
-      name: "Pro",
-      price: "$149",
-      limit: "Unlimited returns",
-      features: ["White-label solution", "API access", "Custom integrations", "Dedicated support"],
-      icon: Crown,
-      color: "text-amber-600"
-    }
-  ];
-
-  const billingHistory = [
-    { date: "2024-01-01", amount: "$79.00", status: "Paid", plan: "Growth" },
-    { date: "2023-12-01", amount: "$79.00", status: "Paid", plan: "Growth" },
-    { date: "2023-11-01", amount: "$29.00", status: "Paid", plan: "Starter" },
-  ];
-
-  const handleNotificationChange = (key: string, value: boolean) => {
-    setNotifications(prev => ({ ...prev, [key]: value }));
+  const handleSaveSettings = () => {
     toast({
-      title: "Settings updated",
-      description: "Your notification preferences have been saved.",
+      title: "Settings saved",
+      description: "Your preferences have been updated successfully."
     });
   };
 
-  const handlePlanUpgrade = (planName: string) => {
+  const handlePlanUpgrade = () => {
     toast({
-      title: "Plan upgrade initiated",
-      description: `Upgrading to ${planName} plan...`,
+      title: "Upgrade initiated",
+      description: "Redirecting to billing portal..."
     });
   };
 
@@ -78,16 +41,19 @@ const Settings = () => {
       <header className="bg-white border-b border-slate-200 px-6 py-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-4">
-            <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
-              <span className="text-white font-bold text-sm">RA</span>
-            </div>
+            <Link to="/">
+              <Button variant="ghost" size="sm">
+                <ArrowLeft className="h-4 w-4 mr-2" />
+                Back to Dashboard
+              </Button>
+            </Link>
             <div>
               <h1 className="text-xl font-semibold text-slate-900">Settings</h1>
               <p className="text-sm text-slate-500">Manage your account and preferences</p>
             </div>
           </div>
-          <Badge variant="outline" className="bg-purple-50 text-purple-700 border-purple-200">
-            {currentPlan} Plan
+          <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
+            Pro Plan
           </Badge>
         </div>
       </header>
@@ -95,293 +61,218 @@ const Settings = () => {
       {/* Main Content */}
       <main className="px-6 py-8">
         <div className="max-w-4xl mx-auto">
-          <Tabs defaultValue="billing" className="space-y-6">
+          <Tabs defaultValue="account" className="space-y-6">
             <TabsList className="grid w-full grid-cols-4">
-              <TabsTrigger value="billing" className="flex items-center gap-2">
-                <CreditCard className="h-4 w-4" />
-                Billing
-              </TabsTrigger>
-              <TabsTrigger value="notifications" className="flex items-center gap-2">
-                <Bell className="h-4 w-4" />
-                Notifications
-              </TabsTrigger>
-              <TabsTrigger value="general" className="flex items-center gap-2">
-                <SettingsIcon className="h-4 w-4" />
-                General
-              </TabsTrigger>
-              <TabsTrigger value="ai" className="flex items-center gap-2">
-                <Zap className="h-4 w-4" />
-                AI Settings
-              </TabsTrigger>
+              <TabsTrigger value="account">Account</TabsTrigger>
+              <TabsTrigger value="billing">Billing</TabsTrigger>
+              <TabsTrigger value="notifications">Notifications</TabsTrigger>
+              <TabsTrigger value="security">Security</TabsTrigger>
             </TabsList>
 
-            <TabsContent value="billing" className="space-y-6">
-              {/* Current Plan & Usage */}
+            <TabsContent value="account">
               <Card>
                 <CardHeader>
-                  <CardTitle>Current Plan & Usage</CardTitle>
+                  <CardTitle className="flex items-center gap-2">
+                    <User className="h-5 w-5" />
+                    Account Information
+                  </CardTitle>
                   <CardDescription>
-                    Monitor your current plan and usage statistics
+                    Update your account details and store information
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-6">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <h3 className="text-lg font-semibold">{currentPlan} Plan</h3>
-                      <p className="text-slate-600">Up to {plans.find(p => p.name === currentPlan)?.limit}</p>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="storeName">Store Name</Label>
+                      <Input id="storeName" defaultValue="John's Store" />
                     </div>
-                    <div className="text-right">
-                      <p className="text-2xl font-bold">{plans.find(p => p.name === currentPlan)?.price}</p>
-                      <p className="text-sm text-slate-500">per month</p>
+                    <div className="space-y-2">
+                      <Label htmlFor="email">Email</Label>
+                      <Input id="email" type="email" defaultValue="john@example.com" />
                     </div>
                   </div>
-                  
                   <div className="space-y-2">
-                    <div className="flex justify-between text-sm">
-                      <span>Returns processed this month</span>
-                      <span>{usageCount} / {usageLimit}</span>
-                    </div>
-                    <Progress value={(usageCount / usageLimit) * 100} className="h-2" />
+                    <Label htmlFor="shopifyDomain">Shopify Domain</Label>
+                    <Input id="shopifyDomain" defaultValue="johns-store.myshopify.com" disabled />
                   </div>
-                </CardContent>
-              </Card>
-
-              {/* Available Plans */}
-              <Card>
-                <CardHeader>
-                  <CardTitle>Available Plans</CardTitle>
-                  <CardDescription>
-                    Choose the plan that best fits your needs
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="grid md:grid-cols-3 gap-4">
-                    {plans.map((plan) => {
-                      const Icon = plan.icon;
-                      const isCurrent = plan.name === currentPlan;
-                      
-                      return (
-                        <Card key={plan.name} className={`relative ${isCurrent ? 'ring-2 ring-blue-500' : ''}`}>
-                          <CardHeader className="text-center">
-                            <Icon className={`h-8 w-8 mx-auto ${plan.color}`} />
-                            <CardTitle className="flex items-center justify-center gap-2">
-                              {plan.name}
-                              {isCurrent && <Badge variant="secondary">Current</Badge>}
-                            </CardTitle>
-                            <div className="text-2xl font-bold">{plan.price}</div>
-                            <p className="text-sm text-slate-600">{plan.limit}</p>
-                          </CardHeader>
-                          <CardContent className="space-y-4">
-                            <ul className="space-y-2 text-sm">
-                              {plan.features.map((feature, index) => (
-                                <li key={index} className="flex items-center gap-2">
-                                  <div className="w-1.5 h-1.5 bg-green-500 rounded-full" />
-                                  {feature}
-                                </li>
-                              ))}
-                            </ul>
-                            {!isCurrent && (
-                              <Button 
-                                className="w-full" 
-                                variant={plan.name === "Pro" ? "default" : "outline"}
-                                onClick={() => handlePlanUpgrade(plan.name)}
-                              >
-                                Upgrade to {plan.name}
-                              </Button>
-                            )}
-                          </CardContent>
-                        </Card>
-                      );
-                    })}
-                  </div>
-                </CardContent>
-              </Card>
-
-              {/* Billing History */}
-              <Card>
-                <CardHeader>
-                  <CardTitle>Billing History</CardTitle>
-                  <CardDescription>
-                    View your past invoices and payments
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-4">
-                    {billingHistory.map((invoice, index) => (
-                      <div key={index} className="flex items-center justify-between p-4 border rounded-lg">
-                        <div>
-                          <p className="font-medium">{invoice.plan} Plan</p>
-                          <p className="text-sm text-slate-500">{invoice.date}</p>
-                        </div>
-                        <div className="text-right">
-                          <p className="font-medium">{invoice.amount}</p>
-                          <Badge variant={invoice.status === "Paid" ? "default" : "secondary"}>
-                            {invoice.status}
-                          </Badge>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
+                  <Button onClick={handleSaveSettings}>Save Changes</Button>
                 </CardContent>
               </Card>
             </TabsContent>
 
-            <TabsContent value="notifications" className="space-y-6">
+            <TabsContent value="billing">
+              <div className="space-y-6">
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <CreditCard className="h-5 w-5" />
+                      Current Plan
+                    </CardTitle>
+                    <CardDescription>
+                      Manage your subscription and usage
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-6">
+                    <div className="flex items-center justify-between p-4 border rounded-lg">
+                      <div>
+                        <h3 className="font-semibold text-lg">Pro Plan</h3>
+                        <p className="text-slate-600">Unlimited returns processing</p>
+                      </div>
+                      <div className="text-right">
+                        <div className="text-2xl font-bold">$149</div>
+                        <div className="text-sm text-slate-500">per month</div>
+                      </div>
+                    </div>
+
+                    <div className="space-y-3">
+                      <div className="flex justify-between items-center">
+                        <span className="text-sm font-medium">Monthly Usage</span>
+                        <span className="text-sm text-slate-600">{usage.current}/{usage.limit} returns</span>
+                      </div>
+                      <Progress value={(usage.current / usage.limit) * 100} className="h-2" />
+                    </div>
+
+                    <Separator />
+
+                    <div className="grid grid-cols-3 gap-4">
+                      <Card className="p-4">
+                        <h4 className="font-medium">Starter</h4>
+                        <p className="text-2xl font-bold">$29</p>
+                        <p className="text-sm text-slate-500">Up to 100 returns</p>
+                      </Card>
+                      <Card className="p-4">
+                        <h4 className="font-medium">Growth</h4>
+                        <p className="text-2xl font-bold">$79</p>
+                        <p className="text-sm text-slate-500">Up to 500 returns</p>
+                      </Card>
+                      <Card className="p-4 border-blue-200 bg-blue-50">
+                        <h4 className="font-medium">Pro</h4>
+                        <p className="text-2xl font-bold">$149</p>
+                        <p className="text-sm text-slate-500">Unlimited returns</p>
+                        <Badge className="mt-2">Current</Badge>
+                      </Card>
+                    </div>
+
+                    <div className="flex gap-2">
+                      <Button onClick={handlePlanUpgrade}>
+                        <Zap className="h-4 w-4 mr-2" />
+                        Manage Billing
+                      </Button>
+                      <Button variant="outline">
+                        <Download className="h-4 w-4 mr-2" />
+                        Download Invoice
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+            </TabsContent>
+
+            <TabsContent value="notifications">
               <Card>
                 <CardHeader>
-                  <CardTitle>Notification Preferences</CardTitle>
+                  <CardTitle className="flex items-center gap-2">
+                    <Bell className="h-5 w-5" />
+                    Notification Preferences
+                  </CardTitle>
                   <CardDescription>
-                    Choose what notifications you'd like to receive
+                    Choose how you want to be notified about returns and system updates
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-6">
                   <div className="space-y-4">
                     <div className="flex items-center justify-between">
                       <div>
-                        <Label className="text-base">New return requests</Label>
-                        <p className="text-sm text-slate-500">Get notified when customers submit new returns</p>
+                        <Label htmlFor="email-notifications" className="text-base font-medium">
+                          Email Notifications
+                        </Label>
+                        <p className="text-sm text-slate-600">
+                          Receive email alerts for new returns and important updates
+                        </p>
                       </div>
-                      <Switch 
-                        checked={notifications.newReturns}
-                        onCheckedChange={(checked) => handleNotificationChange('newReturns', checked)}
+                      <Switch
+                        id="email-notifications"
+                        checked={emailNotifications}
+                        onCheckedChange={setEmailNotifications}
                       />
                     </div>
                     
                     <div className="flex items-center justify-between">
                       <div>
-                        <Label className="text-base">AI suggestions</Label>
-                        <p className="text-sm text-slate-500">Receive alerts about AI-generated exchange recommendations</p>
+                        <Label htmlFor="sms-notifications" className="text-base font-medium">
+                          SMS Notifications
+                        </Label>
+                        <p className="text-sm text-slate-600">
+                          Get text messages for urgent return requests
+                        </p>
                       </div>
-                      <Switch 
-                        checked={notifications.aiSuggestions}
-                        onCheckedChange={(checked) => handleNotificationChange('aiSuggestions', checked)}
-                      />
-                    </div>
-                    
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <Label className="text-base">Usage alerts</Label>
-                        <p className="text-sm text-slate-500">Get warned when approaching plan limits</p>
-                      </div>
-                      <Switch 
-                        checked={notifications.usageAlerts}
-                        onCheckedChange={(checked) => handleNotificationChange('usageAlerts', checked)}
-                      />
-                    </div>
-                    
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <Label className="text-base">Weekly reports</Label>
-                        <p className="text-sm text-slate-500">Receive weekly summary reports via email</p>
-                      </div>
-                      <Switch 
-                        checked={notifications.weeklyReport}
-                        onCheckedChange={(checked) => handleNotificationChange('weeklyReport', checked)}
+                      <Switch
+                        id="sms-notifications"
+                        checked={smsNotifications}
+                        onCheckedChange={setSmsNotifications}
                       />
                     </div>
                   </div>
+
+                  <Separator />
+
+                  <div className="space-y-4">
+                    <h4 className="font-medium">Notification Frequency</h4>
+                    <Select defaultValue="immediate">
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="immediate">Immediate</SelectItem>
+                        <SelectItem value="hourly">Hourly Digest</SelectItem>
+                        <SelectItem value="daily">Daily Summary</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <Button onClick={handleSaveSettings}>Save Preferences</Button>
                 </CardContent>
               </Card>
             </TabsContent>
 
-            <TabsContent value="general" className="space-y-6">
+            <TabsContent value="security">
               <Card>
                 <CardHeader>
-                  <CardTitle>General Settings</CardTitle>
+                  <CardTitle className="flex items-center gap-2">
+                    <Shield className="h-5 w-5" />
+                    Security Settings
+                  </CardTitle>
                   <CardDescription>
-                    Configure your store settings and preferences
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-6">
-                  <div className="grid gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="store-name">Store Name</Label>
-                      <Input id="store-name" defaultValue="John's Store" />
-                    </div>
-                    
-                    <div className="space-y-2">
-                      <Label htmlFor="contact-email">Contact Email</Label>
-                      <Input id="contact-email" type="email" defaultValue="john@store.com" />
-                    </div>
-                    
-                    <div className="space-y-2">
-                      <Label htmlFor="return-window">Return Window (days)</Label>
-                      <Select defaultValue="30">
-                        <SelectTrigger>
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="14">14 days</SelectItem>
-                          <SelectItem value="30">30 days</SelectItem>
-                          <SelectItem value="60">60 days</SelectItem>
-                          <SelectItem value="90">90 days</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    
-                    <div className="space-y-2">
-                      <Label htmlFor="auto-approve">Auto-approve threshold</Label>
-                      <Select defaultValue="50">
-                        <SelectTrigger>
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="25">$25</SelectItem>
-                          <SelectItem value="50">$50</SelectItem>
-                          <SelectItem value="100">$100</SelectItem>
-                          <SelectItem value="0">Disabled</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </div>
-                  
-                  <Button>Save Changes</Button>
-                </CardContent>
-              </Card>
-            </TabsContent>
-
-            <TabsContent value="ai" className="space-y-6">
-              <Card>
-                <CardHeader>
-                  <CardTitle>AI Configuration</CardTitle>
-                  <CardDescription>
-                    Customize AI behavior and preferences
+                    Manage your account security and access controls
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-6">
                   <div className="space-y-4">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <Label className="text-base">Enable AI suggestions</Label>
-                        <p className="text-sm text-slate-500">Allow AI to suggest exchange alternatives</p>
-                      </div>
-                      <Switch defaultChecked />
+                    <div>
+                      <Label htmlFor="current-password">Current Password</Label>
+                      <Input id="current-password" type="password" className="mt-1" />
                     </div>
-                    
-                    <div className="space-y-2">
-                      <Label>Minimum confidence threshold</Label>
-                      <Select defaultValue="75">
-                        <SelectTrigger>
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="60">60%</SelectItem>
-                          <SelectItem value="75">75%</SelectItem>
-                          <SelectItem value="85">85%</SelectItem>
-                          <SelectItem value="95">95%</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      <p className="text-sm text-slate-500">Only show AI suggestions above this confidence level</p>
+                    <div>
+                      <Label htmlFor="new-password">New Password</Label>
+                      <Input id="new-password" type="password" className="mt-1" />
                     </div>
-                    
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <Label className="text-base">Auto-apply high confidence suggestions</Label>
-                        <p className="text-sm text-slate-500">Automatically apply suggestions with 95%+ confidence</p>
-                      </div>
-                      <Switch />
+                    <div>
+                      <Label htmlFor="confirm-password">Confirm New Password</Label>
+                      <Input id="confirm-password" type="password" className="mt-1" />
                     </div>
                   </div>
+
+                  <Separator />
+
+                  <div className="space-y-4">
+                    <h4 className="font-medium">Two-Factor Authentication</h4>
+                    <p className="text-sm text-slate-600">
+                      Add an extra layer of security to your account
+                    </p>
+                    <Button variant="outline">Enable 2FA</Button>
+                  </div>
+
+                  <Button>Update Password</Button>
                 </CardContent>
               </Card>
             </TabsContent>

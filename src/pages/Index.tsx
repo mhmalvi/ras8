@@ -87,39 +87,7 @@ const Index = () => {
             </TabsList>
 
             <TabsContent value="returns" className="mt-6">
-              <Card>
-                <CardHeader>
-                  <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-                    <div>
-                      <CardTitle>Returns Management</CardTitle>
-                      <CardDescription>
-                        View and manage all return requests from your customers
-                      </CardDescription>
-                    </div>
-                    <div className="flex flex-col sm:flex-row gap-2">
-                      <Input
-                        placeholder="Search by order number or email..."
-                        value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
-                        className="w-full sm:w-64"
-                      />
-                      <Select value={statusFilter} onValueChange={setStatusFilter}>
-                        <SelectTrigger className="w-full sm:w-40">
-                          <SelectValue placeholder="Filter by status" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="all">All Status</SelectItem>
-                          <SelectItem value="requested">Requested</SelectItem>
-                          <SelectItem value="approved">Approved</SelectItem>
-                          <SelectItem value="in_transit">In Transit</SelectItem>
-                          <SelectItem value="completed">Completed</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </div>
-                </CardHeader>
-                {/* Use existing ReturnsTable component for basic functionality */}
-              </Card>
+              <BulkActionsReturns />
             </TabsContent>
 
             <TabsContent value="analytics" className="mt-6">
