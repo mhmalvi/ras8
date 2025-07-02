@@ -10,6 +10,8 @@ import { Zap, Bot, Mail, Clock, Webhook, Settings } from "lucide-react";
 import { useAutomationRules } from '@/hooks/useAutomationRules';
 import AutomationRuleCard from '@/components/AutomationRuleCard';
 import AutomationSettings from '@/components/AutomationSettings';
+import RealTimeActivityFeed from '@/components/RealTimeActivityFeed';
+import N8nConnectionSetup from '@/components/N8nConnectionSetup';
 
 const Automations = () => {
   const {
@@ -65,11 +67,12 @@ const Automations = () => {
           <main className="px-6 py-8">
             <div className="max-w-7xl mx-auto">
               <Tabs defaultValue="rules" className="space-y-6">
-                <TabsList className="grid w-full grid-cols-4">
+                <TabsList className="grid w-full grid-cols-5">
                   <TabsTrigger value="rules">Automation Rules</TabsTrigger>
                   <TabsTrigger value="webhooks">Webhook Management</TabsTrigger>
                   <TabsTrigger value="workflows">N8n Workflows</TabsTrigger>
-                  <TabsTrigger value="settings">Configuration</TabsTrigger>
+                  <TabsTrigger value="activity">Live Activity</TabsTrigger>
+                  <TabsTrigger value="setup">Setup & Config</TabsTrigger>
                 </TabsList>
 
                 <TabsContent value="rules" className="space-y-6">
@@ -193,50 +196,13 @@ const Automations = () => {
                   </Card>
                 </TabsContent>
 
-                <TabsContent value="settings" className="space-y-6">
+                <TabsContent value="activity" className="space-y-6">
+                  <RealTimeActivityFeed />
+                </TabsContent>
+
+                <TabsContent value="setup" className="space-y-6">
+                  <N8nConnectionSetup />
                   <AutomationSettings />
-                  
-                  <Card>
-                    <CardHeader>
-                      <CardTitle>Workflow Templates</CardTitle>
-                      <CardDescription>
-                        Pre-built n8n workflow templates for common automation scenarios
-                      </CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="grid gap-4">
-                        <div className="p-4 border rounded-lg">
-                          <h4 className="font-medium mb-2">Return Processing Workflow</h4>
-                          <p className="text-sm text-muted-foreground mb-3">
-                            Automatically process returns, send notifications, and update inventory
-                          </p>
-                          <Button variant="outline" size="sm" disabled>
-                            Deploy Template (Coming Soon)
-                          </Button>
-                        </div>
-                        
-                        <div className="p-4 border rounded-lg">
-                          <h4 className="font-medium mb-2">Customer Retention Campaign</h4>
-                          <p className="text-sm text-muted-foreground mb-3">
-                            Send targeted emails to customers with multiple returns
-                          </p>
-                          <Button variant="outline" size="sm" disabled>
-                            Deploy Template (Coming Soon)
-                          </Button>
-                        </div>
-                        
-                        <div className="p-4 border rounded-lg">
-                          <h4 className="font-medium mb-2">Order Sync Workflow</h4>
-                          <p className="text-sm text-muted-foreground mb-3">
-                            Sync Shopify orders and trigger return eligibility checks
-                          </p>
-                          <Button variant="outline" size="sm" disabled>
-                            Deploy Template (Coming Soon)
-                          </Button>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
                 </TabsContent>
               </Tabs>
             </div>
