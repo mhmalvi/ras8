@@ -39,9 +39,15 @@ export const useCustomerPortal = () => {
     setError(null);
     
     try {
-      console.log('🔍 Looking up order:', orderNumber, 'for email:', email);
+      console.log('🔍 Starting order lookup for:', { orderNumber, email });
       
-      // Find order by shopify_order_id and customer_email from real database
+      // Clean and normalize inputs
+      const cleanOrderNumber = orderNumber.trim();
+      const cleanEmail = email.toLowerCase().trim();
+      
+      console.log('🧹 Cleaned inputs:', { cleanOrderNumber, cleanEmail });
+      
+      // Query orders table with proper join to order_items
       const { data: orderData, error: orderError } = await supabase
         .from('orders')
         .select(`
@@ -58,24 +64,25 @@ export const useCustomerPortal = () => {
             quantity
           )
         `)
-        .eq('shopify_order_id', orderNumber)
-        .eq('customer_email', email.toLowerCase().trim())
+        .eq('shopify_order_id', cleanOrderNumber)
+        .eq('customer_email', cleanEmail)
         .single();
 
-      console.log('📊 Order query result:', { orderData, orderError });
+      console.log('📊 Database query result:', { orderData, orderError });
 
       if (orderError) {
+        console.error('💥 Database error:', orderError);
         if (orderError.code === 'PGRST116') {
           throw new Error('Order not found. Please check your order number and email address.');
         }
-        throw new Error(`Database error: ${orderError.message}`);
+        throw new Error(`Failed to find order: ${orderError.message}`);
       }
 
       if (!orderData) {
-        throw new Error('Order not found. Please check your order number and email address.');
+        throw new Error('Order not found. Please verify your order number and email address.');
       }
 
-      // Transform data to expected format
+      // Transform the data to match our interface
       const transformedOrder: Order = {
         id: orderData.id,
         shopify_order_id: orderData.shopify_order_id,
@@ -88,17 +95,17 @@ export const useCustomerPortal = () => {
           product_name: item.product_name,
           price: item.price,
           quantity: item.quantity,
-          eligible: true, // All items are eligible for return
+          eligible: true, // All items are eligible for return by default
         }))
       };
 
-      console.log('✅ Order transformed:', transformedOrder);
+      console.log('✅ Order successfully transformed:', transformedOrder);
       setOrder(transformedOrder);
       return transformedOrder;
     } catch (err) {
-      const errorMsg = err instanceof Error ? err.message : 'Failed to lookup order';
-      console.error('💥 Order lookup error:', errorMsg);
-      setError(errorMsg);
+      const errorMessage = err instanceof Error ? err.message : 'An unexpected error occurred while looking up your order.';
+      console.error('💥 Order lookup failed:', errorMessage);
+      setError(errorMessage);
       throw err;
     } finally {
       setLoading(false);
@@ -131,20 +138,21 @@ export const useCustomerPortal = () => {
       setAiRecommendations(recommendations);
       return recommendations;
     } catch (err) {
-      const errorMsg = err instanceof Error ? err.message : 'Failed to generate recommendations';
-      console.error('💥 AI recommendation error:', errorMsg);
-      setError(errorMsg);
+      const errorMessage = err instanceof Error ? err.message : 'Failed to generate AI recommendations';
+      console.error('💥 AI recommendation error:', errorMessage);
       
-      // Return graceful fallback recommendations
-      const fallback: AIRecommendation[] = [
+      // Provide fallback recommendations instead of failing
+      const fallbackRecommendations: AIRecommendation[] = [
         {
           suggestedProduct: `Enhanced version of ${productName}`,
           confidence: 75,
           reasoning: 'Based on similar customer preferences and return patterns.'
         }
       ];
-      setAiRecommendations(fallback);
-      return fallback;
+      
+      console.log('🔄 Using fallback recommendations:', fallbackRecommendations);
+      setAiRecommendations(fallbackRecommendations);
+      return fallbackRecommendations;
     } finally {
       setLoading(false);
     }
@@ -160,60 +168,73 @@ export const useCustomerPortal = () => {
     setError(null);
 
     try {
-      console.log('📤 Submitting return:', returnData);
+      console.log('📤 Starting return submission:', returnData);
 
-      // Get any available merchant for return processing
-      // In a real system, this would be determined by the order's merchant
+      if (!order) {
+        throw new Error('Order information is missing. Please try looking up your order again.');
+      }
+
+      // Get first available merchant for demo purposes
       const { data: merchants, error: merchantError } = await supabase
         .from('merchants')
         .select('id')
         .limit(1);
 
       if (merchantError) {
-        console.error('💥 Merchant query error:', merchantError);
+        console.error('💥 Merchant lookup error:', merchantError);
         throw new Error('Unable to process return at this time. Please try again later.');
       }
 
       if (!merchants || merchants.length === 0) {
-        throw new Error('No merchant found. Please contact support.');
+        throw new Error('No merchant available to process this return. Please contact support.');
       }
 
       const merchantId = merchants[0].id;
       console.log('🏪 Using merchant ID:', merchantId);
 
-      // Create return record
-      const { data: returnRecord, error: returnError } = await supabase
+      // Create the return record
+      const returnRecord = {
+        shopify_order_id: returnData.orderNumber.trim(),
+        customer_email: returnData.email.toLowerCase().trim(),
+        reason: Object.values(returnData.returnReasons).join(', '),
+        status: 'requested',
+        total_amount: order.total_amount,
+        merchant_id: merchantId
+      };
+
+      console.log('📝 Creating return record:', returnRecord);
+
+      const { data: createdReturn, error: returnError } = await supabase
         .from('returns')
-        .insert({
-          shopify_order_id: returnData.orderNumber,
-          customer_email: returnData.email.toLowerCase().trim(),
-          reason: Object.values(returnData.returnReasons).join(', '),
-          status: 'requested',
-          total_amount: order?.total_amount || 0,
-          merchant_id: merchantId
-        })
+        .insert(returnRecord)
         .select()
         .single();
 
       if (returnError) {
         console.error('💥 Return creation error:', returnError);
-        throw new Error(`Failed to create return: ${returnError.message}`);
+        throw new Error(`Failed to create return request: ${returnError.message}`);
       }
 
-      console.log('✅ Return record created:', returnRecord);
+      console.log('✅ Return record created:', createdReturn);
 
-      // Create return item records
+      // Create return items
       const returnItems = returnData.selectedItems.map(itemId => {
-        const originalItem = order?.items.find(item => item.id === itemId);
+        const originalItem = order.items.find(item => item.id === itemId);
+        if (!originalItem) {
+          throw new Error(`Selected item not found: ${itemId}`);
+        }
+        
         return {
-          return_id: returnRecord.id,
-          product_id: originalItem?.product_id || '',
-          product_name: originalItem?.product_name || '',
-          price: originalItem?.price || 0,
-          quantity: originalItem?.quantity || 1,
+          return_id: createdReturn.id,
+          product_id: originalItem.product_id,
+          product_name: originalItem.product_name,
+          price: originalItem.price,
+          quantity: originalItem.quantity,
           action: 'refund'
         };
       });
+
+      console.log('📦 Creating return items:', returnItems);
 
       const { error: itemsError } = await supabase
         .from('return_items')
@@ -224,16 +245,16 @@ export const useCustomerPortal = () => {
         throw new Error(`Failed to create return items: ${itemsError.message}`);
       }
 
-      console.log('✅ Return items created:', returnItems.length, 'items');
+      console.log('✅ Return items created successfully');
 
       return {
-        returnId: returnRecord.id,
+        returnId: createdReturn.id,
         status: 'submitted'
       };
     } catch (err) {
-      const errorMsg = err instanceof Error ? err.message : 'Failed to submit return';
-      console.error('💥 Return submission error:', errorMsg);
-      setError(errorMsg);
+      const errorMessage = err instanceof Error ? err.message : 'Failed to submit return request';
+      console.error('💥 Return submission error:', errorMessage);
+      setError(errorMessage);
       throw err;
     } finally {
       setLoading(false);
