@@ -51,13 +51,6 @@ export type Database = {
             referencedRelation: "returns"
             referencedColumns: ["id"]
           },
-          {
-            foreignKeyName: "fk_ai_suggestions_return"
-            columns: ["return_id"]
-            isOneToOne: false
-            referencedRelation: "returns"
-            referencedColumns: ["id"]
-          },
         ]
       }
       analytics_events: {
@@ -85,13 +78,6 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "analytics_events_merchant_id_fkey"
-            columns: ["merchant_id"]
-            isOneToOne: false
-            referencedRelation: "merchants"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "fk_analytics_events_merchant"
             columns: ["merchant_id"]
             isOneToOne: false
             referencedRelation: "merchants"
@@ -136,13 +122,6 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "billing_records_merchant_id_fkey"
-            columns: ["merchant_id"]
-            isOneToOne: false
-            referencedRelation: "merchants"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "fk_billing_records_merchant"
             columns: ["merchant_id"]
             isOneToOne: false
             referencedRelation: "merchants"
@@ -260,13 +239,6 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "fk_return_items_return"
-            columns: ["return_id"]
-            isOneToOne: false
-            referencedRelation: "returns"
-            referencedColumns: ["id"]
-          },
-          {
             foreignKeyName: "return_items_return_id_fkey"
             columns: ["return_id"]
             isOneToOne: false
@@ -311,13 +283,6 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "fk_returns_merchant"
-            columns: ["merchant_id"]
-            isOneToOne: false
-            referencedRelation: "merchants"
-            referencedColumns: ["id"]
-          },
-          {
             foreignKeyName: "returns_merchant_id_fkey"
             columns: ["merchant_id"]
             isOneToOne: false
@@ -349,13 +314,6 @@ export type Database = {
           role?: string | null
         }
         Relationships: [
-          {
-            foreignKeyName: "fk_users_merchant"
-            columns: ["merchant_id"]
-            isOneToOne: false
-            referencedRelation: "merchants"
-            referencedColumns: ["id"]
-          },
           {
             foreignKeyName: "users_merchant_id_fkey"
             columns: ["merchant_id"]
