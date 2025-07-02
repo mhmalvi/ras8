@@ -14,6 +14,7 @@ import { ArrowLeft, CreditCard, Bell, User, Shield, Zap, Download } from 'lucide
 import { Link } from 'react-router-dom';
 import { useToast } from "@/hooks/use-toast";
 import SystemSetup from "@/components/SystemSetup";
+import AIServiceTester from "@/components/AIServiceTester";
 
 const Settings = () => {
   const { toast } = useToast();
@@ -71,8 +72,9 @@ const Settings = () => {
               <TabsTrigger value="security">Security</TabsTrigger>
             </TabsList>
 
-            <TabsContent value="system">
+            <TabsContent value="system" className="space-y-6">
               <SystemSetup />
+              <AIServiceTester />
             </TabsContent>
 
             <TabsContent value="account">
