@@ -93,6 +93,9 @@ const MerchantAssignment = () => {
       console.log('✅ Profile updated successfully, refetching...');
       await refetchProfile();
       
+      // Dispatch event to notify other components that profile was updated
+      window.dispatchEvent(new CustomEvent('profileUpdated'));
+      
       console.log('🔄 Profile refetch complete');
       
       toast({

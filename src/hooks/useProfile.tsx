@@ -55,7 +55,21 @@ export const useProfile = () => {
 
   useEffect(() => {
     fetchProfile();
-  }, [user?.id]); // Fixed: Added specific dependency
+    
+    // Listen for profile updates triggered by other components
+    const handleProfileUpdate = () => {
+      console.log('🔄 Profile update event received, refetching...');
+      fetchProfile();
+    };
+    
+    window.addEventListener('profileUpdated', handleProfileUpdate);
+    window.addEventListener('sampleDataCreated', handleProfileUpdate);
+    
+    return () => {
+      window.removeEventListener('profileUpdated', handleProfileUpdate);
+      window.removeEventListener('sampleDataCreated', handleProfileUpdate);
+    };
+  }, [user?.id]);
 
   const updateProfile = async (updates: Partial<Profile>) => {
     console.log('✏️ Updating profile with:', updates);
