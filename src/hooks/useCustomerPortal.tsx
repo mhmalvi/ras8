@@ -41,13 +41,11 @@ export const useCustomerPortal = () => {
     try {
       console.log('🔍 Starting order lookup for:', { orderNumber, email });
       
-      // Clean and normalize inputs
       const cleanOrderNumber = orderNumber.trim();
       const cleanEmail = email.toLowerCase().trim();
       
       console.log('🧹 Cleaned inputs:', { cleanOrderNumber, cleanEmail });
       
-      // Query orders table with proper join to order_items
       const { data: orderData, error: orderError } = await supabase
         .from('orders')
         .select(`
@@ -82,7 +80,6 @@ export const useCustomerPortal = () => {
         throw new Error('Order not found. Please verify your order number and email address.');
       }
 
-      // Transform the data to match our interface
       const transformedOrder: Order = {
         id: orderData.id,
         shopify_order_id: orderData.shopify_order_id,
@@ -95,7 +92,7 @@ export const useCustomerPortal = () => {
           product_name: item.product_name,
           price: item.price,
           quantity: item.quantity,
-          eligible: true, // All items are eligible for return by default
+          eligible: true,
         }))
       };
 
@@ -141,7 +138,6 @@ export const useCustomerPortal = () => {
       const errorMessage = err instanceof Error ? err.message : 'Failed to generate AI recommendations';
       console.error('💥 AI recommendation error:', errorMessage);
       
-      // Provide fallback recommendations instead of failing
       const fallbackRecommendations: AIRecommendation[] = [
         {
           suggestedProduct: `Enhanced version of ${productName}`,
@@ -192,7 +188,6 @@ export const useCustomerPortal = () => {
       const merchantId = merchants[0].id;
       console.log('🏪 Using merchant ID:', merchantId);
 
-      // Create the return record
       const returnRecord = {
         shopify_order_id: returnData.orderNumber.trim(),
         customer_email: returnData.email.toLowerCase().trim(),
@@ -217,7 +212,6 @@ export const useCustomerPortal = () => {
 
       console.log('✅ Return record created:', createdReturn);
 
-      // Create return items
       const returnItems = returnData.selectedItems.map(itemId => {
         const originalItem = order.items.find(item => item.id === itemId);
         if (!originalItem) {
