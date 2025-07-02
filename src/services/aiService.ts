@@ -25,42 +25,28 @@ export class AIService {
   async generateExchangeRecommendation(
     request: AIRecommendationRequest
   ): Promise<AIRecommendationResponse> {
-    if (!this.apiKey) {
-      throw new Error('OpenAI API key not configured');
-    }
-
-    const prompt = this.buildRecommendationPrompt(request);
-
     try {
-      const response = await fetch(`${this.baseUrl}/chat/completions`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${this.apiKey}`
-        },
-        body: JSON.stringify({
-          model: 'gpt-3.5-turbo',
-          messages: [
-            {
-              role: 'system',
-              content: 'You are an AI assistant specialized in e-commerce product recommendations for returns and exchanges. Provide helpful, accurate suggestions based on customer return reasons.'
-            },
-            {
-              role: 'user',
-              content: prompt
-            }
-          ],
-          max_tokens: 500,
-          temperature: 0.7
-        })
+      // Use Supabase edge function instead of direct API calls
+      const { supabase } = await import('@/integrations/supabase/client');
+      
+      const { data, error } = await supabase.functions.invoke('generate-exchange-recommendation', {
+        body: {
+          returnReason: request.returnReason,
+          productName: request.productName,
+          customerEmail: request.customerEmail,
+          orderValue: request.orderValue
+        }
       });
 
-      if (!response.ok) {
-        throw new Error(`OpenAI API error: ${response.statusText}`);
+      if (error) {
+        throw new Error(`Edge function error: ${error.message}`);
       }
 
-      const data = await response.json();
-      return this.parseAIResponse(data.choices[0]?.message?.content || '');
+      return {
+        suggestedProduct: data.suggestedProduct,
+        confidence: data.confidence,
+        reasoning: data.reasoning
+      };
     } catch (error) {
       console.error('AI Service Error:', error);
       return this.getFallbackRecommendation(request);

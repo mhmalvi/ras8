@@ -13,6 +13,7 @@ import { Separator } from "@/components/ui/separator";
 import { ArrowLeft, CreditCard, Bell, User, Shield, Zap, Download } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useToast } from "@/hooks/use-toast";
+import SystemSetup from "@/components/SystemSetup";
 
 const Settings = () => {
   const { toast } = useToast();
@@ -62,12 +63,17 @@ const Settings = () => {
       <main className="px-6 py-8">
         <div className="max-w-4xl mx-auto">
           <Tabs defaultValue="account" className="space-y-6">
-            <TabsList className="grid w-full grid-cols-4">
+            <TabsList className="grid w-full grid-cols-5">
+              <TabsTrigger value="system">System</TabsTrigger>
               <TabsTrigger value="account">Account</TabsTrigger>
               <TabsTrigger value="billing">Billing</TabsTrigger>
               <TabsTrigger value="notifications">Notifications</TabsTrigger>
               <TabsTrigger value="security">Security</TabsTrigger>
             </TabsList>
+
+            <TabsContent value="system">
+              <SystemSetup />
+            </TabsContent>
 
             <TabsContent value="account">
               <Card>
