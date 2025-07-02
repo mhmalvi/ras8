@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -8,7 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Progress } from "@/components/ui/progress";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { CheckCircle, Package, Sparkles, ArrowRight, ArrowLeft, Mail, Hash, Loader2, AlertTriangle, Info } from "lucide-react";
+import { CheckCircle, Package, Sparkles, ArrowRight, ArrowLeft, Mail, Hash, Loader2, AlertTriangle, Info, RefreshCw } from "lucide-react";
 import { useCustomerPortal } from "@/hooks/useCustomerPortal";
 import { useToast } from "@/hooks/use-toast";
 
@@ -39,6 +40,13 @@ const CustomerPortal = () => {
     { number: 4, title: "AI Recommendations", description: "Smart suggestions" },
     { number: 5, title: "Confirmation", description: "All done!" }
   ];
+
+  // Clear error when user navigates between steps
+  useEffect(() => {
+    if (error) {
+      clearError();
+    }
+  }, [currentStep]);
 
   const handleItemSelection = (itemId: string) => {
     setSelectedItems(prev => 
@@ -79,6 +87,7 @@ const CustomerPortal = () => {
         description: "Your order has been located successfully."
       });
     } catch (error) {
+      console.error('Order lookup failed:', error);
       toast({
         title: "Order Not Found",
         description: error instanceof Error ? error.message : "Please check your order number and email address.",
@@ -88,9 +97,11 @@ const CustomerPortal = () => {
   };
 
   const handleGenerateRecommendations = async () => {
-    if (!order || selectedItems.length === 0) return;
+    if (!order || selectedItems.length === 0) {
+      setCurrentStep(4);
+      return;
+    }
 
-    // Get the first selected item and its return reason for AI recommendation
     const firstSelectedItem = order.items.find(item => selectedItems.includes(item.id));
     const returnReason = returnReasons[selectedItems[0]];
 
@@ -102,14 +113,11 @@ const CustomerPortal = () => {
           order.customer_email,
           order.total_amount
         );
-        setCurrentStep(4);
       } catch (error) {
-        // AI failed, but we can still proceed
-        setCurrentStep(4);
+        console.warn('AI recommendations failed, proceeding anyway:', error);
       }
-    } else {
-      setCurrentStep(4);
     }
+    setCurrentStep(4);
   };
 
   const handleSubmitReturn = async () => {
@@ -127,6 +135,7 @@ const CustomerPortal = () => {
         description: "Your return request has been processed successfully."
       });
     } catch (error) {
+      console.error('Return submission failed:', error);
       toast({
         title: "Submission Failed",
         description: error instanceof Error ? error.message : "Failed to submit return request. Please try again.",
@@ -156,19 +165,37 @@ const CustomerPortal = () => {
     }
   };
 
+  const resetPortal = () => {
+    setCurrentStep(1);
+    setOrderNumber('');
+    setEmail('');
+    setSelectedItems([]);
+    setReturnReasons({});
+    setSubmittedReturnId(null);
+    clearError();
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">
       {/* Header */}
       <header className="bg-white border-b border-slate-200 px-4 py-6">
         <div className="max-w-4xl mx-auto">
-          <div className="flex items-center space-x-3">
-            <div className="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center">
-              <Package className="w-5 h-5 text-white" />
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-3">
+              <div className="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center">
+                <Package className="w-5 h-5 text-white" />
+              </div>
+              <div>
+                <h1 className="text-xl font-bold text-slate-900">Returns Automation</h1>
+                <p className="text-sm text-slate-500">Easy Returns Portal</p>
+              </div>
             </div>
-            <div>
-              <h1 className="text-xl font-bold text-slate-900">Returns Automation</h1>
-              <p className="text-sm text-slate-500">Easy Returns Portal</p>
-            </div>
+            {currentStep > 1 && currentStep < 5 && (
+              <Button variant="outline" size="sm" onClick={resetPortal}>
+                <RefreshCw className="w-4 h-4 mr-2" />
+                Start Over
+              </Button>
+            )}
           </div>
         </div>
       </header>
@@ -212,6 +239,14 @@ const CustomerPortal = () => {
 
       {/* Main Content */}
       <main className="max-w-4xl mx-auto px-4 py-8">
+        {/* Global Error Display */}
+        {error && (
+          <Alert variant="destructive" className="mb-6">
+            <AlertTriangle className="h-4 w-4" />
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
+        )}
+
         {/* Step 1: Order Lookup */}
         {currentStep === 1 && (
           <Card className="max-w-lg mx-auto">
@@ -225,17 +260,10 @@ const CustomerPortal = () => {
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              {error && (
-                <Alert variant="destructive">
-                  <AlertTriangle className="h-4 w-4" />
-                  <AlertDescription>{error}</AlertDescription>
-                </Alert>
-              )}
-              
               <Alert>
                 <Info className="h-4 w-4" />
                 <AlertDescription>
-                  This portal works with real order data from your database. Make sure you have actual orders in your system.
+                  Use real order data from your database. Try order numbers like "ORD-2024-3008" with email "sarah.johnson@email.com"
                 </AlertDescription>
               </Alert>
               
@@ -243,7 +271,7 @@ const CustomerPortal = () => {
                 <Label htmlFor="orderNumber">Order Number</Label>
                 <Input
                   id="orderNumber"
-                  placeholder="e.g., ORD-2024-001"
+                  placeholder="e.g., ORD-2024-3008"
                   value={orderNumber}
                   onChange={(e) => setOrderNumber(e.target.value)}
                   className="text-center"
@@ -326,7 +354,7 @@ const CustomerPortal = () => {
                 <Alert>
                   <Info className="h-4 w-4" />
                   <AlertDescription>
-                    No items found for this order. This may indicate the order has no associated items in the database.
+                    No items found for this order. Please contact support if you believe this is an error.
                   </AlertDescription>
                 </Alert>
               )}
@@ -438,8 +466,15 @@ const CustomerPortal = () => {
                   <Button variant="outline" className="mr-3" onClick={handleSubmitReturn}>
                     Just Process Refund
                   </Button>
-                  <Button onClick={handleSubmitReturn}>
-                    Complete Return
+                  <Button onClick={handleSubmitReturn} disabled={loading}>
+                    {loading ? (
+                      <>
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        Processing...
+                      </>
+                    ) : (
+                      'Complete Return'
+                    )}
                   </Button>
                 </div>
               </div>
@@ -492,6 +527,10 @@ const CustomerPortal = () => {
                 <Mail className="w-4 w-4" />
                 <span>Confirmation sent to {email}</span>
               </div>
+
+              <Button onClick={resetPortal} className="mt-6">
+                Process Another Return
+              </Button>
             </CardContent>
           </Card>
         )}
