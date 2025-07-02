@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Progress } from "@/components/ui/progress";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { CheckCircle, Package, Sparkles, ArrowRight, ArrowLeft, Mail, Hash, Loader2, AlertTriangle } from "lucide-react";
+import { CheckCircle, Package, Sparkles, ArrowRight, ArrowLeft, Mail, Hash, Loader2, AlertTriangle, Info } from "lucide-react";
 import { useCustomerPortal } from "@/hooks/useCustomerPortal";
 import { useToast } from "@/hooks/use-toast";
 
@@ -59,7 +59,7 @@ const CustomerPortal = () => {
   const canProceed = () => {
     switch (currentStep) {
       case 1:
-        return orderNumber && email && !loading;
+        return orderNumber.trim() && email.trim() && !loading;
       case 2:
         return selectedItems.length > 0;
       case 3:
@@ -71,7 +71,8 @@ const CustomerPortal = () => {
 
   const handleOrderLookup = async () => {
     try {
-      await lookupOrder(orderNumber, email);
+      clearError();
+      await lookupOrder(orderNumber.trim(), email.trim());
       setCurrentStep(2);
       toast({
         title: "Order Found!",
@@ -80,7 +81,7 @@ const CustomerPortal = () => {
     } catch (error) {
       toast({
         title: "Order Not Found",
-        description: "Please check your order number and email address.",
+        description: error instanceof Error ? error.message : "Please check your order number and email address.",
         variant: "destructive"
       });
     }
@@ -114,8 +115,8 @@ const CustomerPortal = () => {
   const handleSubmitReturn = async () => {
     try {
       const result = await submitReturn({
-        orderNumber,
-        email,
+        orderNumber: orderNumber.trim(),
+        email: email.trim(),
         selectedItems,
         returnReasons
       });
@@ -128,7 +129,7 @@ const CustomerPortal = () => {
     } catch (error) {
       toast({
         title: "Submission Failed",
-        description: "Failed to submit return request. Please try again.",
+        description: error instanceof Error ? error.message : "Failed to submit return request. Please try again.",
         variant: "destructive"
       });
     }
@@ -231,11 +232,18 @@ const CustomerPortal = () => {
                 </Alert>
               )}
               
+              <Alert>
+                <Info className="h-4 w-4" />
+                <AlertDescription>
+                  This portal works with real order data from your database. Make sure you have actual orders in your system.
+                </AlertDescription>
+              </Alert>
+              
               <div className="space-y-2">
                 <Label htmlFor="orderNumber">Order Number</Label>
                 <Input
                   id="orderNumber"
-                  placeholder="e.g., #ORD-2024-001"
+                  placeholder="e.g., ORD-2024-001"
                   value={orderNumber}
                   onChange={(e) => setOrderNumber(e.target.value)}
                   className="text-center"
@@ -282,7 +290,7 @@ const CustomerPortal = () => {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              {order && (
+              {order && order.items.length > 0 ? (
                 <div className="space-y-4">
                   {order.items.map((item) => (
                     <div 
@@ -314,6 +322,13 @@ const CustomerPortal = () => {
                     </div>
                   ))}
                 </div>
+              ) : (
+                <Alert>
+                  <Info className="h-4 w-4" />
+                  <AlertDescription>
+                    No items found for this order. This may indicate the order has no associated items in the database.
+                  </AlertDescription>
+                </Alert>
               )}
             </CardContent>
           </Card>
@@ -448,7 +463,7 @@ const CustomerPortal = () => {
               <div className="bg-slate-50 rounded-lg p-4">
                 <h4 className="font-medium text-slate-900 mb-2">Return Details</h4>
                 <div className="text-sm text-slate-600 space-y-1">
-                  <p><strong>Return ID:</strong> {submittedReturnId || 'RT-2024-001'}</p>
+                  <p><strong>Return ID:</strong> {submittedReturnId}</p>
                   <p><strong>Order:</strong> {order?.shopify_order_id}</p>
                   <p><strong>Items:</strong> {selectedItems.length} item(s)</p>
                   <p><strong>Status:</strong> Processing</p>
