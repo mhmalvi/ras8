@@ -30,13 +30,46 @@ interface N8nResponse {
 export class N8nService {
   private baseUrl: string;
   private apiKey?: string;
+  private configLoaded: boolean = false;
 
   constructor() {
-    this.baseUrl = process.env.N8N_BASE_URL || 'https://n8n.yourserver.com';
-    this.apiKey = process.env.N8N_API_KEY;
+    this.baseUrl = 'https://n8n.yourserver.com'; // Default fallback
+    this.loadConfiguration();
+  }
+
+  private async loadConfiguration() {
+    try {
+      const { data: config, error } = await supabase
+        .from('analytics_events')
+        .select('*')
+        .eq('event_type', 'n8n_configuration')
+        .single();
+
+      if (!error && config?.event_data) {
+        const configData = config.event_data as { n8n_url?: string; api_key?: string };
+        if (configData.n8n_url) {
+          this.baseUrl = configData.n8n_url;
+        }
+        if (configData.api_key) {
+          this.apiKey = configData.api_key;
+        }
+      }
+      this.configLoaded = true;
+    } catch (error) {
+      console.error('Failed to load n8n configuration:', error);
+      this.configLoaded = true; // Set to true to prevent infinite loading
+    }
+  }
+
+  private async ensureConfigLoaded() {
+    if (!this.configLoaded) {
+      await this.loadConfiguration();
+    }
   }
 
   async triggerWorkflow(trigger: N8nWorkflowTrigger): Promise<N8nResponse> {
+    await this.ensureConfigLoaded();
+    
     try {
       console.log('🔄 Triggering n8n workflow via HTTP:', trigger.workflowName);
       console.log('📡 Webhook URL:', trigger.webhookUrl);
@@ -224,7 +257,9 @@ export class N8nService {
   }
 
   async getAutomationRules(): Promise<AutomationRule[]> {
-    // Enhanced automation rules with webhook URLs
+    await this.ensureConfigLoaded();
+    
+    // Enhanced automation rules with webhook URLs using configured base URL
     return [
       {
         id: '1',
@@ -270,6 +305,8 @@ export class N8nService {
   }
 
   async testWebhookConnection(webhookUrl: string): Promise<N8nResponse> {
+    await this.ensureConfigLoaded();
+    
     return await this.triggerWorkflow({
       workflowName: 'connection-test',
       webhookUrl,
