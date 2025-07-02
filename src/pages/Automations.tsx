@@ -9,6 +9,7 @@ import WebhookManager from "@/components/WebhookManager";
 import { Zap, Bot, Mail, Clock, Webhook, Settings } from "lucide-react";
 import { useAutomationRules } from '@/hooks/useAutomationRules';
 import AutomationRuleCard from '@/components/AutomationRuleCard';
+import AutomationSettings from '@/components/AutomationSettings';
 
 const Automations = () => {
   const {
@@ -64,10 +65,11 @@ const Automations = () => {
           <main className="px-6 py-8">
             <div className="max-w-7xl mx-auto">
               <Tabs defaultValue="rules" className="space-y-6">
-                <TabsList className="grid w-full grid-cols-3">
+                <TabsList className="grid w-full grid-cols-4">
                   <TabsTrigger value="rules">Automation Rules</TabsTrigger>
                   <TabsTrigger value="webhooks">Webhook Management</TabsTrigger>
                   <TabsTrigger value="workflows">N8n Workflows</TabsTrigger>
+                  <TabsTrigger value="settings">Configuration</TabsTrigger>
                 </TabsList>
 
                 <TabsContent value="rules" className="space-y-6">
@@ -185,6 +187,52 @@ const Automations = () => {
                         <div className="text-center p-4 bg-purple-50 rounded-lg">
                           <div className="text-2xl font-bold text-purple-600">3</div>
                           <div className="text-sm text-purple-600">Active Workflows</div>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </TabsContent>
+
+                <TabsContent value="settings" className="space-y-6">
+                  <AutomationSettings />
+                  
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>Workflow Templates</CardTitle>
+                      <CardDescription>
+                        Pre-built n8n workflow templates for common automation scenarios
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="grid gap-4">
+                        <div className="p-4 border rounded-lg">
+                          <h4 className="font-medium mb-2">Return Processing Workflow</h4>
+                          <p className="text-sm text-muted-foreground mb-3">
+                            Automatically process returns, send notifications, and update inventory
+                          </p>
+                          <Button variant="outline" size="sm" disabled>
+                            Deploy Template (Coming Soon)
+                          </Button>
+                        </div>
+                        
+                        <div className="p-4 border rounded-lg">
+                          <h4 className="font-medium mb-2">Customer Retention Campaign</h4>
+                          <p className="text-sm text-muted-foreground mb-3">
+                            Send targeted emails to customers with multiple returns
+                          </p>
+                          <Button variant="outline" size="sm" disabled>
+                            Deploy Template (Coming Soon)
+                          </Button>
+                        </div>
+                        
+                        <div className="p-4 border rounded-lg">
+                          <h4 className="font-medium mb-2">Order Sync Workflow</h4>
+                          <p className="text-sm text-muted-foreground mb-3">
+                            Sync Shopify orders and trigger return eligibility checks
+                          </p>
+                          <Button variant="outline" size="sm" disabled>
+                            Deploy Template (Coming Soon)
+                          </Button>
                         </div>
                       </div>
                     </CardContent>
