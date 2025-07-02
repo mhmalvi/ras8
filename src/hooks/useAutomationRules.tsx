@@ -19,6 +19,21 @@ interface AutomationRule {
   actions?: string[];
 }
 
+interface AutomationRuleData {
+  name?: string;
+  description?: string;
+  icon?: string;
+  active?: boolean;
+  trigger?: string;
+  webhookUrl?: string;
+  triggers?: number;
+  lastRun?: string;
+  conditions?: Record<string, any>;
+  actions?: string[];
+  createdAt?: string;
+  updatedAt?: string;
+}
+
 export const useAutomationRules = () => {
   const [rules, setRules] = useState<AutomationRule[]>([]);
   const [loading, setLoading] = useState(false);
@@ -78,19 +93,23 @@ export const useAutomationRules = () => {
         'Clock': Clock
       };
 
-      const formattedRules: AutomationRule[] = rulesData?.map(item => ({
-        id: item.id,
-        name: item.event_data?.name || 'Unnamed Rule',
-        description: item.event_data?.description || '',
-        icon: iconMap[item.event_data?.icon as keyof typeof iconMap] || Zap,
-        active: item.event_data?.active || false,
-        type: item.event_data?.trigger || 'Rule-based',
-        webhookUrl: item.event_data?.webhookUrl,
-        triggers: item.event_data?.triggers || 0,
-        lastRun: item.event_data?.lastRun,
-        conditions: item.event_data?.conditions,
-        actions: item.event_data?.actions
-      })) || [];
+      const formattedRules: AutomationRule[] = rulesData?.map(item => {
+        const eventData = item.event_data as AutomationRuleData;
+        
+        return {
+          id: item.id,
+          name: eventData?.name || 'Unnamed Rule',
+          description: eventData?.description || '',
+          icon: iconMap[eventData?.icon as keyof typeof iconMap] || Zap,
+          active: eventData?.active || false,
+          type: eventData?.trigger || 'Rule-based',
+          webhookUrl: eventData?.webhookUrl,
+          triggers: eventData?.triggers || 0,
+          lastRun: eventData?.lastRun,
+          conditions: eventData?.conditions,
+          actions: eventData?.actions
+        };
+      }) || [];
 
       setRules(formattedRules);
     } catch (error) {
