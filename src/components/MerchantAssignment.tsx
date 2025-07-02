@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Loader2, UserCheck, AlertCircle } from 'lucide-react';
+import { Loader2, UserCheck, AlertCircle, RefreshCw } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -27,6 +27,21 @@ const MerchantAssignment = () => {
 
   useEffect(() => {
     fetchMerchants();
+  }, []);
+
+  // Refresh merchants list when component becomes visible or when sample data might have changed
+  useEffect(() => {
+    const refreshMerchants = () => {
+      console.log('🔄 Refreshing merchants list...');
+      fetchMerchants();
+    };
+    
+    // Listen for focus events to refresh when user comes back to the tab
+    window.addEventListener('focus', refreshMerchants);
+    
+    return () => {
+      window.removeEventListener('focus', refreshMerchants);
+    };
   }, []);
 
   const fetchMerchants = async () => {
@@ -128,7 +143,20 @@ const MerchantAssignment = () => {
         ) : (
           <>
             <div>
-              <label className="text-sm font-medium mb-2 block">Select Merchant</label>
+              <div className="flex items-center justify-between mb-2">
+                <label className="text-sm font-medium">Select Merchant</label>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    setFetchingMerchants(true);
+                    fetchMerchants();
+                  }}
+                  disabled={fetchingMerchants}
+                >
+                  <RefreshCw className={`h-3 w-3 ${fetchingMerchants ? 'animate-spin' : ''}`} />
+                </Button>
+              </div>
               <Select value={selectedMerchant} onValueChange={setSelectedMerchant}>
                 <SelectTrigger>
                   <SelectValue placeholder="Choose a merchant..." />
