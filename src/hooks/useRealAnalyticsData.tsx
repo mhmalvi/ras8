@@ -134,6 +134,20 @@ export const useRealAnalyticsData = () => {
     };
 
     fetchAnalytics();
+    
+    // Listen for profile updates from other components
+    const handleProfileUpdate = () => {
+      console.log('📢 Profile update event received in useRealAnalyticsData');
+      if (profile?.merchant_id) {
+        fetchAnalytics();
+      }
+    };
+    
+    window.addEventListener('profileUpdated', handleProfileUpdate);
+    
+    return () => {
+      window.removeEventListener('profileUpdated', handleProfileUpdate);
+    };
   }, [profile?.merchant_id]);
 
   return {

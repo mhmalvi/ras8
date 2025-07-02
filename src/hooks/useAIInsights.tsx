@@ -117,6 +117,20 @@ export const useAIInsights = () => {
 
   useEffect(() => {
     fetchInsights();
+    
+    // Listen for profile updates from other components
+    const handleProfileUpdate = () => {
+      console.log('📢 Profile update event received in useAIInsights');
+      if (profile?.merchant_id) {
+        fetchInsights();
+      }
+    };
+    
+    window.addEventListener('profileUpdated', handleProfileUpdate);
+    
+    return () => {
+      window.removeEventListener('profileUpdated', handleProfileUpdate);
+    };
   }, [profile?.merchant_id]);
 
   return {
