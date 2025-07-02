@@ -1,4 +1,3 @@
-
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
@@ -8,42 +7,17 @@ import { SidebarProvider, SidebarTrigger, SidebarInset } from "@/components/ui/s
 import { AppSidebar } from "@/components/AppSidebar";
 import WebhookManager from "@/components/WebhookManager";
 import { Zap, Bot, Mail, Clock, Webhook, Settings } from "lucide-react";
+import { useAutomationRules } from '@/hooks/useAutomationRules';
+import AutomationRuleCard from '@/components/AutomationRuleCard';
 
 const Automations = () => {
-  const automations = [
-    {
-      id: "1",
-      name: "Auto-approve returns under $50",
-      description: "Automatically approve return requests for orders under $50",
-      icon: Zap,
-      active: true,
-      type: "Rule-based"
-    },
-    {
-      id: "2",
-      name: "AI-powered exchange suggestions",
-      description: "Use AI to suggest relevant exchange items to customers",
-      icon: Bot,
-      active: true,
-      type: "AI-powered"
-    },
-    {
-      id: "3",
-      name: "Return confirmation emails",
-      description: "Send automatic confirmation emails when returns are processed",
-      icon: Mail,
-      active: false,
-      type: "Communication"
-    },
-    {
-      id: "4",
-      name: "Follow-up reminders",
-      description: "Send reminders for pending return actions after 24 hours",
-      icon: Clock,
-      active: true,
-      type: "Time-based"
-    }
-  ];
+  const {
+    rules,
+    loading,
+    toggleRule,
+    testRule,
+    configureRule
+  } = useAutomationRules();
 
   const n8nWorkflows = [
     {
@@ -100,42 +74,35 @@ const Automations = () => {
                   <Card>
                     <CardHeader>
                       <CardTitle>Automation Rules</CardTitle>
-                      <CardDescription>Configure automated processes to streamline your returns management</CardDescription>
+                      <CardDescription>
+                        Configure automated processes to streamline your returns management
+                      </CardDescription>
                     </CardHeader>
                   </Card>
 
                   <div className="grid gap-6">
-                    {automations.map((automation) => {
-                      const Icon = automation.icon;
-                      return (
-                        <Card key={automation.id}>
-                          <CardContent className="pt-6">
-                            <div className="flex items-center justify-between">
-                              <div className="flex items-center space-x-4">
-                                <div className="p-2 bg-blue-100 rounded-lg">
-                                  <Icon className="h-5 w-5 text-blue-600" />
-                                </div>
-                                <div>
-                                  <h3 className="font-semibold">{automation.name}</h3>
-                                  <p className="text-sm text-slate-500">{automation.description}</p>
-                                  <div className="mt-2">
-                                    <Badge variant="outline" className="text-xs">
-                                      {automation.type}
-                                    </Badge>
-                                  </div>
-                                </div>
-                              </div>
-                              <div className="flex items-center space-x-4">
-                                <Switch checked={automation.active} />
-                                <Button variant="outline" size="sm">
-                                  Configure
-                                </Button>
-                              </div>
-                            </div>
-                          </CardContent>
-                        </Card>
-                      );
-                    })}
+                    {rules.length === 0 ? (
+                      <Card>
+                        <CardContent className="pt-6">
+                          <div className="text-center py-8 text-muted-foreground">
+                            <Zap className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                            <p>No automation rules configured yet</p>
+                            <p className="text-sm">Rules will be automatically loaded from your configuration</p>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    ) : (
+                      rules.map((rule) => (
+                        <AutomationRuleCard
+                          key={rule.id}
+                          rule={rule}
+                          onToggle={toggleRule}
+                          onConfigure={configureRule}
+                          onTest={testRule}
+                          loading={loading}
+                        />
+                      ))
+                    )}
                   </div>
 
                   <Card>
@@ -144,9 +111,9 @@ const Automations = () => {
                       <CardDescription>Set up custom automation rules for your specific needs</CardDescription>
                     </CardHeader>
                     <CardContent>
-                      <Button className="w-full sm:w-auto">
+                      <Button className="w-full sm:w-auto" disabled>
                         <Zap className="h-4 w-4 mr-2" />
-                        Create Automation
+                        Create Automation (Coming Soon)
                       </Button>
                     </CardContent>
                   </Card>
