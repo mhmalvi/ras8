@@ -11,6 +11,7 @@ import CustomerPortal from "./pages/CustomerPortal";
 import Returns from "./pages/Returns";
 import Analytics from "./pages/Analytics";
 import AIInsights from "./pages/AIInsights";
+import Automations from "./pages/Automations";
 import Settings from "./pages/Settings";
 import NotFound from "./pages/NotFound";
 
@@ -46,6 +47,11 @@ const App = () => (
             <Route path="/ai-insights" element={
               <ProtectedRoute>
                 <AIInsights />
+              </ProtectedRoute>
+            } />
+            <Route path="/automations" element={
+              <ProtectedRoute>
+                <Automations />
               </ProtectedRoute>
             } />
             <Route path="/settings" element={
