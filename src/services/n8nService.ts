@@ -75,10 +75,18 @@ export class N8nService {
       console.log('📡 Webhook URL:', trigger.webhookUrl);
       console.log('📦 Payload:', trigger.data);
 
+      // Log the webhook trigger attempt immediately
+      await this.logWebhookActivity({
+        webhookUrl: trigger.webhookUrl,
+        workflowName: trigger.workflowName,
+        payload: trigger.data,
+        status: 'pending'
+      });
+
       const headers = {
         'Content-Type': 'application/json',
         'User-Agent': 'Returns-Automation-SaaS/1.0',
-        ...(this.apiKey && { 'Authorization': `Bearer ${this.apiKey}` }),
+        ...(this.apiKey && { 'X-N8N-API-KEY': this.apiKey }),
         ...trigger.headers
       };
 
@@ -95,6 +103,16 @@ export class N8nService {
       if (!response.ok) {
         const errorText = await response.text();
         console.error('❌ N8n workflow trigger failed:', response.status, errorText);
+        
+        // Log the failure
+        await this.logWebhookActivity({
+          webhookUrl: trigger.webhookUrl,
+          workflowName: trigger.workflowName,
+          payload: trigger.data,
+          status: 'error',
+          error: `HTTP ${response.status}: ${response.statusText}`
+        });
+
         return {
           success: false,
           error: `HTTP ${response.status}: ${response.statusText}`,
@@ -106,7 +124,7 @@ export class N8nService {
       console.log('✅ N8n workflow triggered successfully');
       console.log('📥 Response:', responseData);
 
-      // Log the activity to analytics
+      // Log the success
       await this.logWebhookActivity({
         webhookUrl: trigger.webhookUrl,
         workflowName: trigger.workflowName,
@@ -233,7 +251,7 @@ export class N8nService {
     webhookUrl: string;
     workflowName: string;
     payload: any;
-    status: 'success' | 'error';
+    status: 'success' | 'error' | 'pending';
     response?: any;
     error?: string;
   }) {
@@ -248,7 +266,8 @@ export class N8nService {
             status: activityData.status,
             payload_size: JSON.stringify(activityData.payload).length,
             error: activityData.error,
-            has_response: !!activityData.response
+            has_response: !!activityData.response,
+            timestamp: new Date().toISOString()
           }
         });
     } catch (error) {
