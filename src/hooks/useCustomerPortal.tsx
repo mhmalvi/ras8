@@ -142,6 +142,17 @@ export const useCustomerPortal = () => {
     setError(null);
 
     try {
+      // Get the demo merchant ID for return processing
+      const { data: merchant, error: merchantError } = await supabase
+        .from('merchants')
+        .select('id')
+        .eq('shop_domain', 'demo-store.myshopify.com')
+        .single();
+
+      if (merchantError || !merchant) {
+        throw new Error('Unable to process return at this time. Please try again later.');
+      }
+
       // Create return record
       const { data: returnRecord, error: returnError } = await supabase
         .from('returns')
@@ -151,7 +162,7 @@ export const useCustomerPortal = () => {
           reason: Object.values(returnData.returnReasons).join(', '),
           status: 'requested',
           total_amount: order?.total_amount || 0,
-          merchant_id: null // Will be set by merchant later
+          merchant_id: merchant.id
         })
         .select()
         .single();
