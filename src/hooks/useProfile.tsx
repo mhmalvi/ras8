@@ -55,7 +55,7 @@ export const useProfile = () => {
 
   useEffect(() => {
     fetchProfile();
-  }, [user]);
+  }, [user?.id]); // Fixed: Added specific dependency
 
   const updateProfile = async (updates: Partial<Profile>) => {
     console.log('✏️ Updating profile with:', updates);

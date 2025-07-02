@@ -34,6 +34,32 @@ interface AISuggestion {
   reasoning: string;
 }
 
+// Helper function to execute the returns query and process data
+const fetchReturnsQuery = async (merchantId: string) => {
+  const { data, error } = await supabase
+    .from('returns')
+    .select(`
+      *,
+      return_items (*),
+      ai_suggestions (*)
+    `)
+    .eq('merchant_id', merchantId)
+    .order('created_at', { ascending: false });
+
+  if (error) throw error;
+  
+  // Type assertion to ensure proper typing
+  return (data || []).map(item => ({
+    ...item,
+    status: item.status as 'requested' | 'approved' | 'in_transit' | 'completed',
+    return_items: (item.return_items || []).map((returnItem: any) => ({
+      ...returnItem,
+      action: returnItem.action as 'refund' | 'exchange'
+    })) as ReturnItem[],
+    ai_suggestions: (item.ai_suggestions || []) as AISuggestion[]
+  })) as Return[];
+};
+
 export const useRealReturnsData = () => {
   const { profile } = useProfile();
   const [returns, setReturns] = useState<Return[]>([]);
@@ -55,43 +81,7 @@ export const useRealReturnsData = () => {
         console.log('🚀 Fetching returns for merchant_id:', profile.merchant_id);
         setLoading(true);
         
-        // First, let's check if there are any returns in the database at all
-        const { data: allReturns, error: allReturnsError } = await supabase
-          .from('returns')
-          .select('*');
-        
-        console.log('📊 Total returns in database:', allReturns?.length || 0);
-        if (allReturns?.length) {
-          console.log('📋 All returns merchant IDs:', allReturns.map(r => r.merchant_id));
-        }
-        
-        const { data, error } = await supabase
-          .from('returns')
-          .select(`
-            *,
-            return_items (*),
-            ai_suggestions (*)
-          `)
-          .eq('merchant_id', profile.merchant_id)
-          .order('created_at', { ascending: false });
-
-        console.log('📥 Query result:', { data: data?.length || 0, error });
-        
-        if (error) {
-          console.error('🚨 Supabase error:', error);
-          throw error;
-        }
-        
-        // Type assertion to ensure proper typing
-        const typedData = (data || []).map(item => ({
-          ...item,
-          status: item.status as 'requested' | 'approved' | 'in_transit' | 'completed',
-          return_items: (item.return_items || []).map((returnItem: any) => ({
-            ...returnItem,
-            action: returnItem.action as 'refund' | 'exchange'
-          })) as ReturnItem[],
-          ai_suggestions: (item.ai_suggestions || []) as AISuggestion[]
-        })) as Return[];
+        const typedData = await fetchReturnsQuery(profile.merchant_id);
         
         console.log('✅ Processed returns data:', typedData.length, 'returns');
         console.log('📄 Sample return:', typedData[0]);
@@ -116,28 +106,7 @@ export const useRealReturnsData = () => {
     
     try {
       setLoading(true);
-      const { data, error } = await supabase
-        .from('returns')
-        .select(`
-          *,
-          return_items (*),
-          ai_suggestions (*)
-        `)
-        .eq('merchant_id', profile.merchant_id)
-        .order('created_at', { ascending: false });
-
-      if (error) throw error;
-      
-      // Type assertion to ensure proper typing
-      const typedData = (data || []).map(item => ({
-        ...item,
-        status: item.status as 'requested' | 'approved' | 'in_transit' | 'completed',
-        return_items: (item.return_items || []).map((returnItem: any) => ({
-          ...returnItem,
-          action: returnItem.action as 'refund' | 'exchange'
-        })) as ReturnItem[],
-        ai_suggestions: (item.ai_suggestions || []) as AISuggestion[]
-      })) as Return[];
+      const typedData = await fetchReturnsQuery(profile.merchant_id);
       
       console.log('🔄 Refetch complete:', typedData.length, 'returns');
       setReturns(typedData);
