@@ -98,6 +98,20 @@ export const useRealReturnsData = () => {
     };
 
     fetchReturns();
+    
+    // Listen for profile updates from other components
+    const handleProfileUpdate = () => {
+      console.log('📢 Profile update event received in useRealReturnsData');
+      if (profile?.merchant_id) {
+        fetchReturns();
+      }
+    };
+    
+    window.addEventListener('profileUpdated', handleProfileUpdate);
+    
+    return () => {
+      window.removeEventListener('profileUpdated', handleProfileUpdate);
+    };
   }, [profile?.merchant_id]);
 
   const refetch = async () => {
