@@ -12,13 +12,13 @@ export const createComprehensiveSampleData = async (): Promise<CreateDataResult>
   try {
     console.log('🚀 Starting comprehensive sample data creation...');
 
-    // First, clear any existing sample data to avoid conflicts
-    console.log('🧹 Clearing existing data...');
-    const clearResult = await clearAllSampleData();
-    if (!clearResult.success) {
-      console.warn('⚠️ Warning during data clearing:', clearResult.error);
-      // Continue anyway - clearing issues shouldn't block creation
-    }
+    // Only clear if explicitly requested - don't auto-clear to avoid breaking merchant assignments
+    // console.log('🧹 Clearing existing data...');
+    // const clearResult = await clearAllSampleData();
+    // if (!clearResult.success) {
+    //   console.warn('⚠️ Warning during data clearing:', clearResult.error);
+    //   // Continue anyway - clearing issues shouldn't block creation
+    // }
 
     // Create merchants
     console.log('👥 Creating merchants...');
