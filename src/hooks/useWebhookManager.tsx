@@ -27,6 +27,28 @@ interface WebhookActivity {
   error?: string;
 }
 
+interface WebhookData {
+  name?: string;
+  url?: string;
+  events?: string[];
+  active?: boolean;
+  status?: string;
+  method?: string;
+  headers?: Record<string, string>;
+  lastTriggered?: string;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+interface WebhookActivityData {
+  webhookId?: string;
+  status?: string;
+  payload?: any;
+  response?: any;
+  error?: string;
+  testTriggered?: boolean;
+}
+
 export const useWebhookManager = () => {
   const [webhooks, setWebhooks] = useState<WebhookEndpoint[]>([]);
   const [activities, setActivities] = useState<WebhookActivity[]>([]);
@@ -44,18 +66,22 @@ export const useWebhookManager = () => {
 
       if (error) throw error;
 
-      const formattedWebhooks: WebhookEndpoint[] = webhookData?.map(item => ({
-        id: item.id,
-        name: item.event_data?.name || 'Unnamed Webhook',
-        url: item.event_data?.url || '',
-        events: item.event_data?.events || [],
-        active: item.event_data?.active || false,
-        status: item.event_data?.status || 'inactive',
-        method: item.event_data?.method || 'POST',
-        headers: item.event_data?.headers || {},
-        lastTriggered: item.event_data?.lastTriggered,
-        merchantId: item.merchant_id
-      })) || [];
+      const formattedWebhooks: WebhookEndpoint[] = webhookData?.map(item => {
+        const eventData = item.event_data as WebhookData;
+        
+        return {
+          id: item.id,
+          name: eventData?.name || 'Unnamed Webhook',
+          url: eventData?.url || '',
+          events: eventData?.events || [],
+          active: eventData?.active || false,
+          status: (eventData?.status as 'active' | 'inactive' | 'error') || 'inactive',
+          method: (eventData?.method as 'POST' | 'GET') || 'POST',
+          headers: eventData?.headers || {},
+          lastTriggered: eventData?.lastTriggered,
+          merchantId: item.merchant_id
+        };
+      }) || [];
 
       setWebhooks(formattedWebhooks);
     } catch (error) {
@@ -80,15 +106,19 @@ export const useWebhookManager = () => {
 
       if (error) throw error;
 
-      const formattedActivities: WebhookActivity[] = activityData?.map(item => ({
-        id: item.id,
-        webhookId: item.event_data?.webhookId || '',
-        timestamp: item.created_at || new Date().toISOString(),
-        status: item.event_data?.status || 'pending',
-        payload: item.event_data?.payload || {},
-        response: item.event_data?.response,
-        error: item.event_data?.error
-      })) || [];
+      const formattedActivities: WebhookActivity[] = activityData?.map(item => {
+        const eventData = item.event_data as WebhookActivityData;
+        
+        return {
+          id: item.id,
+          webhookId: eventData?.webhookId || '',
+          timestamp: item.created_at || new Date().toISOString(),
+          status: (eventData?.status as 'success' | 'error' | 'pending') || 'pending',
+          payload: eventData?.payload || {},
+          response: eventData?.response,
+          error: eventData?.error
+        };
+      }) || [];
 
       setActivities(formattedActivities);
     } catch (error) {
