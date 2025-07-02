@@ -53,23 +53,31 @@ const MerchantAssignment = () => {
   const handleAssignMerchant = async () => {
     if (!selectedMerchant || !user) return;
 
+    console.log('🔧 Starting merchant assignment...', { selectedMerchant, userId: user.id });
     setLoading(true);
     try {
+      console.log('📝 Updating profile with merchant_id:', selectedMerchant);
       const { error } = await supabase
         .from('profiles')
         .update({ merchant_id: selectedMerchant })
         .eq('id', user.id);
 
-      if (error) throw error;
+      if (error) {
+        console.error('❌ Profile update error:', error);
+        throw error;
+      }
 
+      console.log('✅ Profile updated successfully, refetching...');
       await refetchProfile();
+      
+      console.log('🔄 Profile refetch complete');
       
       toast({
         title: "Merchant assigned successfully!",
         description: "You can now access the merchant's returns data.",
       });
     } catch (error) {
-      console.error('Error assigning merchant:', error);
+      console.error('💥 Error assigning merchant:', error);
       toast({
         title: "Error assigning merchant",
         description: error instanceof Error ? error.message : 'Unknown error',
