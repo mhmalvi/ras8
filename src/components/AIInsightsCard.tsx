@@ -2,13 +2,13 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Sparkles, ThumbsUp, ThumbsDown, Brain, TrendingUp } from "lucide-react";
+import { Sparkles, ThumbsUp, ThumbsDown, Brain, TrendingUp, AlertCircle, Loader2 } from "lucide-react";
 import { useAIInsights } from "@/hooks/useAIInsights";
 import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
 
 const AIInsightsCard = () => {
-  const { insights, loading, updateInsightFeedback } = useAIInsights();
+  const { insights, loading, error, updateInsightFeedback } = useAIInsights();
   const { toast } = useToast();
   const navigate = useNavigate();
 
@@ -20,6 +20,7 @@ const AIInsightsCard = () => {
         description: accepted ? "Thanks for the positive feedback!" : "We'll improve our recommendations.",
       });
     } catch (error) {
+      console.error('Error submitting feedback:', error);
       toast({
         title: "Error",
         description: "Failed to record feedback. Please try again.",
@@ -30,7 +31,7 @@ const AIInsightsCard = () => {
 
   const getConfidenceBadge = (confidence: number) => {
     if (confidence >= 90) {
-      return <Badge variant="default" className="bg-green-500">High Match</Badge>;
+      return <Badge variant="default" className="bg-green-500 hover:bg-green-600">High Match</Badge>;
     } else if (confidence >= 75) {
       return <Badge variant="outline" className="border-yellow-500 text-yellow-700">Medium Match</Badge>;
     } else {
@@ -38,6 +39,7 @@ const AIInsightsCard = () => {
     }
   };
 
+  // Show recent insights (top 3) for card view
   const recentInsights = insights.slice(0, 3);
   const acceptedInsights = insights.filter(i => i.accepted !== null);
   const acceptanceRate = acceptedInsights.length > 0 
@@ -54,13 +56,28 @@ const AIInsightsCard = () => {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="space-y-3">
-            {[...Array(3)].map((_, i) => (
-              <div key={i} className="animate-pulse">
-                <div className="h-4 bg-slate-200 rounded w-3/4 mb-2"></div>
-                <div className="h-3 bg-slate-200 rounded w-1/2"></div>
-              </div>
-            ))}
+          <div className="flex items-center justify-center py-8">
+            <Loader2 className="h-6 w-6 animate-spin text-purple-600" />
+            <span className="ml-2 text-sm text-slate-600">Loading AI insights...</span>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  if (error) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <AlertCircle className="h-5 w-5 text-red-600" />
+            AI Insights
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="text-center py-6">
+            <p className="text-red-600 text-sm mb-3">Failed to load AI insights</p>
+            <p className="text-xs text-slate-500">{error}</p>
           </div>
         </CardContent>
       </Card>
@@ -106,6 +123,11 @@ const AIInsightsCard = () => {
                     <p className="text-xs text-slate-600 mt-1">
                       {insight.reasoning}
                     </p>
+                    {insight.customer_email && (
+                      <p className="text-xs text-slate-500 mt-1">
+                        Customer: {insight.customer_email}
+                      </p>
+                    )}
                   </div>
                   <div className="ml-4">
                     {getConfidenceBadge(insight.confidence)}
