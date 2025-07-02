@@ -1,5 +1,4 @@
-
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -8,14 +7,30 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Progress } from "@/components/ui/progress";
-import { CheckCircle, Package, Sparkles, ArrowRight, ArrowLeft, Mail, Hash } from "lucide-react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { CheckCircle, Package, Sparkles, ArrowRight, ArrowLeft, Mail, Hash, Loader2, AlertTriangle } from "lucide-react";
+import { useCustomerPortal } from "@/hooks/useCustomerPortal";
+import { useToast } from "@/hooks/use-toast";
 
 const CustomerPortal = () => {
+  const { toast } = useToast();
+  const { 
+    loading, 
+    error, 
+    order, 
+    aiRecommendations, 
+    lookupOrder, 
+    generateAIRecommendations, 
+    submitReturn,
+    clearError 
+  } = useCustomerPortal();
+
   const [currentStep, setCurrentStep] = useState(1);
   const [orderNumber, setOrderNumber] = useState('');
   const [email, setEmail] = useState('');
   const [selectedItems, setSelectedItems] = useState<string[]>([]);
   const [returnReasons, setReturnReasons] = useState<Record<string, string>>({});
+  const [submittedReturnId, setSubmittedReturnId] = useState<string | null>(null);
 
   const steps = [
     { number: 1, title: "Order Lookup", description: "Find your order" },
@@ -23,59 +38,6 @@ const CustomerPortal = () => {
     { number: 3, title: "Return Reason", description: "Tell us why" },
     { number: 4, title: "AI Recommendations", description: "Smart suggestions" },
     { number: 5, title: "Confirmation", description: "All done!" }
-  ];
-
-  const mockOrder = {
-    orderNumber: "#ORD-2024-001",
-    date: "2024-01-10",
-    items: [
-      {
-        id: "1",
-        name: "Wireless Bluetooth Headphones",
-        price: "$129.99",
-        quantity: 1,
-        image: "/placeholder.svg",
-        eligible: true
-      },
-      {
-        id: "2", 
-        name: "USB-C Cable (3ft)",
-        price: "$19.99",
-        quantity: 2,
-        image: "/placeholder.svg",
-        eligible: true
-      },
-      {
-        id: "3",
-        name: "Phone Case - Clear",
-        price: "$24.99",
-        quantity: 1,
-        image: "/placeholder.svg",
-        eligible: false,
-        reason: "Past return window"
-      }
-    ]
-  };
-
-  const aiSuggestions = [
-    {
-      id: "1",
-      original: "Wireless Bluetooth Headphones",
-      suggested: "Premium Wireless Earbuds Pro",
-      reason: "Upgraded model with better battery life",
-      confidence: 94,
-      price: "$149.99",
-      image: "/placeholder.svg"
-    },
-    {
-      id: "2",
-      original: "Wireless Bluetooth Headphones", 
-      suggested: "Noise-Cancelling Headphones",
-      reason: "Enhanced audio experience",
-      confidence: 87,
-      price: "$199.99",
-      image: "/placeholder.svg"
-    }
   ];
 
   const handleItemSelection = (itemId: string) => {
@@ -97,7 +59,7 @@ const CustomerPortal = () => {
   const canProceed = () => {
     switch (currentStep) {
       case 1:
-        return orderNumber && email;
+        return orderNumber && email && !loading;
       case 2:
         return selectedItems.length > 0;
       case 3:
@@ -107,8 +69,81 @@ const CustomerPortal = () => {
     }
   };
 
+  const handleOrderLookup = async () => {
+    try {
+      await lookupOrder(orderNumber, email);
+      setCurrentStep(2);
+      toast({
+        title: "Order Found!",
+        description: "Your order has been located successfully."
+      });
+    } catch (error) {
+      toast({
+        title: "Order Not Found",
+        description: "Please check your order number and email address.",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const handleGenerateRecommendations = async () => {
+    if (!order || selectedItems.length === 0) return;
+
+    // Get the first selected item and its return reason for AI recommendation
+    const firstSelectedItem = order.items.find(item => selectedItems.includes(item.id));
+    const returnReason = returnReasons[selectedItems[0]];
+
+    if (firstSelectedItem && returnReason) {
+      try {
+        await generateAIRecommendations(
+          returnReason,
+          firstSelectedItem.product_name,
+          order.customer_email,
+          order.total_amount
+        );
+        setCurrentStep(4);
+      } catch (error) {
+        // AI failed, but we can still proceed
+        setCurrentStep(4);
+      }
+    } else {
+      setCurrentStep(4);
+    }
+  };
+
+  const handleSubmitReturn = async () => {
+    try {
+      const result = await submitReturn({
+        orderNumber,
+        email,
+        selectedItems,
+        returnReasons
+      });
+      setSubmittedReturnId(result.returnId);
+      setCurrentStep(5);
+      toast({
+        title: "Return Submitted!",
+        description: "Your return request has been processed successfully."
+      });
+    } catch (error) {
+      toast({
+        title: "Submission Failed",
+        description: "Failed to submit return request. Please try again.",
+        variant: "destructive"
+      });
+    }
+  };
+
   const nextStep = () => {
-    if (canProceed() && currentStep < steps.length) {
+    if (!canProceed()) return;
+
+    if (currentStep === 1) {
+      handleOrderLookup();
+    } else if (currentStep === 3) {
+      handleGenerateRecommendations();
+    } else if (currentStep === 4) {
+      handleSubmitReturn();
+    } else if (currentStep < steps.length) {
       setCurrentStep(currentStep + 1);
     }
   };
@@ -116,6 +151,7 @@ const CustomerPortal = () => {
   const prevStep = () => {
     if (currentStep > 1) {
       setCurrentStep(currentStep - 1);
+      clearError();
     }
   };
 
@@ -129,7 +165,7 @@ const CustomerPortal = () => {
               <Package className="w-5 h-5 text-white" />
             </div>
             <div>
-              <h1 className="text-xl font-bold text-slate-900">John's Electronics Store</h1>
+              <h1 className="text-xl font-bold text-slate-900">Returns Automation</h1>
               <p className="text-sm text-slate-500">Easy Returns Portal</p>
             </div>
           </div>
@@ -188,6 +224,13 @@ const CustomerPortal = () => {
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
+              {error && (
+                <Alert variant="destructive">
+                  <AlertTriangle className="h-4 w-4" />
+                  <AlertDescription>{error}</AlertDescription>
+                </Alert>
+              )}
+              
               <div className="space-y-2">
                 <Label htmlFor="orderNumber">Order Number</Label>
                 <Input
@@ -213,8 +256,17 @@ const CustomerPortal = () => {
                 disabled={!canProceed()}
                 className="w-full"
               >
-                Find My Order
-                <ArrowRight className="w-4 h-4 ml-2" />
+                {loading ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Finding Order...
+                  </>
+                ) : (
+                  <>
+                    Find My Order
+                    <ArrowRight className="w-4 h-4 ml-2" />
+                  </>
+                )}
               </Button>
             </CardContent>
           </Card>
@@ -226,45 +278,43 @@ const CustomerPortal = () => {
             <CardHeader>
               <CardTitle>Select Items to Return</CardTitle>
               <CardDescription>
-                Choose which items from order {mockOrder.orderNumber} you'd like to return
+                Choose which items from order {order?.shopify_order_id} you'd like to return
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="space-y-4">
-                {mockOrder.items.map((item) => (
-                  <div 
-                    key={item.id} 
-                    className={`border rounded-lg p-4 transition-all ${
-                      selectedItems.includes(item.id) 
-                        ? 'border-blue-500 bg-blue-50' 
-                        : 'border-slate-200 hover:border-slate-300'
-                    } ${!item.eligible ? 'opacity-50' : 'cursor-pointer'}`}
-                    onClick={() => item.eligible && handleItemSelection(item.id)}
-                  >
-                    <div className="flex items-center space-x-4">
-                      <div className="w-16 h-16 bg-slate-100 rounded-lg flex items-center justify-center">
-                        <Package className="w-8 h-8 text-slate-400" />
-                      </div>
-                      <div className="flex-1">
-                        <h3 className="font-medium text-slate-900">{item.name}</h3>
-                        <p className="text-sm text-slate-500">Quantity: {item.quantity}</p>
-                        <p className="text-sm font-medium text-slate-900">{item.price}</p>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        {!item.eligible ? (
-                          <Badge variant="outline" className="text-red-600 border-red-200">
-                            {item.reason}
-                          </Badge>
-                        ) : selectedItems.includes(item.id) ? (
-                          <Badge className="bg-blue-600">Selected</Badge>
-                        ) : (
-                          <Badge variant="outline">Select</Badge>
-                        )}
+              {order && (
+                <div className="space-y-4">
+                  {order.items.map((item) => (
+                    <div 
+                      key={item.id} 
+                      className={`border rounded-lg p-4 transition-all cursor-pointer ${
+                        selectedItems.includes(item.id) 
+                          ? 'border-blue-500 bg-blue-50' 
+                          : 'border-slate-200 hover:border-slate-300'
+                      }`}
+                      onClick={() => handleItemSelection(item.id)}
+                    >
+                      <div className="flex items-center space-x-4">
+                        <div className="w-16 h-16 bg-slate-100 rounded-lg flex items-center justify-center">
+                          <Package className="w-8 h-8 text-slate-400" />
+                        </div>
+                        <div className="flex-1">
+                          <h3 className="font-medium text-slate-900">{item.product_name}</h3>
+                          <p className="text-sm text-slate-500">Quantity: {item.quantity}</p>
+                          <p className="text-sm font-medium text-slate-900">${item.price}</p>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          {selectedItems.includes(item.id) ? (
+                            <Badge className="bg-blue-600">Selected</Badge>
+                          ) : (
+                            <Badge variant="outline">Select</Badge>
+                          )}
+                        </div>
                       </div>
                     </div>
-                  </div>
-                ))}
-              </div>
+                  ))}
+                </div>
+              )}
             </CardContent>
           </Card>
         )}
@@ -281,7 +331,7 @@ const CustomerPortal = () => {
             <CardContent>
               <div className="space-y-6">
                 {selectedItems.map((itemId) => {
-                  const item = mockOrder.items.find(i => i.id === itemId);
+                  const item = order?.items.find(i => i.id === itemId);
                   return (
                     <div key={itemId} className="border rounded-lg p-4">
                       <div className="flex items-center space-x-3 mb-3">
@@ -289,8 +339,8 @@ const CustomerPortal = () => {
                           <Package className="w-6 h-6 text-slate-400" />
                         </div>
                         <div>
-                          <h4 className="font-medium text-slate-900">{item?.name}</h4>
-                          <p className="text-sm text-slate-500">{item?.price}</p>
+                          <h4 className="font-medium text-slate-900">{item?.product_name}</h4>
+                          <p className="text-sm text-slate-500">${item?.price}</p>
                         </div>
                       </div>
                       <Select onValueChange={(value) => handleReasonChange(itemId, value)}>
@@ -338,17 +388,23 @@ const CustomerPortal = () => {
                   </p>
                 </div>
 
-                {aiSuggestions.map((suggestion) => (
-                  <div key={suggestion.id} className="border rounded-lg p-4 hover:shadow-md transition-shadow">
+                {loading && (
+                  <div className="flex items-center justify-center py-8">
+                    <Loader2 className="h-6 w-6 animate-spin mr-2" />
+                    <span>Generating AI recommendations...</span>
+                  </div>
+                )}
+
+                {aiRecommendations.length > 0 && aiRecommendations.map((suggestion, index) => (
+                  <div key={index} className="border rounded-lg p-4 hover:shadow-md transition-shadow">
                     <div className="flex items-start space-x-4">
                       <div className="w-20 h-20 bg-slate-100 rounded-lg flex items-center justify-center">
                         <Package className="w-10 h-10 text-slate-400" />
                       </div>
                       <div className="flex-1">
-                        <h4 className="font-medium text-slate-900 mb-1">{suggestion.suggested}</h4>
-                        <p className="text-sm text-slate-600 mb-2">{suggestion.reason}</p>
+                        <h4 className="font-medium text-slate-900 mb-1">{suggestion.suggestedProduct}</h4>
+                        <p className="text-sm text-slate-600 mb-2">{suggestion.reasoning}</p>
                         <div className="flex items-center space-x-4">
-                          <span className="text-lg font-bold text-slate-900">{suggestion.price}</span>
                           <Badge variant="outline" className="text-purple-600 border-purple-200">
                             {suggestion.confidence}% match
                           </Badge>
@@ -364,11 +420,11 @@ const CustomerPortal = () => {
                 <Separator />
 
                 <div className="text-center">
-                  <Button variant="outline" className="mr-3">
+                  <Button variant="outline" className="mr-3" onClick={handleSubmitReturn}>
                     Just Process Refund
                   </Button>
-                  <Button>
-                    Continue with Exchange
+                  <Button onClick={handleSubmitReturn}>
+                    Complete Return
                   </Button>
                 </div>
               </div>
@@ -392,8 +448,8 @@ const CustomerPortal = () => {
               <div className="bg-slate-50 rounded-lg p-4">
                 <h4 className="font-medium text-slate-900 mb-2">Return Details</h4>
                 <div className="text-sm text-slate-600 space-y-1">
-                  <p><strong>Return ID:</strong> RT-2024-001</p>
-                  <p><strong>Order:</strong> {mockOrder.orderNumber}</p>
+                  <p><strong>Return ID:</strong> {submittedReturnId || 'RT-2024-001'}</p>
+                  <p><strong>Order:</strong> {order?.shopify_order_id}</p>
                   <p><strong>Items:</strong> {selectedItems.length} item(s)</p>
                   <p><strong>Status:</strong> Processing</p>
                 </div>
@@ -418,7 +474,7 @@ const CustomerPortal = () => {
               </div>
 
               <div className="flex items-center justify-center space-x-2 text-sm text-slate-500">
-                <Mail className="w-4 h-4" />
+                <Mail className="w-4 w-4" />
                 <span>Confirmation sent to {email}</span>
               </div>
             </CardContent>
@@ -432,9 +488,20 @@ const CustomerPortal = () => {
               <ArrowLeft className="w-4 h-4 mr-2" />
               Previous
             </Button>
-            <Button onClick={nextStep} disabled={!canProceed()}>
-              {currentStep === 4 ? 'Complete Return' : 'Continue'}
-              <ArrowRight className="w-4 h-4 ml-2" />
+            <Button onClick={nextStep} disabled={!canProceed() || loading}>
+              {loading ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Processing...
+                </>
+              ) : currentStep === 4 ? (
+                'Complete Return'
+              ) : (
+                <>
+                  Continue
+                  <ArrowRight className="w-4 h-4 ml-2" />
+                </>
+              )}
             </Button>
           </div>
         )}
