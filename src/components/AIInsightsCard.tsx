@@ -5,10 +5,12 @@ import { Button } from "@/components/ui/button";
 import { Sparkles, ThumbsUp, ThumbsDown, Brain, TrendingUp } from "lucide-react";
 import { useAIInsights } from "@/hooks/useAIInsights";
 import { useToast } from "@/hooks/use-toast";
+import { useNavigate } from "react-router-dom";
 
 const AIInsightsCard = () => {
   const { insights, loading, updateInsightFeedback } = useAIInsights();
   const { toast } = useToast();
+  const navigate = useNavigate();
 
   const handleFeedback = async (insightId: string, accepted: boolean) => {
     try {
@@ -37,8 +39,9 @@ const AIInsightsCard = () => {
   };
 
   const recentInsights = insights.slice(0, 3);
-  const acceptanceRate = insights.length > 0 
-    ? (insights.filter(i => i.accepted === true).length / insights.filter(i => i.accepted !== null).length) * 100 
+  const acceptedInsights = insights.filter(i => i.accepted !== null);
+  const acceptanceRate = acceptedInsights.length > 0 
+    ? (insights.filter(i => i.accepted === true).length / acceptedInsights.length) * 100 
     : 0;
 
   if (loading) {
@@ -73,7 +76,7 @@ const AIInsightsCard = () => {
         </CardTitle>
         <CardDescription className="flex items-center gap-4">
           <span>{insights.length} total recommendations</span>
-          {insights.length > 0 && (
+          {acceptedInsights.length > 0 && (
             <div className="flex items-center gap-1">
               <TrendingUp className="h-4 w-4 text-green-600" />
               <span className="text-sm font-medium text-green-600">
@@ -146,7 +149,11 @@ const AIInsightsCard = () => {
             
             {insights.length > 3 && (
               <div className="text-center pt-2">
-                <Button variant="ghost" size="sm">
+                <Button 
+                  variant="ghost" 
+                  size="sm"
+                  onClick={() => navigate('/ai-insights')}
+                >
                   View all {insights.length} insights
                 </Button>
               </div>

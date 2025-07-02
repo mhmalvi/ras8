@@ -39,13 +39,14 @@ export class AIService {
       });
 
       if (error) {
-        throw new Error(`Edge function error: ${error.message}`);
+        console.warn('Edge function error, using fallback:', error.message);
+        return this.getFallbackRecommendation(request);
       }
 
       return {
-        suggestedProduct: data.suggestedProduct,
-        confidence: data.confidence,
-        reasoning: data.reasoning
+        suggestedProduct: data.suggestedProduct || data.suggestion,
+        confidence: data.confidence || 85,
+        reasoning: data.reasoning || 'AI-generated recommendation based on return analysis'
       };
     } catch (error) {
       console.error('AI Service Error:', error);
@@ -101,21 +102,55 @@ REASONING: [brief explanation]
   }
 
   private getFallbackRecommendation(request: AIRecommendationRequest): AIRecommendationResponse {
-    // Fallback logic when AI service is unavailable
-    const fallbackProducts = [
-      'Premium Version',
-      'Enhanced Model',
-      'Alternative Style',
-      'Upgraded Version',
-      'Different Size Option'
-    ];
-
-    const randomProduct = fallbackProducts[Math.floor(Math.random() * fallbackProducts.length)];
+    // Improved fallback logic based on return reason
+    const reasonAnalysis = this.analyzeReturnReason(request.returnReason);
     
     return {
-      suggestedProduct: `${randomProduct} of ${request.productName}`,
+      suggestedProduct: `${reasonAnalysis.suggestedType} ${request.productName}`,
+      confidence: reasonAnalysis.confidence,
+      reasoning: reasonAnalysis.reasoning
+    };
+  }
+
+  private analyzeReturnReason(reason: string): { suggestedType: string; confidence: number; reasoning: string } {
+    const reasonLower = reason.toLowerCase();
+    
+    if (reasonLower.includes('too small') || reasonLower.includes('size')) {
+      return {
+        suggestedType: 'Larger Size',
+        confidence: 85,
+        reasoning: 'Size-related return suggests customer needs a different size option.'
+      };
+    }
+    
+    if (reasonLower.includes('quality') || reasonLower.includes('defective')) {
+      return {
+        suggestedType: 'Premium Quality',
+        confidence: 90,
+        reasoning: 'Quality concerns indicate customer would benefit from a higher-grade product.'
+      };
+    }
+    
+    if (reasonLower.includes('color') || reasonLower.includes('style')) {
+      return {
+        suggestedType: 'Alternative Style',
+        confidence: 80,
+        reasoning: 'Aesthetic preferences suggest offering a different style or color variant.'
+      };
+    }
+    
+    if (reasonLower.includes('too expensive') || reasonLower.includes('price')) {
+      return {
+        suggestedType: 'Budget-Friendly',
+        confidence: 75,
+        reasoning: 'Price sensitivity indicates customer would prefer a more affordable alternative.'
+      };
+    }
+    
+    return {
+      suggestedType: 'Enhanced Version',
       confidence: 75,
-      reasoning: 'Recommendation based on common exchange patterns for similar return reasons.'
+      reasoning: 'Based on common exchange patterns, this alternative should better meet customer needs.'
     };
   }
 }

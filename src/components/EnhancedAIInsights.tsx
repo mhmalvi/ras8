@@ -7,90 +7,23 @@ import { Progress } from "@/components/ui/progress";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Brain, ThumbsUp, ThumbsDown, TrendingUp, Target, AlertCircle, CheckCircle } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast";
-import { supabase } from '@/integrations/supabase/client';
-import { useProfile } from '@/hooks/useProfile';
-
-interface AISuggestion {
-  id: string;
-  return_id: string;
-  customer_email?: string;
-  original_item?: string;
-  suggested_product_name: string;
-  confidence_score: number;
-  reasoning: string;
-  accepted: boolean | null;
-  suggestion_type: string;
-  created_at: string;
-}
+import { useAIInsights } from '@/hooks/useAIInsights';
 
 const EnhancedAIInsights = () => {
   const { toast } = useToast();
-  const { profile } = useProfile();
+  const { insights, loading, error, updateInsightFeedback } = useAIInsights();
   const [feedbackGiven, setFeedbackGiven] = useState<Record<string, boolean>>({});
-  const [aiSuggestions, setAiSuggestions] = useState<AISuggestion[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    const fetchAISuggestions = async () => {
-      if (!profile?.merchant_id) return;
-      
-      try {
-        setLoading(true);
-        
-        // Fetch AI suggestions with related return data
-        const { data: suggestions, error } = await supabase
-          .from('ai_suggestions')
-          .select(`
-            *,
-            returns!inner (
-              id,
-              customer_email,
-              merchant_id
-            )
-          `)
-          .eq('returns.merchant_id', profile.merchant_id)
-          .order('created_at', { ascending: false })
-          .limit(10);
-
-        if (error) {
-          console.error('Error fetching AI suggestions:', error);
-          return;
-        }
-
-        // Transform the data to match our interface
-        const transformedSuggestions: AISuggestion[] = (suggestions || []).map(suggestion => ({
-          id: suggestion.id,
-          return_id: suggestion.return_id,
-          customer_email: (suggestion.returns as any)?.customer_email,
-          suggested_product_name: suggestion.suggested_product_name || 'Unknown Product',
-          confidence_score: suggestion.confidence_score,
-          reasoning: suggestion.reasoning,
-          accepted: suggestion.accepted,
-          suggestion_type: suggestion.suggestion_type,
-          created_at: suggestion.created_at
-        }));
-
-        setAiSuggestions(transformedSuggestions);
-      } catch (error) {
-        console.error('Error fetching AI suggestions:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchAISuggestions();
-  }, [profile?.merchant_id]);
 
   const performanceMetrics = [
     { 
       label: 'AI Accuracy', 
-      value: aiSuggestions.length > 0 ? Math.round(aiSuggestions.reduce((acc, s) => acc + s.confidence_score, 0) / aiSuggestions.length) : 0, 
+      value: insights.length > 0 ? Math.round(insights.reduce((acc, s) => acc + s.confidence, 0) / insights.length) : 0, 
       target: 90, 
       trend: '+2.3%' 
     },
     { 
       label: 'Acceptance Rate', 
-      value: aiSuggestions.length > 0 ? Math.round((aiSuggestions.filter(s => s.accepted === true).length / aiSuggestions.length) * 100) : 0, 
+      value: insights.length > 0 ? Math.round((insights.filter(s => s.accepted === true).length / insights.filter(s => s.accepted !== null).length) * 100) || 0 : 0, 
       target: 85, 
       trend: '+1.8%' 
     },
@@ -110,20 +43,8 @@ const EnhancedAIInsights = () => {
 
   const handleFeedback = async (suggestionId: string, isPositive: boolean) => {
     try {
-      const { error } = await supabase
-        .from('ai_suggestions')
-        .update({ accepted: isPositive })
-        .eq('id', suggestionId);
-
-      if (error) {
-        console.error('Error updating feedback:', error);
-        return;
-      }
-
+      await updateInsightFeedback(suggestionId, isPositive);
       setFeedbackGiven(prev => ({ ...prev, [suggestionId]: true }));
-      setAiSuggestions(prev => prev.map(s => 
-        s.id === suggestionId ? { ...s, accepted: isPositive } : s
-      ));
       
       toast({
         title: "Feedback received",
@@ -167,6 +88,24 @@ const EnhancedAIInsights = () => {
                 <div key={i} className="h-4 bg-gray-200 rounded animate-pulse" />
               ))}
             </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="space-y-6">
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <AlertCircle className="h-5 w-5 text-red-600" />
+              Error Loading AI Insights
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-red-600">{error}</p>
           </CardContent>
         </Card>
       </div>
@@ -223,21 +162,21 @@ const EnhancedAIInsights = () => {
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                {aiSuggestions.length === 0 ? (
+                {insights.length === 0 ? (
                   <div className="text-center py-8 text-slate-500">
                     No AI suggestions available yet. Start processing returns to see AI recommendations.
                   </div>
                 ) : (
-                  aiSuggestions.map((suggestion) => (
+                  insights.map((suggestion) => (
                     <Card key={suggestion.id} className="border-l-4 border-l-purple-500">
                       <CardContent className="pt-4">
                         <div className="flex items-start justify-between mb-3">
                           <div>
                             <div className="flex items-center gap-2 mb-1">
-                              <span className="font-medium">Return #{suggestion.return_id.slice(0, 8)}...</span>
-                              {getConfidenceBadge(suggestion.confidence_score)}
-                              <span className={`text-sm font-medium ${getConfidenceColor(suggestion.confidence_score)}`}>
-                                {suggestion.confidence_score}% confidence
+                              <span className="font-medium">Return #{suggestion.returnId.slice(0, 8)}...</span>
+                              {getConfidenceBadge(suggestion.confidence)}
+                              <span className={`text-sm font-medium ${getConfidenceColor(suggestion.confidence)}`}>
+                                {suggestion.confidence}% confidence
                               </span>
                             </div>
                             <p className="text-sm text-slate-600">{suggestion.customer_email}</p>
@@ -263,7 +202,7 @@ const EnhancedAIInsights = () => {
                         <div className="bg-slate-50 rounded-lg p-4 mb-4">
                           <div>
                             <p className="text-sm font-medium text-slate-700 mb-1">AI Suggested Product</p>
-                            <p className="text-sm font-medium text-green-700">{suggestion.suggested_product_name}</p>
+                            <p className="text-sm font-medium text-green-700">{suggestion.suggestion}</p>
                           </div>
                         </div>
 
@@ -323,39 +262,39 @@ const EnhancedAIInsights = () => {
                   <div className="flex justify-between items-center">
                     <span className="text-sm">High (90%+)</span>
                     <span className="text-sm font-medium">
-                      {aiSuggestions.length > 0 ? 
-                        Math.round((aiSuggestions.filter(s => s.confidence_score >= 90).length / aiSuggestions.length) * 100) : 0}%
+                      {insights.length > 0 ? 
+                        Math.round((insights.filter(s => s.confidence >= 90).length / insights.length) * 100) : 0}%
                     </span>
                   </div>
                   <Progress 
-                    value={aiSuggestions.length > 0 ? 
-                      (aiSuggestions.filter(s => s.confidence_score >= 90).length / aiSuggestions.length) * 100 : 0} 
+                    value={insights.length > 0 ? 
+                      (insights.filter(s => s.confidence >= 90).length / insights.length) * 100 : 0} 
                     className="h-2" 
                   />
                   
                   <div className="flex justify-between items-center">
                     <span className="text-sm">Medium (75-89%)</span>
                     <span className="text-sm font-medium">
-                      {aiSuggestions.length > 0 ? 
-                        Math.round((aiSuggestions.filter(s => s.confidence_score >= 75 && s.confidence_score < 90).length / aiSuggestions.length) * 100) : 0}%
+                      {insights.length > 0 ? 
+                        Math.round((insights.filter(s => s.confidence >= 75 && s.confidence < 90).length / insights.length) * 100) : 0}%
                     </span>
                   </div>
                   <Progress 
-                    value={aiSuggestions.length > 0 ? 
-                      (aiSuggestions.filter(s => s.confidence_score >= 75 && s.confidence_score < 90).length / aiSuggestions.length) * 100 : 0} 
+                    value={insights.length > 0 ? 
+                      (insights.filter(s => s.confidence >= 75 && s.confidence < 90).length / insights.length) * 100 : 0} 
                     className="h-2" 
                   />
                   
                   <div className="flex justify-between items-center">
                     <span className="text-sm">Low (60-74%)</span>
                     <span className="text-sm font-medium">
-                      {aiSuggestions.length > 0 ? 
-                        Math.round((aiSuggestions.filter(s => s.confidence_score >= 60 && s.confidence_score < 75).length / aiSuggestions.length) * 100) : 0}%
+                      {insights.length > 0 ? 
+                        Math.round((insights.filter(s => s.confidence >= 60 && s.confidence < 75).length / insights.length) * 100) : 0}%
                     </span>
                   </div>
                   <Progress 
-                    value={aiSuggestions.length > 0 ? 
-                      (aiSuggestions.filter(s => s.confidence_score >= 60 && s.confidence_score < 75).length / aiSuggestions.length) * 100 : 0} 
+                    value={insights.length > 0 ? 
+                      (insights.filter(s => s.confidence >= 60 && s.confidence < 75).length / insights.length) * 100 : 0} 
                     className="h-2" 
                   />
                 </div>
@@ -371,19 +310,19 @@ const EnhancedAIInsights = () => {
                   <div className="flex justify-between items-center">
                     <span className="text-sm">Suggestions Accepted</span>
                     <span className="text-sm font-medium">
-                      {aiSuggestions.length > 0 ? 
-                        Math.round((aiSuggestions.filter(s => s.accepted === true).length / aiSuggestions.length) * 100) : 0}%
+                      {insights.length > 0 ? 
+                        Math.round((insights.filter(s => s.accepted === true).length / insights.filter(s => s.accepted !== null).length) * 100) || 0 : 0}%
                     </span>
                   </div>
                   <div className="flex justify-between items-center">
                     <span className="text-sm">Total Suggestions</span>
-                    <span className="text-sm font-medium">{aiSuggestions.length}</span>
+                    <span className="text-sm font-medium">{insights.length}</span>
                   </div>
                   <div className="flex justify-between items-center">
                     <span className="text-sm">Avg Confidence</span>
                     <span className="text-sm font-medium">
-                      {aiSuggestions.length > 0 ? 
-                        Math.round(aiSuggestions.reduce((acc, s) => acc + s.confidence_score, 0) / aiSuggestions.length) : 0}%
+                      {insights.length > 0 ? 
+                        Math.round(insights.reduce((acc, s) => acc + s.confidence, 0) / insights.length) : 0}%
                     </span>
                   </div>
                 </div>
@@ -413,11 +352,11 @@ const EnhancedAIInsights = () => {
                 <div className="space-y-2">
                   <div className="flex justify-between items-center">
                     <span className="text-sm">Training Data Points</span>
-                    <span className="text-sm font-medium">{aiSuggestions.length}</span>
+                    <span className="text-sm font-medium">{insights.length}</span>
                   </div>
                   <div className="flex justify-between items-center">
                     <span className="text-sm">Feedback Incorporated</span>
-                    <span className="text-sm font-medium">{aiSuggestions.filter(s => s.accepted !== null).length}</span>
+                    <span className="text-sm font-medium">{insights.filter(s => s.accepted !== null).length}</span>
                   </div>
                   <div className="flex justify-between items-center">
                     <span className="text-sm">Model Status</span>

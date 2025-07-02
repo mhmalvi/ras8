@@ -11,7 +11,9 @@ interface AIInsight {
   confidence: number;
   reasoning: string;
   accepted: boolean | null;
+  suggestion_type: string;
   created_at: string;
+  customer_email?: string;
 }
 
 export const useAIInsights = () => {
@@ -19,6 +21,51 @@ export const useAIInsights = () => {
   const [insights, setInsights] = useState<AIInsight[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const fetchInsights = async () => {
+    if (!profile?.merchant_id) return;
+
+    try {
+      setLoading(true);
+      setError(null);
+
+      // Fetch AI suggestions with related return data
+      const { data: suggestions, error: fetchError } = await supabase
+        .from('ai_suggestions')
+        .select(`
+          *,
+          returns!inner (
+            id,
+            customer_email,
+            merchant_id
+          )
+        `)
+        .eq('returns.merchant_id', profile.merchant_id)
+        .order('created_at', { ascending: false });
+
+      if (fetchError) throw fetchError;
+
+      // Transform the data to match our interface
+      const transformedInsights: AIInsight[] = (suggestions || []).map(suggestion => ({
+        id: suggestion.id,
+        returnId: suggestion.return_id,
+        suggestion: suggestion.suggested_product_name || 'Unknown Product',
+        confidence: Math.round(suggestion.confidence_score * 100),
+        reasoning: suggestion.reasoning,
+        accepted: suggestion.accepted,
+        suggestion_type: suggestion.suggestion_type,
+        created_at: suggestion.created_at,
+        customer_email: (suggestion.returns as any)?.customer_email
+      }));
+
+      setInsights(transformedInsights);
+    } catch (err) {
+      console.error('Error fetching AI insights:', err);
+      setError(err instanceof Error ? err.message : 'Failed to fetch insights');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const generateInsightForReturn = async (returnData: any) => {
     if (!returnData.return_items || returnData.return_items.length === 0) {
@@ -41,7 +88,7 @@ export const useAIInsights = () => {
           return_id: returnData.id,
           suggestion_type: 'product_exchange',
           suggested_product_name: recommendation.suggestedProduct,
-          confidence_score: recommendation.confidence,
+          confidence_score: recommendation.confidence / 100, // Convert to decimal
           reasoning: recommendation.reasoning,
           accepted: null
         })
@@ -49,46 +96,14 @@ export const useAIInsights = () => {
         .single();
 
       if (error) throw error;
+
+      // Refresh insights after creating new one
+      await fetchInsights();
+      
       return data;
     } catch (err) {
       console.error('Error generating AI insight:', err);
       throw err;
-    }
-  };
-
-  const fetchInsights = async () => {
-    if (!profile?.merchant_id) return;
-
-    try {
-      setLoading(true);
-      const { data, error } = await supabase
-        .from('ai_suggestions')
-        .select(`
-          *,
-          returns!inner(merchant_id)
-        `)
-        .eq('returns.merchant_id', profile.merchant_id)
-        .order('created_at', { ascending: false });
-
-      if (error) throw error;
-      
-      const formattedInsights = data.map(item => ({
-        id: item.id,
-        returnId: item.return_id,
-        suggestion: item.suggested_product_name,
-        confidence: item.confidence_score,
-        reasoning: item.reasoning,
-        accepted: item.accepted,
-        created_at: item.created_at
-      }));
-
-      setInsights(formattedInsights);
-      setError(null);
-    } catch (err) {
-      console.error('Error fetching AI insights:', err);
-      setError(err instanceof Error ? err.message : 'Unknown error');
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -115,22 +130,33 @@ export const useAIInsights = () => {
     }
   };
 
+  // Set up real-time subscription for AI suggestions
+  useEffect(() => {
+    if (!profile?.merchant_id) return;
+
+    const channel = supabase
+      .channel('ai-suggestions-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'ai_suggestions'
+        },
+        () => {
+          // Refresh insights when AI suggestions change
+          fetchInsights();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [profile?.merchant_id]);
+
   useEffect(() => {
     fetchInsights();
-    
-    // Listen for profile updates from other components
-    const handleProfileUpdate = () => {
-      console.log('📢 Profile update event received in useAIInsights');
-      if (profile?.merchant_id) {
-        fetchInsights();
-      }
-    };
-    
-    window.addEventListener('profileUpdated', handleProfileUpdate);
-    
-    return () => {
-      window.removeEventListener('profileUpdated', handleProfileUpdate);
-    };
   }, [profile?.merchant_id]);
 
   return {
