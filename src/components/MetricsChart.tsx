@@ -1,31 +1,96 @@
 
+import React from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, PieChart, Pie, Cell } from 'recharts';
+import { useRealAnalyticsData } from "@/hooks/useRealAnalyticsData";
+import { useRealReturnsData } from "@/hooks/useRealReturnsData";
+import { Skeleton } from "@/components/ui/skeleton";
 
 const MetricsChart = () => {
-  const returnsData = [
-    { month: 'Jan', returns: 120, exchanges: 82, refunds: 38 },
-    { month: 'Feb', returns: 145, exchanges: 98, refunds: 47 },
-    { month: 'Mar', returns: 168, exchanges: 115, refunds: 53 },
-    { month: 'Apr', returns: 192, exchanges: 134, refunds: 58 },
-    { month: 'May', returns: 234, exchanges: 162, refunds: 72 },
-    { month: 'Jun', returns: 287, exchanges: 198, refunds: 89 }
-  ];
+  const { analytics, loading, error } = useRealAnalyticsData();
+  const { returns } = useRealReturnsData();
 
-  const reasonsData = [
-    { name: 'Wrong Size', value: 35, color: '#3B82F6' },
-    { name: 'Defective', value: 25, color: '#EF4444' },
-    { name: 'Not as Described', value: 20, color: '#F59E0B' },
-    { name: 'Changed Mind', value: 15, color: '#10B981' },
-    { name: 'Other', value: 5, color: '#6B7280' }
-  ];
+  // Use real trend data from analytics
+  const returnsData = analytics?.monthlyTrends || [];
+  
+  // Calculate return reasons from actual returns data
+  const reasonsData = React.useMemo(() => {
+    if (!returns || returns.length === 0) return [];
+    
+    const reasonCounts: { [key: string]: number } = {};
+    returns.forEach(returnItem => {
+      const reason = returnItem.reason || 'Other';
+      reasonCounts[reason] = (reasonCounts[reason] || 0) + 1;
+    });
+    
+    const total = returns.length;
+    const colors = ['#3B82F6', '#EF4444', '#F59E0B', '#10B981', '#6B7280', '#8B5CF6', '#EC4899'];
+    
+    return Object.entries(reasonCounts)
+      .map(([name, count], index) => ({
+        name,
+        value: Math.round((count / total) * 100),
+        color: colors[index] || '#6B7280'
+      }))
+      .sort((a, b) => b.value - a.value)
+      .slice(0, 6); // Top 6 reasons
+  }, [returns]);
 
+  // Calculate AI performance data from real insights (fallback to static for now)
   const aiPerformanceData = [
     { week: 'Week 1', accuracy: 78, acceptance: 65 },
     { week: 'Week 2', accuracy: 82, acceptance: 71 },
     { week: 'Week 3', accuracy: 85, acceptance: 76 },
     { week: 'Week 4', accuracy: 88, acceptance: 82 }
   ];
+
+  if (loading) {
+    return (
+      <div className="grid gap-6">
+        <Card>
+          <CardHeader>
+            <Skeleton className="h-6 w-32" />
+            <Skeleton className="h-4 w-48" />
+          </CardHeader>
+          <CardContent>
+            <Skeleton className="h-[300px] w-full" />
+          </CardContent>
+        </Card>
+        <div className="grid md:grid-cols-2 gap-6">
+          <Card>
+            <CardHeader>
+              <Skeleton className="h-6 w-32" />
+              <Skeleton className="h-4 w-48" />
+            </CardHeader>
+            <CardContent>
+              <Skeleton className="h-[250px] w-full" />
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader>
+              <Skeleton className="h-6 w-32" />
+              <Skeleton className="h-4 w-48" />
+            </CardHeader>
+            <CardContent>
+              <Skeleton className="h-[250px] w-full" />
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="grid gap-6">
+        <Card>
+          <CardContent className="p-6 text-center">
+            <p className="text-red-600">Error loading analytics data: {error}</p>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="grid gap-6">
