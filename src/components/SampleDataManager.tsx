@@ -39,6 +39,9 @@ const SampleDataManager = () => {
       setDebugInfo(logs);
       
       if (result.success) {
+        // Dispatch custom event to notify other components that sample data was created
+        window.dispatchEvent(new CustomEvent('sampleDataCreated'));
+        
         toast({
           title: "Sample data created successfully!",
           description: `Created ${result.summary.returns} returns across ${result.summary.merchants} merchants with AI suggestions and analytics.`,

@@ -36,11 +36,19 @@ const MerchantAssignment = () => {
       fetchMerchants();
     };
     
+    // Listen for sample data creation events
+    const handleSampleDataCreated = () => {
+      console.log('📢 Sample data created event received, refreshing merchants...');
+      refreshMerchants();
+    };
+    
     // Listen for focus events to refresh when user comes back to the tab
     window.addEventListener('focus', refreshMerchants);
+    window.addEventListener('sampleDataCreated', handleSampleDataCreated);
     
     return () => {
       window.removeEventListener('focus', refreshMerchants);
+      window.removeEventListener('sampleDataCreated', handleSampleDataCreated);
     };
   }, []);
 
