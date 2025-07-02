@@ -73,7 +73,10 @@ const Index = () => {
                     </CardDescription>
                   </CardHeader>
                   <CardContent>
-                    <RealReturnsTable limit={10} />
+                    <RealReturnsTable 
+                      searchTerm=""
+                      statusFilter="all"
+                    />
                   </CardContent>
                 </Card>
               </div>
