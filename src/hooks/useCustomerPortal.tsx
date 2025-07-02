@@ -40,14 +40,14 @@ export const useCustomerPortal = () => {
     try {
       // Find order by shopify_order_id and customer_email
       const { data: orderData, error: orderError } = await supabase
-        .from('returns')
+        .from('orders')
         .select(`
           id,
           shopify_order_id,
           customer_email,
           total_amount,
           created_at,
-          return_items (
+          order_items (
             id,
             product_id,
             product_name,
@@ -70,7 +70,7 @@ export const useCustomerPortal = () => {
         customer_email: orderData.customer_email,
         total_amount: orderData.total_amount,
         created_at: orderData.created_at,
-        items: orderData.return_items.map((item: any) => ({
+        items: orderData.order_items.map((item: any) => ({
           id: item.id,
           product_id: item.product_id,
           product_name: item.product_name,
