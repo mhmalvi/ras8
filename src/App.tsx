@@ -12,6 +12,12 @@ import Analytics from "@/pages/Analytics";
 import AIInsights from "@/pages/AIInsights";
 import Settings from "@/pages/Settings";
 import CustomerPortal from "@/pages/CustomerPortal";
+import Customers from "@/pages/Customers";
+import Products from "@/pages/Products";
+import Performance from "@/pages/Performance";
+import Notifications from "@/pages/Notifications";
+import Automations from "@/pages/Automations";
+import Security from "@/pages/Security";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import GlobalErrorBoundary from "@/components/GlobalErrorBoundary";
 import { AuthProvider } from "@/contexts/AuthContext";
@@ -52,9 +58,39 @@ function App() {
                     <AIInsights />
                   </ProtectedRoute>
                 } />
+                <Route path="/customers" element={
+                  <ProtectedRoute>
+                    <Customers />
+                  </ProtectedRoute>
+                } />
+                <Route path="/products" element={
+                  <ProtectedRoute>
+                    <Products />
+                  </ProtectedRoute>
+                } />
+                <Route path="/performance" element={
+                  <ProtectedRoute>
+                    <Performance />
+                  </ProtectedRoute>
+                } />
                 <Route path="/settings" element={
                   <ProtectedRoute>
                     <Settings />
+                  </ProtectedRoute>
+                } />
+                <Route path="/notifications" element={
+                  <ProtectedRoute>
+                    <Notifications />
+                  </ProtectedRoute>
+                } />
+                <Route path="/automations" element={
+                  <ProtectedRoute>
+                    <Automations />
+                  </ProtectedRoute>
+                } />
+                <Route path="/security" element={
+                  <ProtectedRoute>
+                    <Security />
                   </ProtectedRoute>
                 } />
                 
