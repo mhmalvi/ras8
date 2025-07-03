@@ -1,169 +1,96 @@
 
 import React, { Component, ErrorInfo, ReactNode } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import { AlertTriangle, RefreshCw, Home, Bug } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { AlertTriangle, RefreshCw } from 'lucide-react';
 
 interface Props {
   children: ReactNode;
-  fallback?: ReactNode;
-  level?: 'page' | 'component' | 'global';
 }
 
 interface State {
   hasError: boolean;
   error: Error | null;
   errorInfo: ErrorInfo | null;
-  errorId: string;
 }
 
 class GlobalErrorBoundary extends Component<Props, State> {
-  public state: State = {
-    hasError: false,
-    error: null,
-    errorInfo: null,
-    errorId: ''
-  };
-
-  public static getDerivedStateFromError(error: Error): Partial<State> {
-    return {
-      hasError: true,
-      error,
-      errorId: `error-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
-    };
+  constructor(props: Props) {
+    super(props);
+    this.state = { hasError: false, error: null, errorInfo: null };
   }
 
-  public componentDidCatch(error: Error, errorInfo: ErrorInfo) {
-    console.error(`Error caught by ${this.props.level || 'component'} boundary:`, error, errorInfo);
-    
-    // Log error to monitoring service
-    this.logErrorToService(error, errorInfo);
-    
+  static getDerivedStateFromError(error: Error): State {
+    return { hasError: true, error, errorInfo: null };
+  }
+
+  componentDidCatch(error: Error, errorInfo: ErrorInfo) {
+    console.error('Error caught by boundary:', error, errorInfo);
     this.setState({
       error,
       errorInfo
     });
   }
 
-  private logErrorToService = (error: Error, errorInfo: ErrorInfo) => {
-    // In a real app, send to error monitoring service
-    console.log('Logging error to monitoring service:', {
-      error: error.message,
-      stack: error.stack,
-      componentStack: errorInfo.componentStack,
-      errorId: this.state.errorId,
-      timestamp: new Date().toISOString(),
-      level: this.props.level
-    });
-  };
-
-  private handleReset = () => {
-    this.setState({
-      hasError: false,
-      error: null,
-      errorInfo: null,
-      errorId: ''
-    });
-  };
-
-  private handleReload = () => {
+  handleReload = () => {
     window.location.reload();
   };
 
-  private handleGoHome = () => {
-    window.location.href = '/';
+  handleReset = () => {
+    this.setState({ hasError: false, error: null, errorInfo: null });
   };
 
-  private handleReportError = () => {
-    const errorReport = {
-      errorId: this.state.errorId,
-      message: this.state.error?.message,
-      stack: this.state.error?.stack,
-      timestamp: new Date().toISOString()
-    };
-    
-    // Copy error details to clipboard
-    navigator.clipboard.writeText(JSON.stringify(errorReport, null, 2));
-    alert('Error details copied to clipboard');
-  };
-
-  public render() {
+  render() {
     if (this.state.hasError) {
-      if (this.props.fallback) {
-        return this.props.fallback;
-      }
-
-      const isGlobalLevel = this.props.level === 'global';
-      const isPageLevel = this.props.level === 'page';
-
       return (
-        <div className={`${isGlobalLevel ? 'min-h-screen bg-slate-50 flex items-center justify-center p-4' : 'p-4'}`}>
-          <Card className="w-full max-w-2xl">
-            <CardHeader>
-              <div className="flex items-center space-x-2">
-                <AlertTriangle className="h-6 w-6 text-red-600" />
-                <CardTitle className="text-red-600">
-                  {isGlobalLevel ? 'Application Error' : isPageLevel ? 'Page Error' : 'Component Error'}
-                </CardTitle>
+        <div className="min-h-screen flex items-center justify-center bg-gray-50 p-4">
+          <Card className="max-w-lg w-full">
+            <CardHeader className="text-center">
+              <div className="mx-auto mb-4 h-12 w-12 text-red-500">
+                <AlertTriangle className="h-full w-full" />
               </div>
+              <CardTitle className="text-red-600">Something went wrong</CardTitle>
               <CardDescription>
-                {isGlobalLevel 
-                  ? 'The application encountered an unexpected error'
-                  : isPageLevel 
-                  ? 'This page encountered an error'
-                  : 'This component encountered an error'
-                }
+                We're sorry, but something unexpected happened. Please try refreshing the page.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              <Alert variant="destructive">
-                <AlertTriangle className="h-4 w-4" />
-                <AlertDescription>
-                  <strong>Error ID:</strong> {this.state.errorId}<br />
-                  <strong>Message:</strong> {this.state.error?.message || 'An unknown error occurred'}
-                </AlertDescription>
-              </Alert>
-
-              {process.env.NODE_ENV === 'development' && this.state.errorInfo && (
-                <details className="bg-slate-100 p-4 rounded-lg">
-                  <summary className="cursor-pointer font-medium mb-2">
-                    Error Details (Development)
-                  </summary>
-                  <pre className="text-xs text-slate-700 whitespace-pre-wrap overflow-auto max-h-64">
-                    {this.state.error?.stack}
-                    {'\n\nComponent Stack:'}
-                    {this.state.errorInfo.componentStack}
-                  </pre>
-                </details>
-              )}
-
-              <div className="flex flex-col sm:flex-row gap-3">
-                <Button onClick={this.handleReset} variant="outline" className="flex-1">
-                  <RefreshCw className="h-4 w-4 mr-2" />
+              <div className="flex gap-2 justify-center">
+                <Button onClick={this.handleReload} className="flex items-center gap-2">
+                  <RefreshCw className="h-4 w-4" />
+                  Reload Page
+                </Button>
+                <Button variant="outline" onClick={this.handleReset}>
                   Try Again
                 </Button>
-                {(isGlobalLevel || isPageLevel) && (
-                  <Button onClick={this.handleReload} variant="outline" className="flex-1">
-                    <RefreshCw className="h-4 w-4 mr-2" />
-                    Reload Page
-                  </Button>
-                )}
-                {isGlobalLevel && (
-                  <Button onClick={this.handleGoHome} className="flex-1">
-                    <Home className="h-4 w-4 mr-2" />
-                    Go Home
-                  </Button>
-                )}
-                <Button onClick={this.handleReportError} variant="outline" size="sm">
-                  <Bug className="h-4 w-4 mr-2" />
-                  Copy Error
-                </Button>
               </div>
-
-              <div className="text-sm text-slate-600 text-center pt-4 border-t">
-                If this error persists, please contact support with Error ID: <code>{this.state.errorId}</code>
-              </div>
+              
+              {process.env.NODE_ENV === 'development' && this.state.error && (
+                <details className="mt-4 p-4 bg-gray-100 rounded-lg text-sm">
+                  <summary className="cursor-pointer font-medium">
+                    Error Details (Development Only)
+                  </summary>
+                  <div className="mt-2 space-y-2">
+                    <div>
+                      <strong>Error:</strong> {this.state.error.message}
+                    </div>
+                    <div>
+                      <strong>Stack:</strong>
+                      <pre className="mt-1 text-xs overflow-x-auto">
+                        {this.state.error.stack}
+                      </pre>
+                    </div>
+                    {this.state.errorInfo && (
+                      <div>
+                        <strong>Component Stack:</strong>
+                        <pre className="mt-1 text-xs overflow-x-auto">
+                          {this.state.errorInfo.componentStack}
+                        </pre>
+                      </div>
+                    )}
+                  </div>
+                </details>
+              )}
             </CardContent>
           </Card>
         </div>
