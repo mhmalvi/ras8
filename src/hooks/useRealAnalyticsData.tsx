@@ -29,103 +29,208 @@ export const useRealAnalyticsData = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  const calculateAnalytics = async (merchantId: string) => {
+    try {
+      console.log('🔄 Calculating analytics for merchant:', merchantId);
+      
+      // Fetch returns data with related items and AI suggestions
+      const { data: returns, error: returnsError } = await supabase
+        .from('returns')
+        .select(`
+          *,
+          return_items (*),
+          ai_suggestions (*)
+        `)
+        .eq('merchant_id', merchantId);
+
+      if (returnsError) throw returnsError;
+
+      console.log('📊 Returns data fetched:', returns?.length);
+
+      // Calculate analytics from returns data
+      const totalReturns = returns?.length || 0;
+      let totalRefunds = 0;
+      let totalExchanges = 0;
+      let aiSuggestionsAccepted = 0;
+      let totalAISuggestions = 0;
+      let revenueImpact = 0;
+
+      const returnsByStatus = {
+        requested: 0,
+        approved: 0,
+        in_transit: 0,
+        completed: 0
+      };
+
+      returns?.forEach(returnItem => {
+        // Count by status
+        const status = returnItem.status as keyof typeof returnsByStatus;
+        if (returnsByStatus.hasOwnProperty(status)) {
+          returnsByStatus[status]++;
+        }
+        
+        // Count refunds vs exchanges and calculate revenue impact
+        returnItem.return_items?.forEach((item: any) => {
+          if (item.action === 'refund') {
+            totalRefunds++;
+          } else if (item.action === 'exchange') {
+            totalExchanges++;
+            revenueImpact += Number(item.price) || 0;
+          }
+        });
+
+        // Calculate AI acceptance rate
+        returnItem.ai_suggestions?.forEach((suggestion: any) => {
+          totalAISuggestions++;
+          if (suggestion.accepted === true) {
+            aiSuggestionsAccepted++;
+          }
+        });
+      });
+
+      const aiAcceptanceRate = totalAISuggestions > 0 
+        ? Math.round((aiSuggestionsAccepted / totalAISuggestions) * 100)
+        : 0;
+
+      // Generate monthly trends based on actual data
+      const now = new Date();
+      const monthlyTrends = Array.from({ length: 6 }, (_, i) => {
+        const date = new Date(now.getFullYear(), now.getMonth() - (5 - i), 1);
+        const monthName = date.toLocaleDateString('en-US', { month: 'short' });
+        
+        // Filter returns for this month
+        const monthReturns = returns?.filter(r => {
+          const returnDate = new Date(r.created_at);
+          return returnDate.getMonth() === date.getMonth() && 
+                 returnDate.getFullYear() === date.getFullYear();
+        }) || [];
+
+        const monthlyReturnsCount = monthReturns.length;
+        let monthlyExchanges = 0;
+        let monthlyRefunds = 0;
+
+        monthReturns.forEach(returnItem => {
+          returnItem.return_items?.forEach((item: any) => {
+            if (item.action === 'exchange') {
+              monthlyExchanges++;
+            } else if (item.action === 'refund') {
+              monthlyRefunds++;
+            }
+          });
+        });
+        
+        return {
+          month: monthName,
+          returns: monthlyReturnsCount,
+          exchanges: monthlyExchanges,
+          refunds: monthlyRefunds
+        };
+      });
+
+      return {
+        totalReturns,
+        totalRefunds,
+        totalExchanges,
+        aiAcceptanceRate,
+        revenueImpact,
+        returnsByStatus,
+        monthlyTrends
+      };
+
+    } catch (error) {
+      console.error('Error calculating analytics:', error);
+      throw error;
+    }
+  };
+
   useEffect(() => {
+    console.log('🔍 useRealAnalyticsData: Profile changed:', profile);
+    
     if (!profile?.merchant_id) {
+      console.log('❌ No merchant_id in profile:', profile);
       setAnalytics(null);
       setLoading(false);
       return;
     }
 
-    const fetchAnalytics = async () => {
+    let channel: any;
+
+    const fetchAndSubscribe = async () => {
       try {
         setLoading(true);
         
-        // Fetch returns data
-        const { data: returns, error: returnsError } = await supabase
-          .from('returns')
-          .select(`
-            *,
-            return_items (*),
-            ai_suggestions (*)
-          `)
-          .eq('merchant_id', profile.merchant_id);
-
-        if (returnsError) throw returnsError;
-
-        // Calculate analytics from returns data
-        const totalReturns = returns?.length || 0;
-        let totalRefunds = 0;
-        let totalExchanges = 0;
-        let aiSuggestionsAccepted = 0;
-        let totalAISuggestions = 0;
-        let revenueImpact = 0;
-
-        const returnsByStatus = {
-          requested: 0,
-          approved: 0,
-          in_transit: 0,
-          completed: 0
-        };
-
-        returns?.forEach(returnItem => {
-          // Count by status
-          returnsByStatus[returnItem.status as keyof typeof returnsByStatus]++;
-          
-          // Count refunds vs exchanges and calculate revenue impact
-          returnItem.return_items?.forEach(item => {
-            if (item.action === 'refund') {
-              totalRefunds++;
-            } else if (item.action === 'exchange') {
-              totalExchanges++;
-              revenueImpact += item.price; // Revenue retained through exchange
-            }
-          });
-
-          // Calculate AI acceptance rate
-          returnItem.ai_suggestions?.forEach(suggestion => {
-            totalAISuggestions++;
-            if (suggestion.accepted) {
-              aiSuggestionsAccepted++;
-            }
-          });
-        });
-
-        const aiAcceptanceRate = totalAISuggestions > 0 
-          ? (aiSuggestionsAccepted / totalAISuggestions) * 100 
-          : 0;
-
-        // Generate monthly trends (simplified - last 6 months)
-        const monthlyTrends = Array.from({ length: 6 }, (_, i) => {
-          const date = new Date();
-          date.setMonth(date.getMonth() - i);
-          const monthName = date.toLocaleDateString('en-US', { month: 'short' });
-          
-          // Simple calculation - divide returns across months
-          const monthlyReturns = Math.floor(totalReturns / 6) + Math.floor(Math.random() * 5);
-          const monthlyExchanges = Math.floor(totalExchanges / 6) + Math.floor(Math.random() * 3);
-          const monthlyRefunds = monthlyReturns - monthlyExchanges;
-          
-          return {
-            month: monthName,
-            returns: monthlyReturns,
-            exchanges: Math.max(0, monthlyExchanges),
-            refunds: Math.max(0, monthlyRefunds)
-          };
-        }).reverse();
-
-        setAnalytics({
-          totalReturns,
-          totalRefunds,
-          totalExchanges,
-          aiAcceptanceRate,
-          revenueImpact,
-          returnsByStatus,
-          monthlyTrends
-        });
-        
+        // Calculate initial analytics
+        const analyticsData = await calculateAnalytics(profile.merchant_id);
+        setAnalytics(analyticsData);
         setError(null);
+
+        // Set up real-time subscription for returns changes
+        channel = supabase
+          .channel(`analytics-${profile.merchant_id}`)
+          .on(
+            'postgres_changes',
+            {
+              event: '*',
+              schema: 'public',
+              table: 'returns',
+              filter: `merchant_id=eq.${profile.merchant_id}`
+            },
+            async (payload) => {
+              console.log('📊 Analytics real-time update:', payload.eventType);
+              
+              // Recalculate analytics when returns data changes
+              try {
+                const updatedAnalytics = await calculateAnalytics(profile.merchant_id);
+                setAnalytics(updatedAnalytics);
+              } catch (error) {
+                console.error('Error updating analytics:', error);
+              }
+            }
+          )
+          .on(
+            'postgres_changes',
+            {
+              event: '*',
+              schema: 'public',
+              table: 'return_items',
+            },
+            async (payload) => {
+              console.log('📊 Return items real-time update:', payload.eventType);
+              
+              // Recalculate analytics when return items change
+              try {
+                const updatedAnalytics = await calculateAnalytics(profile.merchant_id);
+                setAnalytics(updatedAnalytics);
+              } catch (error) {
+                console.error('Error updating analytics:', error);
+              }
+            }
+          )
+          .on(
+            'postgres_changes',
+            {
+              event: '*',
+              schema: 'public',
+              table: 'ai_suggestions',
+            },
+            async (payload) => {
+              console.log('🤖 AI suggestions real-time update:', payload.eventType);
+              
+              // Recalculate analytics when AI suggestions change
+              try {
+                const updatedAnalytics = await calculateAnalytics(profile.merchant_id);
+                setAnalytics(updatedAnalytics);
+              } catch (error) {
+                console.error('Error updating analytics:', error);
+              }
+            }
+          )
+          .subscribe((status) => {
+            console.log('📊 Analytics subscription status:', status);
+          });
+
       } catch (err) {
-        console.error('Error fetching analytics:', err);
+        console.error('💥 Error in analytics setup:', err);
         setError(err instanceof Error ? err.message : 'Unknown error');
         setAnalytics(null);
       } finally {
@@ -133,20 +238,25 @@ export const useRealAnalyticsData = () => {
       }
     };
 
-    fetchAnalytics();
+    fetchAndSubscribe();
     
-    // Listen for profile updates from other components
-    const handleProfileUpdate = () => {
-      console.log('📢 Profile update event received in useRealAnalyticsData');
+    // Listen for manual data sync events
+    const handleDataSync = () => {
+      console.log('📢 Data sync event received in useRealAnalyticsData');
       if (profile?.merchant_id) {
-        fetchAnalytics();
+        fetchAndSubscribe();
       }
     };
     
-    window.addEventListener('profileUpdated', handleProfileUpdate);
+    window.addEventListener('dataSync', handleDataSync);
+    window.addEventListener('profileUpdated', handleDataSync);
     
     return () => {
-      window.removeEventListener('profileUpdated', handleProfileUpdate);
+      if (channel) {
+        supabase.removeChannel(channel);
+      }
+      window.removeEventListener('dataSync', handleDataSync);
+      window.removeEventListener('profileUpdated', handleDataSync);
     };
   }, [profile?.merchant_id]);
 
