@@ -10,7 +10,8 @@ import {
   Package,
   TrendingUp,
   Brain,
-  Zap
+  Zap,
+  Shield
 } from "lucide-react";
 import { NavLink, useLocation } from "react-router-dom";
 
@@ -45,6 +46,7 @@ const systemItems = [
   { title: "Settings", url: "/settings", icon: Settings },
   { title: "Notifications", url: "/notifications", icon: Bell },
   { title: "Automations", url: "/automations", icon: Zap },
+  { title: "Security", url: "/security", icon: Shield },
 ];
 
 export function AppSidebar() {

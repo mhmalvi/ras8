@@ -137,6 +137,8 @@ export type Database = {
           plan_type: string | null
           settings: Json | null
           shop_domain: string
+          token_encrypted_at: string | null
+          token_encryption_version: number | null
           updated_at: string | null
         }
         Insert: {
@@ -146,6 +148,8 @@ export type Database = {
           plan_type?: string | null
           settings?: Json | null
           shop_domain: string
+          token_encrypted_at?: string | null
+          token_encryption_version?: number | null
           updated_at?: string | null
         }
         Update: {
@@ -155,6 +159,8 @@ export type Database = {
           plan_type?: string | null
           settings?: Json | null
           shop_domain?: string
+          token_encrypted_at?: string | null
+          token_encryption_version?: number | null
           updated_at?: string | null
         }
         Relationships: []
