@@ -54,13 +54,11 @@ export const useShopifyIntegration = () => {
     if (!merchant) return;
 
     try {
-      // Use proper encrypted token invalidation
-      const encryptedDisconnectedToken = await TokenEncryption.encryptToken('DISCONNECTED');
-      
+      // Fix: Use proper string token instead of object
       const { error } = await supabase
         .from('merchants')
         .update({ 
-          access_token: encryptedDisconnectedToken,
+          access_token: 'DISCONNECTED',
           token_encrypted_at: new Date().toISOString(),
           token_encryption_version: 2,
           updated_at: new Date().toISOString()

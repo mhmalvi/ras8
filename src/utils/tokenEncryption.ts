@@ -18,8 +18,8 @@ export class TokenEncryption {
     );
   }
 
-  // Encrypt sensitive tokens before storage
-  static async encryptToken(token: string): Promise<{ encryptedToken: string; iv: string }> {
+  // Encrypt sensitive tokens before storage - return string for database compatibility
+  static async encryptToken(token: string): Promise<string> {
     try {
       const key = await this.generateKey();
       const iv = window.crypto.getRandomValues(new Uint8Array(12));
@@ -35,14 +35,13 @@ export class TokenEncryption {
         encodedToken
       );
 
-      return {
-        encryptedToken: Array.from(new Uint8Array(encryptedBuffer))
-          .map(b => b.toString(16).padStart(2, '0'))
-          .join(''),
-        iv: Array.from(iv)
-          .map(b => b.toString(16).padStart(2, '0'))
-          .join('')
-      };
+      const encryptedArray = Array.from(new Uint8Array(encryptedBuffer));
+      const ivArray = Array.from(iv);
+      
+      // Combine IV and encrypted data, return as single string
+      const combined = [...ivArray, ...encryptedArray];
+      return combined.map(b => b.toString(16).padStart(2, '0')).join('');
+      
     } catch (error) {
       console.error('Token encryption failed:', error);
       throw new Error('Failed to encrypt token');
@@ -52,19 +51,15 @@ export class TokenEncryption {
   // Store encrypted token with metadata
   static async storeEncryptedToken(merchantId: string, token: string): Promise<void> {
     try {
-      const { encryptedToken } = await this.encryptToken(token);
+      const encryptedToken = await this.encryptToken(token);
       
       const { error } = await supabase
         .from('merchants')
         .update({
           access_token: encryptedToken,
-          // Note: These columns may not exist in current types yet
-          // Will be available after types regeneration
-          ...(process.env.NODE_ENV === 'development' && {
-            token_encrypted_at: new Date().toISOString(),
-            token_encryption_version: 1
-          })
-        } as any)
+          token_encrypted_at: new Date().toISOString(),
+          token_encryption_version: 1
+        })
         .eq('id', merchantId);
 
       if (error) {

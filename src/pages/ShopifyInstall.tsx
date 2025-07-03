@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { ShopifyInstallation } from '@/components/ShopifyInstallation';
+import ShopifyInstallation from '@/components/ShopifyInstallation';
 
 const ShopifyInstall = () => {
   return (
