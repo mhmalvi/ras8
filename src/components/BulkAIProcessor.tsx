@@ -6,7 +6,7 @@ import { Progress } from "@/components/ui/progress";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { PlayCircle, PauseCircle, RotateCcw, Download, Zap, Brain, CheckCircle, XCircle, Clock } from "lucide-react";
+import { PlayCircle, PauseCircle, RotateCcw, Download, Zap, Brain, CheckCircle, XCircle, Clock, AlertCircle } from "lucide-react";
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from "@/hooks/use-toast";
 import { useRealReturnsData } from '@/hooks/useRealReturnsData';
@@ -31,7 +31,7 @@ const BulkAIProcessor = () => {
   const [processingJob, setProcessingJob] = useState<BulkProcessingJob | null>(null);
   const [processingResults, setProcessingResults] = useState<any[]>([]);
 
-  // Filter returns that can be processed (requested status only - fixed the type issue)
+  // Filter returns that can be processed (requested status only)
   const processableReturns = returns.filter(r => 
     r.status === 'requested'
   );
@@ -39,12 +39,16 @@ const BulkAIProcessor = () => {
   const allSelected = selectedReturns.length === processableReturns.length;
   const someSelected = selectedReturns.length > 0;
 
-  console.log('📊 BulkAIProcessor - Returns data:', {
-    totalReturns: returns.length,
-    processableReturns: processableReturns.length,
-    selectedReturns: selectedReturns.length,
-    loading
-  });
+  // Debug logging
+  useEffect(() => {
+    console.log('📊 BulkAIProcessor - Returns data debug:', {
+      totalReturns: returns.length,
+      returnStatuses: returns.map(r => ({ id: r.id, status: r.status, email: r.customer_email })),
+      processableReturns: processableReturns.length,
+      selectedReturns: selectedReturns.length,
+      loading
+    });
+  }, [returns, processableReturns.length, selectedReturns.length, loading]);
 
   const toggleSelectAll = () => {
     if (allSelected) {
@@ -349,6 +353,56 @@ const BulkAIProcessor = () => {
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
+          {/* Debug Information */}
+          {returns.length === 0 ? (
+            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+              <div className="flex items-center gap-2">
+                <AlertCircle className="h-5 w-5 text-yellow-600" />
+                <div>
+                  <h3 className="font-medium text-yellow-800">No Returns Data Found</h3>
+                  <p className="text-sm text-yellow-700">
+                    No returns are currently loaded. This could mean:
+                  </p>
+                  <ul className="text-sm text-yellow-700 mt-2 ml-4 list-disc">
+                    <li>No returns have been created yet</li>
+                    <li>User profile is not properly connected to a merchant</li>
+                    <li>Database connection issue</li>
+                  </ul>
+                  <Button 
+                    onClick={refetch} 
+                    variant="outline" 
+                    size="sm" 
+                    className="mt-3"
+                  >
+                    Retry Loading Data
+                  </Button>
+                </div>
+              </div>
+            </div>
+          ) : returns.length > 0 && processableReturns.length === 0 ? (
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+              <div className="flex items-center gap-2">
+                <AlertCircle className="h-5 w-5 text-blue-600" />
+                <div>
+                  <h3 className="font-medium text-blue-800">No Processable Returns</h3>
+                  <p className="text-sm text-blue-700">
+                    Found {returns.length} returns, but none have status "requested".
+                  </p>
+                  <div className="text-sm text-blue-700 mt-2">
+                    <strong>Current return statuses:</strong>
+                    <ul className="mt-1 ml-4 list-disc">
+                      {[...new Set(returns.map(r => r.status))].map(status => (
+                        <li key={status}>
+                          {status}: {returns.filter(r => r.status === status).length} returns
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                </div>
+              </div>
+            </div>
+          ) : null}
+
           {!processingJob && (
             <>
               <div className="space-y-4">
@@ -392,6 +446,11 @@ const BulkAIProcessor = () => {
                         <Clock className="h-12 w-12 mx-auto mb-4 opacity-50" />
                         <p>No processable returns found.</p>
                         <p className="text-sm">Returns with status 'requested' can be processed.</p>
+                        {returns.length > 0 && (
+                          <p className="text-xs mt-2 text-slate-500">
+                            Total returns loaded: {returns.length}
+                          </p>
+                        )}
                       </div>
                     ) : (
                       <Table>
