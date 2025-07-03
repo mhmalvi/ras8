@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 
 interface N8nWorkflowTrigger {
@@ -177,6 +176,59 @@ export class N8nService {
         }
       }
     });
+  }
+
+  async testWebhookConnection(webhookUrl: string): Promise<N8nResponse> {
+    await this.ensureConfigLoaded();
+    
+    try {
+      console.log('🔗 Testing webhook connection:', webhookUrl);
+
+      const headers = {
+        'Content-Type': 'application/json',
+        'User-Agent': 'Returns-Automation-SaaS/1.0',
+        ...(this.apiKey && { 'X-N8N-API-KEY': this.apiKey })
+      };
+
+      const testPayload = {
+        test: true,
+        timestamp: new Date().toISOString(),
+        source: 'returns-automation-saas-test'
+      };
+
+      const response = await fetch(webhookUrl, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify(testPayload)
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('❌ Webhook connection test failed:', response.status, errorText);
+        
+        return {
+          success: false,
+          error: `HTTP ${response.status}: ${response.statusText}`,
+          data: errorText
+        };
+      }
+
+      const responseData = await response.json().catch(() => ({}));
+      console.log('✅ Webhook connection test successful');
+      console.log('📥 Response:', responseData);
+
+      return {
+        success: true,
+        data: responseData
+      };
+    } catch (error) {
+      console.error('💥 Error testing webhook connection:', error);
+      
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Connection test failed'
+      };
+    }
   }
 
   private async logWebhookActivity(activityData: {

@@ -128,9 +128,13 @@ export class StripeService {
 
   async incrementUsage(merchantId: string): Promise<void> {
     try {
-      const { error } = await supabase.rpc('increment_usage_count', {
-        merchant_id: merchantId
-      });
+      const { error } = await supabase
+        .from('billing_records')
+        .update({ 
+          usage_count: supabase.sql`usage_count + 1`,
+          updated_at: new Date().toISOString()
+        })
+        .eq('merchant_id', merchantId);
 
       if (error) {
         console.error('Error incrementing usage:', error);
