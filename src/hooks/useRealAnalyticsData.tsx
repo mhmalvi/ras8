@@ -43,9 +43,12 @@ export const useRealAnalyticsData = () => {
         `)
         .eq('merchant_id', merchantId);
 
-      if (returnsError) throw returnsError;
+      if (returnsError) {
+        console.error('❌ Error fetching returns:', returnsError);
+        throw returnsError;
+      }
 
-      console.log('📊 Returns data fetched:', returns?.length);
+      console.log('📊 Returns data fetched:', returns?.length || 0, 'returns');
 
       // Calculate analytics from returns data
       const totalReturns = returns?.length || 0;
@@ -127,7 +130,7 @@ export const useRealAnalyticsData = () => {
         };
       });
 
-      return {
+      const analyticsData = {
         totalReturns,
         totalRefunds,
         totalExchanges,
@@ -137,19 +140,29 @@ export const useRealAnalyticsData = () => {
         monthlyTrends
       };
 
+      console.log('📈 Analytics calculated:', {
+        totalReturns,
+        aiAcceptanceRate,
+        revenueImpact,
+        monthlyTrends: monthlyTrends.length
+      });
+
+      return analyticsData;
+
     } catch (error) {
-      console.error('Error calculating analytics:', error);
+      console.error('💥 Error calculating analytics:', error);
       throw error;
     }
   };
 
   useEffect(() => {
-    console.log('🔍 useRealAnalyticsData: Profile changed:', profile);
+    console.log('🔍 useRealAnalyticsData: Profile changed:', profile?.merchant_id);
     
     if (!profile?.merchant_id) {
-      console.log('❌ No merchant_id in profile:', profile);
+      console.log('❌ No merchant_id in profile');
       setAnalytics(null);
       setLoading(false);
+      setError('No merchant profile found');
       return;
     }
 
@@ -158,11 +171,11 @@ export const useRealAnalyticsData = () => {
     const fetchAndSubscribe = async () => {
       try {
         setLoading(true);
+        setError(null);
         
         // Calculate initial analytics
         const analyticsData = await calculateAnalytics(profile.merchant_id);
         setAnalytics(analyticsData);
-        setError(null);
 
         // Set up real-time subscription for returns changes
         channel = supabase
@@ -176,14 +189,13 @@ export const useRealAnalyticsData = () => {
               filter: `merchant_id=eq.${profile.merchant_id}`
             },
             async (payload) => {
-              console.log('📊 Analytics real-time update:', payload.eventType);
+              console.log('📊 Analytics real-time update - returns:', payload.eventType);
               
-              // Recalculate analytics when returns data changes
               try {
                 const updatedAnalytics = await calculateAnalytics(profile.merchant_id);
                 setAnalytics(updatedAnalytics);
               } catch (error) {
-                console.error('Error updating analytics:', error);
+                console.error('❌ Error updating analytics from returns:', error);
               }
             }
           )
@@ -195,14 +207,13 @@ export const useRealAnalyticsData = () => {
               table: 'return_items',
             },
             async (payload) => {
-              console.log('📊 Return items real-time update:', payload.eventType);
+              console.log('📊 Analytics real-time update - return_items:', payload.eventType);
               
-              // Recalculate analytics when return items change
               try {
                 const updatedAnalytics = await calculateAnalytics(profile.merchant_id);
                 setAnalytics(updatedAnalytics);
               } catch (error) {
-                console.error('Error updating analytics:', error);
+                console.error('❌ Error updating analytics from return_items:', error);
               }
             }
           )
@@ -214,14 +225,13 @@ export const useRealAnalyticsData = () => {
               table: 'ai_suggestions',
             },
             async (payload) => {
-              console.log('🤖 AI suggestions real-time update:', payload.eventType);
+              console.log('🤖 Analytics real-time update - ai_suggestions:', payload.eventType);
               
-              // Recalculate analytics when AI suggestions change
               try {
                 const updatedAnalytics = await calculateAnalytics(profile.merchant_id);
                 setAnalytics(updatedAnalytics);
               } catch (error) {
-                console.error('Error updating analytics:', error);
+                console.error('❌ Error updating analytics from ai_suggestions:', error);
               }
             }
           )
@@ -231,7 +241,7 @@ export const useRealAnalyticsData = () => {
 
       } catch (err) {
         console.error('💥 Error in analytics setup:', err);
-        setError(err instanceof Error ? err.message : 'Unknown error');
+        setError(err instanceof Error ? err.message : 'Failed to load analytics');
         setAnalytics(null);
       } finally {
         setLoading(false);
