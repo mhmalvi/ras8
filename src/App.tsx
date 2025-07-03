@@ -11,8 +11,12 @@ import CustomerPortal from "./pages/CustomerPortal";
 import Returns from "./pages/Returns";
 import Analytics from "./pages/Analytics";
 import AIInsights from "./pages/AIInsights";
+import Customers from "./pages/Customers";
+import Products from "./pages/Products";
+import Performance from "./pages/Performance";
 import Automations from "./pages/Automations";
 import Settings from "./pages/Settings";
+import Notifications from "./pages/Notifications";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -49,6 +53,21 @@ const App = () => (
                 <AIInsights />
               </ProtectedRoute>
             } />
+            <Route path="/customers" element={
+              <ProtectedRoute>
+                <Customers />
+              </ProtectedRoute>
+            } />
+            <Route path="/products" element={
+              <ProtectedRoute>
+                <Products />
+              </ProtectedRoute>
+            } />
+            <Route path="/performance" element={
+              <ProtectedRoute>
+                <Performance />
+              </ProtectedRoute>
+            } />
             <Route path="/automations" element={
               <ProtectedRoute>
                 <Automations />
@@ -57,6 +76,11 @@ const App = () => (
             <Route path="/settings" element={
               <ProtectedRoute>
                 <Settings />
+              </ProtectedRoute>
+            } />
+            <Route path="/notifications" element={
+              <ProtectedRoute>
+                <Notifications />
               </ProtectedRoute>
             } />
             
