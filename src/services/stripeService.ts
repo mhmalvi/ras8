@@ -128,10 +128,24 @@ export class StripeService {
 
   async incrementUsage(merchantId: string): Promise<void> {
     try {
+      // First get current usage count
+      const { data: currentRecord, error: fetchError } = await supabase
+        .from('billing_records')
+        .select('usage_count')
+        .eq('merchant_id', merchantId)
+        .single();
+
+      if (fetchError) {
+        console.error('Error fetching current usage:', fetchError);
+        return;
+      }
+
+      const newUsageCount = (currentRecord.usage_count || 0) + 1;
+
       const { error } = await supabase
         .from('billing_records')
         .update({ 
-          usage_count: supabase.sql`usage_count + 1`,
+          usage_count: newUsageCount,
           updated_at: new Date().toISOString()
         })
         .eq('merchant_id', merchantId);
