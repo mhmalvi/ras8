@@ -1,5 +1,6 @@
+
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2?target=deno&no-check'
+import { createClient } from 'https://cdn.skypack.dev/@supabase/supabase-js@2?dts'
 
 // Secure CORS configuration
 const corsHeaders = {
