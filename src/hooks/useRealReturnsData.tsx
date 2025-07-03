@@ -36,6 +36,8 @@ interface AISuggestion {
 
 // Helper function to execute the returns query and process data
 const fetchReturnsQuery = async (merchantId: string) => {
+  console.log('🚀 Fetching returns for merchant_id:', merchantId);
+  
   const { data, error } = await supabase
     .from('returns')
     .select(`
@@ -46,7 +48,12 @@ const fetchReturnsQuery = async (merchantId: string) => {
     .eq('merchant_id', merchantId)
     .order('created_at', { ascending: false });
 
-  if (error) throw error;
+  if (error) {
+    console.error('❌ Error fetching returns:', error);
+    throw error;
+  }
+  
+  console.log('✅ Raw returns data:', data?.length, 'returns');
   
   // Type assertion to ensure proper typing
   return (data || []).map(item => ({
@@ -76,18 +83,85 @@ export const useRealReturnsData = () => {
       return;
     }
 
-    const fetchReturns = async () => {
+    let channel: any;
+
+    const fetchAndSubscribe = async () => {
       try {
-        console.log('🚀 Fetching returns for merchant_id:', profile.merchant_id);
+        console.log('🚀 Setting up real-time returns for merchant:', profile.merchant_id);
         setLoading(true);
         
+        // Fetch initial data
         const typedData = await fetchReturnsQuery(profile.merchant_id);
         
         console.log('✅ Processed returns data:', typedData.length, 'returns');
-        console.log('📄 Sample return:', typedData[0]);
-        
         setReturns(typedData);
         setError(null);
+
+        // Set up real-time subscription
+        channel = supabase
+          .channel(`returns-realtime-${profile.merchant_id}`)
+          .on(
+            'postgres_changes',
+            {
+              event: '*', // Listen to all events
+              schema: 'public',
+              table: 'returns',
+              filter: `merchant_id=eq.${profile.merchant_id}`
+            },
+            async (payload) => {
+              console.log('🔄 Returns real-time update:', payload.eventType, payload);
+              
+              try {
+                // Refetch all data to ensure consistency with related tables
+                const updatedData = await fetchReturnsQuery(profile.merchant_id);
+                setReturns(updatedData);
+              } catch (error) {
+                console.error('Error updating returns from real-time:', error);
+              }
+            }
+          )
+          .on(
+            'postgres_changes',
+            {
+              event: '*',
+              schema: 'public',
+              table: 'return_items'
+            },
+            async (payload) => {
+              console.log('🔄 Return items real-time update:', payload.eventType);
+              
+              // Refetch returns data when return items change
+              try {
+                const updatedData = await fetchReturnsQuery(profile.merchant_id);
+                setReturns(updatedData);
+              } catch (error) {
+                console.error('Error updating returns from return_items change:', error);
+              }
+            }
+          )
+          .on(
+            'postgres_changes',
+            {
+              event: '*',
+              schema: 'public',
+              table: 'ai_suggestions'
+            },
+            async (payload) => {
+              console.log('🤖 AI suggestions real-time update:', payload.eventType);
+              
+              // Refetch returns data when AI suggestions change
+              try {
+                const updatedData = await fetchReturnsQuery(profile.merchant_id);
+                setReturns(updatedData);
+              } catch (error) {
+                console.error('Error updating returns from ai_suggestions change:', error);
+              }
+            }
+          )
+          .subscribe((status) => {
+            console.log('📡 Returns subscription status:', status);
+          });
+
       } catch (err) {
         console.error('💥 Error fetching returns:', err);
         setError(err instanceof Error ? err.message : 'Unknown error');
@@ -97,26 +171,41 @@ export const useRealReturnsData = () => {
       }
     };
 
-    fetchReturns();
+    fetchAndSubscribe();
     
-    // Listen for profile updates from other components
-    const handleProfileUpdate = () => {
-      console.log('📢 Profile update event received in useRealReturnsData');
+    // Listen for manual sync events
+    const handleDataSync = () => {
+      console.log('📢 Data sync event received in useRealReturnsData');
       if (profile?.merchant_id) {
-        fetchReturns();
+        fetchAndSubscribe();
       }
     };
     
+    const handleProfileUpdate = () => {
+      console.log('📢 Profile update event received in useRealReturnsData');
+      if (profile?.merchant_id) {
+        fetchAndSubscribe();
+      }
+    };
+    
+    window.addEventListener('dataSync', handleDataSync);
     window.addEventListener('profileUpdated', handleProfileUpdate);
     
     return () => {
+      if (channel) {
+        supabase.removeChannel(channel);
+      }
+      window.removeEventListener('dataSync', handleDataSync);
       window.removeEventListener('profileUpdated', handleProfileUpdate);
     };
   }, [profile?.merchant_id]);
 
   const refetch = async () => {
-    console.log('🔄 Refetching returns data...');
-    if (!profile?.merchant_id) return;
+    console.log('🔄 Manual refetch requested...');
+    if (!profile?.merchant_id) {
+      console.log('❌ No merchant_id for refetch');
+      return;
+    }
     
     try {
       setLoading(true);
