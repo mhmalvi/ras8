@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -571,7 +570,7 @@ const CustomerCommunicationAutomation = () => {
                 <Alert>
                   <AlertCircle className="h-4 w-4" />
                   <AlertDescription>
-                    Available variables: {{customer_name}}, {{product_name}}, {{return_reason}}, {{order_number}}
+                    Available variables: customer_name, product_name, return_reason, order_number
                   </AlertDescription>
                 </Alert>
               )}
