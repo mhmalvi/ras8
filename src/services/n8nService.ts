@@ -24,6 +24,19 @@ interface RetentionCampaignTrigger {
   inactiveDays: number;
 }
 
+interface AutomationRule {
+  id: string;
+  name: string;
+  description: string;
+  active: boolean;
+  type: string;
+  webhookUrl?: string;
+  triggers?: number;
+  lastRun?: string;
+  conditions?: Record<string, any>;
+  actions?: string[];
+}
+
 export class N8nService {
   private baseUrl: string;
   private apiKey: string;
@@ -172,6 +185,88 @@ export class N8nService {
     } catch (error) {
       console.error('💥 Failed to get workflow status:', error);
       throw error;
+    }
+  }
+
+  async getAutomationRules(): Promise<AutomationRule[]> {
+    try {
+      // Return default automation rules for MVP
+      return [
+        {
+          id: 'auto-approve-small',
+          name: 'Auto-approve returns under $50',
+          description: 'Automatically approve return requests for orders under $50',
+          active: false,
+          type: 'Rule-based',
+          triggers: 0,
+          conditions: { maxAmount: 50 },
+          actions: ['approve', 'notify-customer']
+        },
+        {
+          id: 'ai-exchange-suggest',
+          name: 'AI Exchange Suggestions',
+          description: 'Generate AI-powered exchange recommendations for returned items',
+          active: true,
+          type: 'AI-powered',
+          triggers: 23,
+          lastRun: '2 hours ago',
+          conditions: { hasExchangeableItems: true },
+          actions: ['generate-ai-suggestion', 'notify-merchant']
+        },
+        {
+          id: 'email-followup',
+          name: 'Return Follow-up Emails',
+          description: 'Send follow-up emails to customers about return status',
+          active: true,
+          type: 'Time-based',
+          triggers: 156,
+          lastRun: '1 hour ago',
+          conditions: { statusChanged: true },
+          actions: ['send-email', 'log-communication']
+        }
+      ];
+    } catch (error) {
+      console.error('💥 Failed to get automation rules:', error);
+      return [];
+    }
+  }
+
+  async testWebhookConnection(webhookUrl: string): Promise<{ success: boolean; data?: any; error?: string }> {
+    try {
+      console.log('🧪 Testing webhook connection:', webhookUrl);
+      
+      const response = await fetch(webhookUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          test: true,
+          timestamp: new Date().toISOString(),
+          data: { message: 'Test webhook connection' }
+        })
+      });
+
+      if (!response.ok) {
+        return {
+          success: false,
+          error: `HTTP ${response.status}: ${response.statusText}`
+        };
+      }
+
+      const data = await response.json();
+      console.log('✅ Webhook test successful');
+      
+      return {
+        success: true,
+        data
+      };
+    } catch (error) {
+      console.error('💥 Webhook test failed:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error'
+      };
     }
   }
 

@@ -32,7 +32,7 @@ const MetricCard = ({ title, value, description, trend, icon }: MetricCardProps)
 );
 
 const AnalyticsDashboard = () => {
-  const { data: analytics, loading, error } = useRealAnalyticsData();
+  const { analytics, loading, error } = useRealAnalyticsData();
 
   if (loading) {
     return (
