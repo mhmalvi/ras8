@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -16,6 +15,15 @@ interface ActivityEvent {
   details?: any;
   webhookUrl?: string;
   workflowName?: string;
+}
+
+interface EventData {
+  status?: string;
+  webhook_url?: string;
+  workflow_name?: string;
+  ruleName?: string;
+  error?: string;
+  [key: string]: any;
 }
 
 const RealTimeActivityFeed = () => {
@@ -39,16 +47,19 @@ const RealTimeActivityFeed = () => {
 
       if (error) throw error;
 
-      const formattedActivities: ActivityEvent[] = events?.map(event => ({
-        id: event.id,
-        timestamp: event.created_at || new Date().toISOString(),
-        type: event.event_type as any,
-        status: event.event_data?.status || 'pending',
-        message: getActivityMessage(event.event_type, event.event_data),
-        details: event.event_data,
-        webhookUrl: event.event_data?.webhook_url,
-        workflowName: event.event_data?.workflow_name || event.event_data?.ruleName
-      })) || [];
+      const formattedActivities: ActivityEvent[] = events?.map(event => {
+        const eventData = event.event_data as EventData;
+        return {
+          id: event.id,
+          timestamp: event.created_at || new Date().toISOString(),
+          type: event.event_type as any,
+          status: eventData?.status || 'pending',
+          message: getActivityMessage(event.event_type, eventData),
+          details: eventData,
+          webhookUrl: eventData?.webhook_url,
+          workflowName: eventData?.workflow_name || eventData?.ruleName
+        };
+      }) || [];
 
       setActivities(formattedActivities);
     } catch (error) {
@@ -72,16 +83,17 @@ const RealTimeActivityFeed = () => {
         (payload) => {
           console.log('🔄 Real-time activity update:', payload);
           const newEvent = payload.new;
+          const eventData = newEvent.event_data as EventData;
           
           const newActivity: ActivityEvent = {
             id: newEvent.id,
             timestamp: newEvent.created_at,
             type: newEvent.event_type,
-            status: newEvent.event_data?.status || 'pending',
-            message: getActivityMessage(newEvent.event_type, newEvent.event_data),
-            details: newEvent.event_data,
-            webhookUrl: newEvent.event_data?.webhook_url,
-            workflowName: newEvent.event_data?.workflow_name || newEvent.event_data?.ruleName
+            status: eventData?.status || 'pending',
+            message: getActivityMessage(newEvent.event_type, eventData),
+            details: eventData,
+            webhookUrl: eventData?.webhook_url,
+            workflowName: eventData?.workflow_name || eventData?.ruleName
           };
 
           setActivities(prev => [newActivity, ...prev.slice(0, 19)]);
@@ -97,7 +109,7 @@ const RealTimeActivityFeed = () => {
     };
   };
 
-  const getActivityMessage = (eventType: string, eventData: any) => {
+  const getActivityMessage = (eventType: string, eventData: EventData | null) => {
     switch (eventType) {
       case 'webhook_triggered':
         return `Webhook triggered: ${eventData?.webhook_url || 'Unknown URL'}`;
