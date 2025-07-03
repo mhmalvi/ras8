@@ -1,4 +1,3 @@
-
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
@@ -8,6 +7,7 @@ import { AppSidebar } from "@/components/AppSidebar";
 import { Skeleton } from "@/components/ui/skeleton";
 import { TrendingUp, TrendingDown, Target, Zap, RefreshCw } from "lucide-react";
 import { usePerformanceData } from "@/hooks/usePerformanceData";
+import AIIntegrationStatus from "@/components/AIIntegrationStatus";
 
 const Performance = () => {
   const { performanceData, loading, error, refetch } = usePerformanceData();
@@ -117,7 +117,8 @@ const Performance = () => {
                 </div>
               ) : (
                 <>
-                  <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-2">
+                  {/* Performance Metrics Grid */}
+                  <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-2 mb-6">
                     {metrics.map((metric, index) => (
                       <Card key={index}>
                         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -150,6 +151,18 @@ const Performance = () => {
                     ))}
                   </div>
 
+                  {/* AI Integration Status */}
+                  <div className="mb-6">
+                    <AIIntegrationStatus
+                      aiAcceptanceRate={performanceData ? Math.round(
+                        (performanceData.processingEfficiency.progress + performanceData.exchangeRate.progress) / 2
+                      ) : 0}
+                      processingEfficiency={performanceData?.processingEfficiency.progress || 0}
+                      edgeFunctionsStatus="needs_config"
+                    />
+                  </div>
+
+                  {/* Performance Goals Card */}
                   <Card className="mt-6">
                     <CardHeader>
                       <CardTitle className="flex items-center gap-2">
