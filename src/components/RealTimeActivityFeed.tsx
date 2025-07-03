@@ -36,6 +36,13 @@ const RealTimeActivityFeed = () => {
     setupRealTimeSubscription();
   }, []);
 
+  const validateStatus = (status: string | undefined): 'success' | 'error' | 'pending' => {
+    if (status === 'success' || status === 'error' || status === 'pending') {
+      return status;
+    }
+    return 'pending';
+  };
+
   const loadRecentActivity = async () => {
     try {
       const { data: events, error } = await supabase
@@ -53,7 +60,7 @@ const RealTimeActivityFeed = () => {
           id: event.id,
           timestamp: event.created_at || new Date().toISOString(),
           type: event.event_type as any,
-          status: eventData?.status || 'pending',
+          status: validateStatus(eventData?.status),
           message: getActivityMessage(event.event_type, eventData),
           details: eventData,
           webhookUrl: eventData?.webhook_url,
@@ -89,7 +96,7 @@ const RealTimeActivityFeed = () => {
             id: newEvent.id,
             timestamp: newEvent.created_at,
             type: newEvent.event_type,
-            status: eventData?.status || 'pending',
+            status: validateStatus(eventData?.status),
             message: getActivityMessage(newEvent.event_type, eventData),
             details: eventData,
             webhookUrl: eventData?.webhook_url,
