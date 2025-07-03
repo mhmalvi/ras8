@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { Navigate, useLocation } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -8,177 +8,278 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Loader2 } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
+import { Loader2, ArrowRight, Shield, Users, Zap } from 'lucide-react';
 
 const Auth = () => {
-  const { user, signInWithEmail, signUpWithEmail } = useAuth();
+  const { signInWithEmail, signUpWithEmail } = useAuth();
+  const { toast } = useToast();
+  const navigate = useNavigate();
   const location = useLocation();
-  const [isLoading, setIsLoading] = useState(false);
+  
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState<string | null>(null);
+  
+  const [signInForm, setSignInForm] = useState({
+    email: '',
+    password: ''
+  });
+  
+  const [signUpForm, setSignUpForm] = useState({
+    email: '',
+    password: '',
+    confirmPassword: '',
+    firstName: '',
+    lastName: ''
+  });
 
-  // Redirect if already authenticated
-  if (user) {
-    const from = location.state?.from?.pathname || '/';
-    return <Navigate to={from} replace />;
-  }
+  const from = location.state?.from?.pathname || '/';
 
-  const handleSignIn = async (e: React.FormEvent<HTMLFormElement>) => {
+  const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
-    setIsLoading(true);
+    setLoading(true);
     setError(null);
 
-    const formData = new FormData(e.currentTarget);
-    const email = formData.get('email') as string;
-    const password = formData.get('password') as string;
-
-    const { error } = await signInWithEmail(email, password);
-    
-    if (error) {
-      setError(error.message);
+    try {
+      const { error } = await signInWithEmail(signInForm.email, signInForm.password);
+      
+      if (error) {
+        setError(error.message);
+      } else {
+        toast({
+          title: "Welcome back!",
+          description: "You've successfully signed in.",
+        });
+        navigate(from, { replace: true });
+      }
+    } catch (err) {
+      setError('An unexpected error occurred. Please try again.');
+    } finally {
+      setLoading(false);
     }
-    
-    setIsLoading(false);
   };
 
-  const handleSignUp = async (e: React.FormEvent<HTMLFormElement>) => {
+  const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
-    setIsLoading(true);
+    setLoading(true);
     setError(null);
-    setSuccess(null);
 
-    const formData = new FormData(e.currentTarget);
-    const email = formData.get('email') as string;
-    const password = formData.get('password') as string;
-    const firstName = formData.get('firstName') as string;
-    const lastName = formData.get('lastName') as string;
-
-    const { error } = await signUpWithEmail(email, password, firstName, lastName);
-    
-    if (error) {
-      setError(error.message);
-    } else {
-      setSuccess('Check your email for a confirmation link!');
+    if (signUpForm.password !== signUpForm.confirmPassword) {
+      setError('Passwords do not match');
+      setLoading(false);
+      return;
     }
-    
-    setIsLoading(false);
+
+    if (signUpForm.password.length < 6) {
+      setError('Password must be at least 6 characters long');
+      setLoading(false);
+      return;
+    }
+
+    try {
+      const { error } = await signUpWithEmail(
+        signUpForm.email, 
+        signUpForm.password,
+        signUpForm.firstName,
+        signUpForm.lastName
+      );
+      
+      if (error) {
+        setError(error.message);
+      } else {
+        toast({
+          title: "Account created!",
+          description: "Please check your email to verify your account.",
+        });
+        // Don't navigate immediately - wait for email verification
+      }
+    } catch (err) {
+      setError('An unexpected error occurred. Please try again.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-md w-full">
-        <div className="text-center mb-8">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
+      <div className="max-w-md w-full space-y-6">
+        {/* Header */}
+        <div className="text-center">
+          <div className="mx-auto w-16 h-16 bg-blue-600 rounded-2xl flex items-center justify-center mb-4">
+            <Shield className="h-8 w-8 text-white" />
+          </div>
           <h1 className="text-3xl font-bold text-gray-900">Returns Automation</h1>
-          <p className="text-gray-600 mt-2">AI-powered returns management platform</p>
+          <p className="text-gray-600 mt-2">AI-powered returns management for Shopify stores</p>
         </div>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Welcome</CardTitle>
-            <CardDescription>
-              Sign in to your account or create a new one to get started
+        {/* Features */}
+        <div className="grid grid-cols-3 gap-4 py-4">
+          <div className="text-center">
+            <div className="mx-auto w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center mb-2">
+              <Zap className="h-5 w-5 text-blue-600" />
+            </div>
+            <p className="text-sm font-medium text-gray-700">AI Suggestions</p>
+          </div>
+          <div className="text-center">
+            <div className="mx-auto w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center mb-2">
+              <Users className="h-5 w-5 text-green-600" />
+            </div>
+            <p className="text-sm font-medium text-gray-700">Customer Portal</p>
+          </div>
+          <div className="text-center">
+            <div className="mx-auto w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center mb-2">
+              <Shield className="h-5 w-5 text-purple-600" />
+            </div>
+            <p className="text-sm font-medium text-gray-700">Secure & GDPR</p>
+          </div>
+        </div>
+
+        {/* Auth Form */}
+        <Card className="border-0 shadow-xl">
+          <CardHeader className="pb-4">
+            <CardTitle className="text-xl text-center">Get Started</CardTitle>
+            <CardDescription className="text-center">
+              Sign in to your account or create a new one
             </CardDescription>
           </CardHeader>
           <CardContent>
+            {error && (
+              <Alert variant="destructive" className="mb-4">
+                <AlertDescription>{error}</AlertDescription>
+              </Alert>
+            )}
+
             <Tabs defaultValue="signin" className="w-full">
               <TabsList className="grid w-full grid-cols-2">
                 <TabsTrigger value="signin">Sign In</TabsTrigger>
                 <TabsTrigger value="signup">Sign Up</TabsTrigger>
               </TabsList>
-
-              {error && (
-                <Alert variant="destructive" className="mt-4">
-                  <AlertDescription>{error}</AlertDescription>
-                </Alert>
-              )}
-
-              {success && (
-                <Alert className="mt-4">
-                  <AlertDescription>{success}</AlertDescription>
-                </Alert>
-              )}
-
-              <TabsContent value="signin">
+              
+              <TabsContent value="signin" className="space-y-4 mt-4">
                 <form onSubmit={handleSignIn} className="space-y-4">
-                  <div>
+                  <div className="space-y-2">
                     <Label htmlFor="signin-email">Email</Label>
                     <Input
                       id="signin-email"
-                      name="email"
                       type="email"
-                      required
+                      value={signInForm.email}
+                      onChange={(e) => setSignInForm(prev => ({ ...prev, email: e.target.value }))}
                       placeholder="Enter your email"
+                      required
+                      disabled={loading}
                     />
                   </div>
-                  <div>
+                  <div className="space-y-2">
                     <Label htmlFor="signin-password">Password</Label>
                     <Input
                       id="signin-password"
-                      name="password"
                       type="password"
-                      required
+                      value={signInForm.password}
+                      onChange={(e) => setSignInForm(prev => ({ ...prev, password: e.target.value }))}
                       placeholder="Enter your password"
+                      required
+                      disabled={loading}
                     />
                   </div>
-                  <Button type="submit" className="w-full" disabled={isLoading}>
-                    {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                    Sign In
+                  <Button type="submit" className="w-full" disabled={loading}>
+                    {loading ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Signing in...
+                      </>
+                    ) : (
+                      <>
+                        Sign In
+                        <ArrowRight className="ml-2 h-4 w-4" />
+                      </>
+                    )}
                   </Button>
                 </form>
               </TabsContent>
-
-              <TabsContent value="signup">
+              
+              <TabsContent value="signup" className="space-y-4 mt-4">
                 <form onSubmit={handleSignUp} className="space-y-4">
                   <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <Label htmlFor="firstName">First Name</Label>
+                    <div className="space-y-2">
+                      <Label htmlFor="signup-firstname">First Name</Label>
                       <Input
-                        id="firstName"
-                        name="firstName"
-                        type="text"
-                        placeholder="First name"
+                        id="signup-firstname"
+                        value={signUpForm.firstName}
+                        onChange={(e) => setSignUpForm(prev => ({ ...prev, firstName: e.target.value }))}
+                        placeholder="John"
+                        disabled={loading}
                       />
                     </div>
-                    <div>
-                      <Label htmlFor="lastName">Last Name</Label>
+                    <div className="space-y-2">
+                      <Label htmlFor="signup-lastname">Last Name</Label>
                       <Input
-                        id="lastName"
-                        name="lastName"
-                        type="text"
-                        placeholder="Last name"
+                        id="signup-lastname"
+                        value={signUpForm.lastName}
+                        onChange={(e) => setSignUpForm(prev => ({ ...prev, lastName: e.target.value }))}
+                        placeholder="Doe"
+                        disabled={loading}
                       />
                     </div>
                   </div>
-                  <div>
+                  <div className="space-y-2">
                     <Label htmlFor="signup-email">Email</Label>
                     <Input
                       id="signup-email"
-                      name="email"
                       type="email"
+                      value={signUpForm.email}
+                      onChange={(e) => setSignUpForm(prev => ({ ...prev, email: e.target.value }))}
+                      placeholder="john@example.com"
                       required
-                      placeholder="Enter your email"
+                      disabled={loading}
                     />
                   </div>
-                  <div>
+                  <div className="space-y-2">
                     <Label htmlFor="signup-password">Password</Label>
                     <Input
                       id="signup-password"
-                      name="password"
                       type="password"
+                      value={signUpForm.password}
+                      onChange={(e) => setSignUpForm(prev => ({ ...prev, password: e.target.value }))}
+                      placeholder="At least 6 characters"
                       required
-                      placeholder="Create a password"
-                      minLength={6}
+                      disabled={loading}
                     />
                   </div>
-                  <Button type="submit" className="w-full" disabled={isLoading}>
-                    {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                    Sign Up
+                  <div className="space-y-2">
+                    <Label htmlFor="signup-confirm">Confirm Password</Label>
+                    <Input
+                      id="signup-confirm"
+                      type="password"
+                      value={signUpForm.confirmPassword}
+                      onChange={(e) => setSignUpForm(prev => ({ ...prev, confirmPassword: e.target.value }))}
+                      placeholder="Confirm your password"
+                      required
+                      disabled={loading}
+                    />
+                  </div>
+                  <Button type="submit" className="w-full" disabled={loading}>
+                    {loading ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Creating account...
+                      </>
+                    ) : (
+                      <>
+                        Create Account
+                        <ArrowRight className="ml-2 h-4 w-4" />
+                      </>
+                    )}
                   </Button>
                 </form>
               </TabsContent>
             </Tabs>
           </CardContent>
         </Card>
+
+        {/* Footer */}
+        <div className="text-center text-sm text-gray-500">
+          <p>By signing up, you agree to our Terms of Service and Privacy Policy</p>
+        </div>
       </div>
     </div>
   );
