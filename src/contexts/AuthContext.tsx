@@ -36,6 +36,13 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
         setSession(session);
         setUser(session?.user ?? null);
         setLoading(false);
+        
+        // Check subscription status when user logs in
+        if (event === 'SIGNED_IN' && session?.user) {
+          console.log('🔄 User signed in, checking subscription...');
+          // Trigger subscription check
+          window.dispatchEvent(new CustomEvent('checkSubscription'));
+        }
       }
     );
 
@@ -44,6 +51,12 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
       setSession(session);
       setUser(session?.user ?? null);
       setLoading(false);
+      
+      // Check subscription status for existing session
+      if (session?.user) {
+        console.log('🔄 Existing session found, checking subscription...');
+        window.dispatchEvent(new CustomEvent('checkSubscription'));
+      }
     });
 
     return () => subscription.unsubscribe();

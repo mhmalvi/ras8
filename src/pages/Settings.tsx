@@ -4,7 +4,9 @@ import { SidebarProvider, SidebarTrigger, SidebarInset } from "@/components/ui/s
 import { AppSidebar } from "@/components/AppSidebar";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import EmailNotificationSettings from "@/components/EmailNotificationSettings";
-import { Settings as SettingsIcon, Mail, Shield, Zap } from "lucide-react";
+import SubscriptionPlans from "@/components/SubscriptionPlans";
+import SubscriptionStatus from "@/components/SubscriptionStatus";
+import { Settings as SettingsIcon, Mail, Shield, Zap, CreditCard } from "lucide-react";
 
 const Settings = () => {
   return (
@@ -24,8 +26,12 @@ const Settings = () => {
 
           <main className="px-6 py-8">
             <div className="max-w-4xl mx-auto">
-              <Tabs defaultValue="notifications" className="space-y-6">
-                <TabsList className="grid w-full grid-cols-4">
+              <Tabs defaultValue="billing" className="space-y-6">
+                <TabsList className="grid w-full grid-cols-5">
+                  <TabsTrigger value="billing" className="flex items-center gap-2">
+                    <CreditCard className="h-4 w-4" />
+                    Billing
+                  </TabsTrigger>
                   <TabsTrigger value="notifications" className="flex items-center gap-2">
                     <Mail className="h-4 w-4" />
                     Notifications
@@ -43,6 +49,22 @@ const Settings = () => {
                     Automation
                   </TabsTrigger>
                 </TabsList>
+
+                <TabsContent value="billing" className="space-y-6">
+                  <SubscriptionStatus />
+                  
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>Subscription Plans</CardTitle>
+                      <CardDescription>
+                        Choose the plan that best fits your business needs
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <SubscriptionPlans />
+                    </CardContent>
+                  </Card>
+                </TabsContent>
 
                 <TabsContent value="notifications">
                   <EmailNotificationSettings />
