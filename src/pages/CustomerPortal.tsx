@@ -14,13 +14,12 @@ import { CheckCircle, Package, Mail, ArrowRight } from 'lucide-react';
 
 const CustomerPortal = () => {
   const {
-    orderData,
-    returnData,
+    order,
+    returns,
     loading,
     error,
     lookupOrder,
-    submitReturn,
-    trackReturn
+    submitReturn
   } = useCustomerPortal();
 
   const [lookupForm, setLookupForm] = useState({
@@ -43,23 +42,24 @@ const CustomerPortal = () => {
 
   const handleReturnSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!orderData) return;
+    if (!order) return;
 
     await submitReturn({
-      orderId: orderData.id,
-      reason: returnForm.reason,
-      description: returnForm.description,
-      items: returnForm.selectedItems.map(itemId => ({
-        id: itemId,
-        quantity: 1 // For simplicity, allowing 1 item return
-      }))
+      orderNumber: lookupForm.orderNumber,
+      email: lookupForm.email,
+      selectedItems: returnForm.selectedItems,
+      returnReasons: { general: returnForm.reason }
     });
   };
 
   const handleTrackReturn = async (e: React.FormEvent) => {
     e.preventDefault();
-    await trackReturn(trackingNumber);
+    // For now, just show a message since trackReturn isn't implemented
+    console.log('Tracking return:', trackingNumber);
   };
+
+  // Get the latest return for this order
+  const latestReturn = returns.length > 0 ? returns[0] : null;
 
   return (
     <div className="min-h-screen bg-gray-50 py-8">
@@ -77,7 +77,7 @@ const CustomerPortal = () => {
         )}
 
         {/* Order Lookup */}
-        {!orderData && !returnData && (
+        {!order && !latestReturn && (
           <Card className="mb-8">
             <CardHeader>
               <CardTitle className="flex items-center">
@@ -120,26 +120,26 @@ const CustomerPortal = () => {
         )}
 
         {/* Order Details & Return Form */}
-        {orderData && !returnData && (
+        {order && !latestReturn && (
           <>
             <Card className="mb-8">
               <CardHeader>
                 <CardTitle>Order Details</CardTitle>
-                <CardDescription>Order #{orderData.shopify_order_id}</CardDescription>
+                <CardDescription>Order #{order.shopify_order_id}</CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
                   <div className="flex justify-between">
                     <span className="font-medium">Customer:</span>
-                    <span>{orderData.customer_email}</span>
+                    <span>{order.customer_email}</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="font-medium">Total:</span>
-                    <span>${orderData.total_amount}</span>
+                    <span>${order.total_amount}</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="font-medium">Status:</span>
-                    <Badge variant="secondary">{orderData.status}</Badge>
+                    <Badge variant="secondary">{order.status}</Badge>
                   </div>
                 </div>
               </CardContent>
@@ -196,7 +196,7 @@ const CustomerPortal = () => {
         )}
 
         {/* Return Confirmation */}
-        {returnData && (
+        {latestReturn && (
           <Card className="mb-8">
             <CardHeader>
               <CardTitle className="flex items-center text-green-600">
@@ -211,15 +211,15 @@ const CustomerPortal = () => {
               <div className="space-y-4">
                 <div className="flex justify-between">
                   <span className="font-medium">Return ID:</span>
-                  <span className="font-mono">{returnData.id}</span>
+                  <span className="font-mono">{latestReturn.id}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="font-medium">Status:</span>
-                  <Badge>{returnData.status}</Badge>
+                  <Badge>{latestReturn.status}</Badge>
                 </div>
                 <div className="flex justify-between">
                   <span className="font-medium">Reason:</span>
-                  <span>{returnData.reason}</span>
+                  <span>{latestReturn.reason}</span>
                 </div>
                 
                 <Separator />
