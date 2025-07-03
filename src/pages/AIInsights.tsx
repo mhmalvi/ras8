@@ -1,8 +1,7 @@
 
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { SidebarProvider, SidebarTrigger, SidebarInset } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/AppSidebar";
-import EnhancedAIInsights from "@/components/EnhancedAIInsights";
+import AIInsightsDashboard from "@/components/AIInsightsDashboard";
 
 const AIInsights = () => {
   return (
@@ -15,14 +14,14 @@ const AIInsights = () => {
               <SidebarTrigger />
               <div>
                 <h1 className="text-xl font-semibold text-slate-900">AI Insights</h1>
-                <p className="text-sm text-slate-500">AI-powered recommendations and analytics</p>
+                <p className="text-sm text-slate-500">Advanced AI-powered analytics and recommendations</p>
               </div>
             </div>
           </header>
 
           <main className="px-6 py-8">
             <div className="max-w-7xl mx-auto">
-              <EnhancedAIInsights />
+              <AIInsightsDashboard />
             </div>
           </main>
         </SidebarInset>
