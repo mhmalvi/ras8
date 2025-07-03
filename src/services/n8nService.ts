@@ -1,290 +1,191 @@
+
 import { supabase } from '@/integrations/supabase/client';
 
-interface N8nWorkflowTrigger {
-  workflowName: string;
-  webhookUrl: string;
-  data: Record<string, any>;
-  method?: 'POST' | 'GET';
-  headers?: Record<string, string>;
-}
-
-interface AutomationRule {
+interface N8nWorkflowExecution {
   id: string;
-  name: string;
-  description: string;
-  trigger: string;
-  conditions: Record<string, any>;
-  actions: string[];
-  active: boolean;
-  webhookUrl?: string;
+  workflowId: string;
+  status: 'running' | 'success' | 'failed';
+  data?: any;
+  startedAt: string;
+  finishedAt?: string;
 }
 
-interface N8nResponse {
-  success: boolean;
-  data?: any;
-  error?: string;
-  executionId?: string;
+interface N8nWebhookPayload {
+  event: string;
+  data: any;
+  timestamp: string;
+}
+
+interface RetentionCampaignTrigger {
+  customerId: string;
+  customerEmail: string;
+  lastOrderDate: string;
+  orderValue: number;
+  inactiveDays: number;
 }
 
 export class N8nService {
   private baseUrl: string;
-  private apiKey?: string;
-  private configLoaded: boolean = false;
+  private apiKey: string;
 
   constructor() {
-    this.baseUrl = 'https://n8n.yourserver.com'; // Default fallback
-    this.loadConfiguration();
+    this.baseUrl = process.env.N8N_BASE_URL || 'http://localhost:5678';
+    this.apiKey = process.env.N8N_API_KEY || '';
   }
 
-  private async loadConfiguration() {
+  async triggerRetentionCampaign(data: RetentionCampaignTrigger): Promise<N8nWorkflowExecution> {
     try {
-      const { data: config, error } = await supabase
-        .from('analytics_events')
-        .select('*')
-        .eq('event_type', 'n8n_configuration')
-        .single();
-
-      if (!error && config?.event_data) {
-        const configData = config.event_data as { n8n_url?: string; api_key?: string };
-        if (configData.n8n_url) {
-          this.baseUrl = configData.n8n_url;
-        }
-        if (configData.api_key) {
-          this.apiKey = configData.api_key;
-        }
-      }
-      this.configLoaded = true;
-    } catch (error) {
-      console.error('Failed to load n8n configuration:', error);
-      this.configLoaded = true; // Set to true to prevent infinite loading
-    }
-  }
-
-  private async ensureConfigLoaded() {
-    if (!this.configLoaded) {
-      await this.loadConfiguration();
-    }
-  }
-
-  async triggerWorkflow(trigger: N8nWorkflowTrigger): Promise<N8nResponse> {
-    await this.ensureConfigLoaded();
-    
-    try {
-      console.log('🔄 Triggering n8n workflow via HTTP:', trigger.workflowName);
-      console.log('📡 Webhook URL:', trigger.webhookUrl);
-      console.log('📦 Payload:', trigger.data);
-
-      // Log the webhook trigger attempt immediately
-      await this.logWebhookActivity({
-        webhookUrl: trigger.webhookUrl,
-        workflowName: trigger.workflowName,
-        payload: trigger.data,
-        status: 'pending'
-      });
-
-      const headers = {
-        'Content-Type': 'application/json',
-        'User-Agent': 'Returns-Automation-SaaS/1.0',
-        ...(this.apiKey && { 'X-N8N-API-KEY': this.apiKey }),
-        ...trigger.headers
-      };
-
-      const response = await fetch(trigger.webhookUrl, {
-        method: trigger.method || 'POST',
-        headers,
+      console.log('🔄 Triggering retention campaign for:', data.customerEmail);
+      
+      const response = await fetch(`${this.baseUrl}/api/v1/workflows/retention-campaign/execute`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${this.apiKey}`
+        },
         body: JSON.stringify({
-          ...trigger.data,
-          timestamp: new Date().toISOString(),
-          source: 'returns-automation-saas'
+          customerData: data,
+          timestamp: new Date().toISOString()
         })
       });
 
       if (!response.ok) {
-        const errorText = await response.text();
-        console.error('❌ N8n workflow trigger failed:', response.status, errorText);
-        
-        // Log the failure
-        await this.logWebhookActivity({
-          webhookUrl: trigger.webhookUrl,
-          workflowName: trigger.workflowName,
-          payload: trigger.data,
-          status: 'error',
-          error: `HTTP ${response.status}: ${response.statusText}`
-        });
-
-        return {
-          success: false,
-          error: `HTTP ${response.status}: ${response.statusText}`,
-          data: errorText
-        };
+        throw new Error(`N8n workflow execution failed: ${response.statusText}`);
       }
 
-      const responseData = await response.json().catch(() => ({}));
-      console.log('✅ N8n workflow triggered successfully');
-      console.log('📥 Response:', responseData);
-
-      // Log the success
-      await this.logWebhookActivity({
-        webhookUrl: trigger.webhookUrl,
-        workflowName: trigger.workflowName,
-        payload: trigger.data,
-        status: 'success',
-        response: responseData
-      });
-
-      return {
-        success: true,
-        data: responseData,
-        executionId: responseData.executionId
-      };
-    } catch (error) {
-      console.error('💥 Error triggering n8n workflow:', error);
+      const result = await response.json();
       
-      // Log the error
-      await this.logWebhookActivity({
-        webhookUrl: trigger.webhookUrl,
-        workflowName: trigger.workflowName,
-        payload: trigger.data,
-        status: 'error',
-        error: error instanceof Error ? error.message : 'Unknown error'
+      // Log the campaign trigger
+      await this.logAnalyticsEvent('retention_campaign_triggered', {
+        customerId: data.customerId,
+        inactiveDays: data.inactiveDays,
+        orderValue: data.orderValue
       });
 
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : 'Unknown error'
-      };
+      console.log('✅ Retention campaign triggered successfully');
+      return result;
+    } catch (error) {
+      console.error('💥 Retention campaign trigger failed:', error);
+      throw error;
     }
   }
 
-  async processReturnWorkflow(returnData: any, webhookUrl?: string): Promise<N8nResponse> {
-    const defaultWebhookUrl = `${this.baseUrl}/webhook/return-processing`;
-    
-    return await this.triggerWorkflow({
-      workflowName: 'return-processing',
-      webhookUrl: webhookUrl || defaultWebhookUrl,
-      data: {
-        returnId: returnData.id,
-        merchantId: returnData.merchant_id,
-        customerEmail: returnData.customer_email,
-        reason: returnData.reason,
-        orderValue: returnData.total_amount,
-        status: returnData.status,
-        items: returnData.items || [],
-        metadata: {
-          source: 'return_created',
-          processedAt: new Date().toISOString()
-        }
-      }
-    });
-  }
-
-  async testWebhookConnection(webhookUrl: string): Promise<N8nResponse> {
-    await this.ensureConfigLoaded();
-    
+  async processShopifyWebhook(webhookData: N8nWebhookPayload): Promise<void> {
     try {
-      console.log('🔗 Testing webhook connection:', webhookUrl);
-
-      const headers = {
-        'Content-Type': 'application/json',
-        'User-Agent': 'Returns-Automation-SaaS/1.0',
-        ...(this.apiKey && { 'X-N8N-API-KEY': this.apiKey })
-      };
-
-      const testPayload = {
-        test: true,
-        timestamp: new Date().toISOString(),
-        source: 'returns-automation-saas-test'
-      };
-
-      const response = await fetch(webhookUrl, {
+      console.log('📨 Processing Shopify webhook:', webhookData.event);
+      
+      const response = await fetch(`${this.baseUrl}/api/v1/workflows/shopify-webhook/execute`, {
         method: 'POST',
-        headers,
-        body: JSON.stringify(testPayload)
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${this.apiKey}`
+        },
+        body: JSON.stringify(webhookData)
       });
 
       if (!response.ok) {
-        const errorText = await response.text();
-        console.error('❌ Webhook connection test failed:', response.status, errorText);
-        
-        return {
-          success: false,
-          error: `HTTP ${response.status}: ${response.statusText}`,
-          data: errorText
-        };
+        throw new Error(`Webhook processing failed: ${response.statusText}`);
       }
 
-      const responseData = await response.json().catch(() => ({}));
-      console.log('✅ Webhook connection test successful');
-      console.log('📥 Response:', responseData);
+      // Log webhook processing
+      await this.logAnalyticsEvent('webhook_processed', {
+        event: webhookData.event,
+        timestamp: webhookData.timestamp
+      });
 
-      return {
-        success: true,
-        data: responseData
-      };
+      console.log('✅ Shopify webhook processed successfully');
     } catch (error) {
-      console.error('💥 Error testing webhook connection:', error);
-      
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : 'Connection test failed'
-      };
+      console.error('💥 Webhook processing failed:', error);
+      throw error;
     }
   }
 
-  private async logWebhookActivity(activityData: {
-    webhookUrl: string;
-    workflowName: string;
-    payload: any;
-    status: 'success' | 'error' | 'pending';
-    response?: any;
-    error?: string;
-  }) {
+  async scheduleReturnFollowUp(returnId: string, customerEmail: string, delayHours: number = 24): Promise<void> {
     try {
-      await supabase
-        .from('analytics_events')
-        .insert({
-          event_type: 'n8n_webhook_triggered',
-          event_data: {
-            workflow_name: activityData.workflowName,
-            webhook_url: activityData.webhookUrl,
-            status: activityData.status,
-            payload_size: JSON.stringify(activityData.payload).length,
-            error: activityData.error,
-            has_response: !!activityData.response,
-            timestamp: new Date().toISOString()
-          }
-        });
+      console.log('⏰ Scheduling return follow-up for:', returnId);
+      
+      const response = await fetch(`${this.baseUrl}/api/v1/workflows/return-followup/execute`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${this.apiKey}`
+        },
+        body: JSON.stringify({
+          returnId,
+          customerEmail,
+          delayHours,
+          scheduledAt: new Date().toISOString()
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error(`Follow-up scheduling failed: ${response.statusText}`);
+      }
+
+      console.log('✅ Return follow-up scheduled successfully');
     } catch (error) {
-      console.error('Failed to log webhook activity:', error);
+      console.error('💥 Follow-up scheduling failed:', error);
+      throw error;
     }
   }
 
-  async getAutomationRules(): Promise<AutomationRule[]> {
-    await this.ensureConfigLoaded();
-    
-    // Enhanced automation rules with webhook URLs using configured base URL
-    return [
-      {
-        id: '1',
-        name: 'Auto-approve small returns',
-        description: 'Automatically approve returns under $50 via n8n workflow',
-        trigger: 'return_submitted',
-        conditions: { amount: { less_than: 50 } },
-        actions: ['approve_return', 'send_confirmation', 'update_inventory'],
-        active: true,
-        webhookUrl: `${this.baseUrl}/webhook/auto-approve-returns`
-      },
-      {
-        id: '2',
-        name: 'AI exchange suggestions',
-        description: 'Generate AI-powered exchange suggestions and notify customer',
-        trigger: 'return_approved',
-        conditions: { reason: { includes: ['size', 'color', 'style'] } },
-        actions: ['generate_ai_suggestion', 'notify_customer', 'log_suggestion'],
-        active: true,
-        webhookUrl: `${this.baseUrl}/webhook/ai-exchange-suggestions`
+  async sendSlackNotification(channel: string, message: string, data?: any): Promise<void> {
+    try {
+      const response = await fetch(`${this.baseUrl}/api/v1/workflows/slack-notification/execute`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${this.apiKey}`
+        },
+        body: JSON.stringify({
+          channel,
+          message,
+          data,
+          timestamp: new Date().toISOString()
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error(`Slack notification failed: ${response.statusText}`);
       }
-    ];
+
+      console.log('✅ Slack notification sent successfully');
+    } catch (error) {
+      console.error('💥 Slack notification failed:', error);
+      // Don't throw error for notifications - they're not critical
+    }
+  }
+
+  async getWorkflowStatus(executionId: string): Promise<N8nWorkflowExecution> {
+    try {
+      const response = await fetch(`${this.baseUrl}/api/v1/executions/${executionId}`, {
+        headers: {
+          'Authorization': `Bearer ${this.apiKey}`
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to get workflow status: ${response.statusText}`);
+      }
+
+      return await response.json();
+    } catch (error) {
+      console.error('💥 Failed to get workflow status:', error);
+      throw error;
+    }
+  }
+
+  private async logAnalyticsEvent(eventType: string, eventData: any): Promise<void> {
+    try {
+      await supabase.from('analytics_events').insert({
+        event_type: eventType,
+        event_data: eventData,
+        merchant_id: null // System events don't belong to a specific merchant
+      });
+    } catch (error) {
+      console.warn('Failed to log analytics event:', error);
+      // Don't throw - logging failures shouldn't break the main flow
+    }
   }
 }
 
