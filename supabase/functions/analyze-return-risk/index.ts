@@ -2,12 +2,17 @@
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 
-const openAIApiKey = Deno.env.get('OPENAI_API_KEY');
-
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
+
+interface StandardResponse {
+  success: boolean;
+  data?: any;
+  error?: string;
+  fallback?: boolean;
+}
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -25,6 +30,26 @@ serve(async (req) => {
     } = await req.json();
 
     console.log('Analyzing return risk for:', returnId);
+
+    const openAIApiKey = Deno.env.get('OPENAI_API_KEY');
+    if (!openAIApiKey) {
+      console.error('OpenAI API key not configured');
+      return new Response(JSON.stringify({
+        success: false,
+        error: 'OpenAI API key not configured',
+        fallback: true,
+        data: {
+          riskLevel: 'low',
+          fraudProbability: 0.05,
+          customerSatisfactionScore: 75,
+          recommendedAction: 'approve',
+          reasoning: 'Fallback analysis - API key not configured'
+        }
+      } as StandardResponse), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 200
+      });
+    }
 
     const systemPrompt = `You are an AI risk assessment specialist for e-commerce returns. Analyze return requests for fraud indicators, customer behavior patterns, and business risk factors.
 
@@ -60,6 +85,7 @@ Consider red flags like:
 - Multiple returns of same product type
 - Geographic or timing anomalies`;
 
+    console.log('Making OpenAI API request for risk analysis...');
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -83,23 +109,24 @@ Consider red flags like:
 
     const data = await response.json();
     const content = data.choices[0].message.content;
+    console.log('OpenAI risk analysis response received:', content.substring(0, 100) + '...');
 
     let analysis;
     try {
       analysis = JSON.parse(content);
     } catch (e) {
-      // Fallback analysis
+      console.warn('Failed to parse AI response as JSON, using fallback');
       analysis = {
         riskLevel: orderValue > 500 ? 'medium' : 'low',
         fraudProbability: 0.1,
         customerSatisfactionScore: 75,
         recommendedAction: 'approve',
-        reasoning: 'Standard risk assessment - no significant risk factors detected'
+        reasoning: 'Standard risk assessment - AI response parsing failed'
       };
     }
 
     // Validate and normalize response
-    const response_data = {
+    const responseData = {
       riskLevel: ['low', 'medium', 'high'].includes(analysis.riskLevel) ? analysis.riskLevel : 'low',
       fraudProbability: Math.max(0, Math.min(1, analysis.fraudProbability || 0.1)),
       customerSatisfactionScore: Math.max(0, Math.min(100, analysis.customerSatisfactionScore || 75)),
@@ -108,21 +135,34 @@ Consider red flags like:
       reasoning: analysis.reasoning || 'Risk assessment completed'
     };
 
-    console.log('Risk analysis result:', response_data);
+    const result = {
+      success: true,
+      fallback: false,
+      data: responseData
+    } as StandardResponse;
 
-    return new Response(JSON.stringify(response_data), {
+    console.log('Risk analysis result:', result.data);
+
+    return new Response(JSON.stringify(result), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   } catch (error) {
     console.error('Error in risk analysis function:', error);
-    return new Response(JSON.stringify({ 
+    
+    const fallbackResponse = {
+      success: false,
       error: error.message,
-      riskLevel: 'low',
-      fraudProbability: 0.05,
-      customerSatisfactionScore: 70,
-      recommendedAction: 'approve',
-      reasoning: 'Fallback risk analysis due to processing error'
-    }), {
+      fallback: true,
+      data: {
+        riskLevel: 'low',
+        fraudProbability: 0.05,
+        customerSatisfactionScore: 70,
+        recommendedAction: 'approve',
+        reasoning: 'Fallback risk analysis due to processing error'
+      }
+    } as StandardResponse;
+
+    return new Response(JSON.stringify(fallbackResponse), {
       status: 200,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });

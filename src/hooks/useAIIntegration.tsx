@@ -14,6 +14,15 @@ interface AIIntegrationStatus {
     autoComm: boolean;
   };
   lastUpdate: string | null;
+  apiKeyConfigured: boolean;
+  lastError: string | null;
+}
+
+interface StandardAIResponse {
+  success: boolean;
+  data?: any;
+  error?: string;
+  fallback?: boolean;
 }
 
 export const useAIIntegration = () => {
@@ -28,7 +37,9 @@ export const useAIIntegration = () => {
       predictiveAnalytics: false,
       autoComm: false
     },
-    lastUpdate: null
+    lastUpdate: null,
+    apiKeyConfigured: false,
+    lastError: null
   });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -43,24 +54,45 @@ export const useAIIntegration = () => {
       setLoading(true);
       setError(null);
 
-      // Test edge function connectivity with a simple test
+      console.log('🔍 Checking AI integration status...');
+
+      // Test edge function connectivity with standardized response handling
       const { data: testResponse, error: testError } = await supabase.functions
         .invoke('generate-exchange-recommendation', {
           body: {
-            returnReason: 'Size too small - testing API key',
+            returnReason: 'Size too small - testing API integration',
             productName: 'Test Product',
             customerEmail: 'test@example.com',
             orderValue: 100
           }
         });
 
-      const edgeFunctionsActive = !testError && testResponse?.suggestedProduct;
+      console.log('🤖 AI Test Response:', { testResponse, testError });
 
-      console.log('AI Edge Function Test:', { 
-        success: edgeFunctionsActive, 
-        error: testError?.message,
-        response: testResponse
-      });
+      let edgeFunctionsActive = false;
+      let apiKeyConfigured = false;
+      let lastError = null;
+
+      if (!testError && testResponse) {
+        const aiResponse = testResponse as StandardAIResponse;
+        
+        if (aiResponse.success && !aiResponse.fallback) {
+          edgeFunctionsActive = true;
+          apiKeyConfigured = true;
+          console.log('✅ AI functions working with real OpenAI data');
+        } else if (aiResponse.fallback) {
+          edgeFunctionsActive = true;
+          apiKeyConfigured = false;
+          lastError = aiResponse.error || 'Using fallback responses - API key may not be configured';
+          console.log('⚠️ AI functions working but using fallback data');
+        } else {
+          lastError = aiResponse.error || 'AI function returned unsuccessful response';
+          console.log('❌ AI functions not working properly');
+        }
+      } else {
+        lastError = testError?.message || 'Failed to invoke AI function';
+        console.log('💥 Error invoking AI function:', testError);
+      }
 
       // Get AI performance metrics from actual data
       const { data: aiSuggestions, error: suggestionsError } = await supabase
@@ -69,7 +101,7 @@ export const useAIIntegration = () => {
         .not('return_id', 'is', null);
 
       if (suggestionsError && suggestionsError.code !== 'PGRST116') {
-        console.warn('Error fetching AI suggestions:', suggestionsError);
+        console.warn('⚠️ Error fetching AI suggestions:', suggestionsError);
       }
 
       let aiAcceptanceRate = 0;
@@ -80,30 +112,36 @@ export const useAIIntegration = () => {
         aiAcceptanceRate = (acceptedCount / aiSuggestions.length) * 100;
         
         avgConfidence = aiSuggestions.reduce((sum, s) => sum + (s.confidence_score || 0), 0) / aiSuggestions.length;
+        console.log('📊 AI Performance:', { aiAcceptanceRate, avgConfidence, totalSuggestions: aiSuggestions.length });
       }
 
       setStatus({
         edgeFunctionsActive,
+        apiKeyConfigured,
         aiAcceptanceRate: Math.round(aiAcceptanceRate),
         processingEfficiency: Math.round(avgConfidence * 100),
         featuresEnabled: {
-          smartRecommendations: edgeFunctionsActive,
-          riskAnalysis: edgeFunctionsActive,
-          predictiveAnalytics: edgeFunctionsActive,
-          autoComm: edgeFunctionsActive
+          smartRecommendations: edgeFunctionsActive && apiKeyConfigured,
+          riskAnalysis: edgeFunctionsActive && apiKeyConfigured,
+          predictiveAnalytics: edgeFunctionsActive && apiKeyConfigured,
+          autoComm: edgeFunctionsActive && apiKeyConfigured
         },
-        lastUpdate: new Date().toISOString()
+        lastUpdate: new Date().toISOString(),
+        lastError
       });
 
     } catch (err) {
-      console.error('Error checking AI status:', err);
-      setError(err instanceof Error ? err.message : 'Unknown error');
+      console.error('💥 Error checking AI status:', err);
+      const errorMessage = err instanceof Error ? err.message : 'Unknown error';
+      setError(errorMessage);
       
       // Set fallback status
       setStatus(prev => ({
         ...prev,
         edgeFunctionsActive: false,
-        lastUpdate: new Date().toISOString()
+        apiKeyConfigured: false,
+        lastUpdate: new Date().toISOString(),
+        lastError: errorMessage
       }));
     } finally {
       setLoading(false);
@@ -112,7 +150,7 @@ export const useAIIntegration = () => {
 
   const testAIFeature = async (feature: string) => {
     try {
-      console.log(`Testing AI feature: ${feature}`);
+      console.log(`🧪 Testing AI feature: ${feature}`);
       
       switch (feature) {
         case 'recommendation':
@@ -127,11 +165,16 @@ export const useAIIntegration = () => {
           
           if (error) throw error;
           
-          console.log('Recommendation test result:', data);
+          const response = data as StandardAIResponse;
+          console.log('🎯 Recommendation test result:', response);
+          
           return { 
-            success: !!data?.suggestedProduct, 
-            data,
-            message: `Suggested: ${data?.suggestedProduct}` 
+            success: response.success && !response.fallback, 
+            data: response.data,
+            message: response.success 
+              ? `Suggested: ${response.data?.suggestedProduct}${response.fallback ? ' (Fallback)' : ''}` 
+              : response.error || 'Test failed',
+            fallback: response.fallback || false
           };
 
         case 'risk-analysis':
@@ -147,27 +190,38 @@ export const useAIIntegration = () => {
           
           if (riskError) throw riskError;
           
-          console.log('Risk analysis test result:', riskData);
+          const riskResponse = riskData as StandardAIResponse;
+          console.log('🔍 Risk analysis test result:', riskResponse);
+          
           return { 
-            success: !!riskData?.riskLevel, 
-            data: riskData,
-            message: `Risk Level: ${riskData?.riskLevel}` 
+            success: riskResponse.success && !riskResponse.fallback, 
+            data: riskResponse.data,
+            message: riskResponse.success 
+              ? `Risk Level: ${riskResponse.data?.riskLevel}${riskResponse.fallback ? ' (Fallback)' : ''}` 
+              : riskResponse.error || 'Test failed',
+            fallback: riskResponse.fallback || false
           };
 
         default:
           throw new Error('Unknown feature');
       }
     } catch (error) {
-      console.error(`Error testing ${feature}:`, error);
+      console.error(`💥 Error testing ${feature}:`, error);
       return { 
         success: false, 
-        error: error instanceof Error ? error.message : 'Unknown error' 
+        error: error instanceof Error ? error.message : 'Unknown error',
+        fallback: false
       };
     }
   };
 
   useEffect(() => {
     checkAIStatus();
+    
+    // Set up periodic status checks every 5 minutes
+    const interval = setInterval(checkAIStatus, 5 * 60 * 1000);
+    
+    return () => clearInterval(interval);
   }, [profile?.merchant_id]);
 
   return {

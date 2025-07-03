@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useProfile } from './useProfile';
 
@@ -40,24 +40,32 @@ export const usePerformanceData = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const calculatePerformanceMetrics = async (merchantId: string) => {
+  const calculatePerformanceMetrics = useCallback(async (merchantId: string) => {
     try {
       console.log('🔄 Calculating performance metrics for merchant:', merchantId);
       
-      // Fetch returns with AI suggestions for performance calculation
+      // Optimized query - fetch only necessary data with single query
       const { data: returns, error: returnsError } = await supabase
         .from('returns')
         .select(`
-          *,
-          return_items (*),
-          ai_suggestions (*)
+          id,
+          status,
+          created_at,
+          return_items!inner (
+            action
+          ),
+          ai_suggestions (
+            accepted,
+            confidence_score
+          )
         `)
         .eq('merchant_id', merchantId)
-        .order('created_at', { ascending: false });
+        .order('created_at', { ascending: false })
+        .limit(100); // Limit for performance
 
       if (returnsError) throw returnsError;
 
-      console.log('📊 Returns data for performance:', returns?.length);
+      console.log('📊 Performance calculation data:', returns?.length || 0, 'recent returns');
 
       const totalReturns = returns?.length || 0;
       
@@ -147,16 +155,39 @@ export const usePerformanceData = () => {
       };
 
     } catch (error) {
-      console.error('Error calculating performance metrics:', error);
+      console.error('💥 Error calculating performance metrics:', error);
       throw error;
     }
-  };
+  }, []);
+
+  const fetchAndUpdate = useCallback(async () => {
+    if (!profile?.merchant_id) {
+      console.log('❌ No merchant_id in profile');
+      setPerformanceData(null);
+      setLoading(false);
+      return;
+    }
+
+    try {
+      setLoading(true);
+      setError(null);
+      
+      const metrics = await calculatePerformanceMetrics(profile.merchant_id);
+      setPerformanceData(metrics);
+      console.log('✅ Performance metrics updated successfully');
+    } catch (err) {
+      console.error('💥 Error in fetchAndUpdate:', err);
+      setError(err instanceof Error ? err.message : 'Unknown error');
+      setPerformanceData(null);
+    } finally {
+      setLoading(false);
+    }
+  }, [profile?.merchant_id, calculatePerformanceMetrics]);
 
   useEffect(() => {
-    console.log('🔍 usePerformanceData: Profile changed:', profile);
+    console.log('🔍 usePerformanceData: Profile changed:', profile?.merchant_id);
     
     if (!profile?.merchant_id) {
-      console.log('❌ No merchant_id in profile:', profile);
       setPerformanceData(null);
       setLoading(false);
       return;
@@ -164,95 +195,62 @@ export const usePerformanceData = () => {
 
     let channel: any;
 
-    const fetchAndSubscribe = async () => {
-      try {
-        setLoading(true);
-        
-        // Calculate initial performance metrics
-        const metrics = await calculatePerformanceMetrics(profile.merchant_id);
-        setPerformanceData(metrics);
-        setError(null);
+    const setupRealtimeUpdates = () => {
+      // Initial fetch
+      fetchAndUpdate();
 
-        // Set up real-time subscription for returns changes
-        channel = supabase
-          .channel(`performance-${profile.merchant_id}`)
-          .on(
-            'postgres_changes',
-            {
-              event: '*',
-              schema: 'public',
-              table: 'returns',
-              filter: `merchant_id=eq.${profile.merchant_id}`
-            },
-            async (payload) => {
-              console.log('📊 Performance real-time update:', payload.eventType);
-              
-              // Recalculate performance metrics when returns data changes
-              try {
-                const updatedMetrics = await calculatePerformanceMetrics(profile.merchant_id);
-                setPerformanceData(updatedMetrics);
-              } catch (error) {
-                console.error('Error updating performance metrics:', error);
-              }
-            }
-          )
-          .on(
-            'postgres_changes',
-            {
-              event: '*',
-              schema: 'public',
-              table: 'return_items',
-            },
-            async (payload) => {
-              console.log('📊 Return items performance update:', payload.eventType);
-              
-              try {
-                const updatedMetrics = await calculatePerformanceMetrics(profile.merchant_id);
-                setPerformanceData(updatedMetrics);
-              } catch (error) {
-                console.error('Error updating performance metrics:', error);
-              }
-            }
-          )
-          .on(
-            'postgres_changes',
-            {
-              event: '*',
-              schema: 'public',
-              table: 'ai_suggestions',
-            },
-            async (payload) => {
-              console.log('🤖 AI suggestions performance update:', payload.eventType);
-              
-              try {
-                const updatedMetrics = await calculatePerformanceMetrics(profile.merchant_id);
-                setPerformanceData(updatedMetrics);
-              } catch (error) {
-                console.error('Error updating performance metrics:', error);
-              }
-            }
-          )
-          .subscribe((status) => {
-            console.log('📊 Performance subscription status:', status);
-          });
-
-      } catch (err) {
-        console.error('💥 Error in performance setup:', err);
-        setError(err instanceof Error ? err.message : 'Unknown error');
-        setPerformanceData(null);
-      } finally {
-        setLoading(false);
-      }
+      // Set up optimized real-time subscription - single channel for all relevant changes
+      channel = supabase
+        .channel(`performance-${profile.merchant_id}`)
+        .on(
+          'postgres_changes',
+          {
+            event: '*',
+            schema: 'public',
+            table: 'returns',
+            filter: `merchant_id=eq.${profile.merchant_id}`
+          },
+          async (payload) => {
+            console.log('📊 Performance real-time update - returns:', payload.eventType);
+            // Debounced update - only recalculate after 1 second delay
+            setTimeout(fetchAndUpdate, 1000);
+          }
+        )
+        .on(
+          'postgres_changes',
+          {
+            event: '*',
+            schema: 'public',
+            table: 'return_items',
+          },
+          async (payload) => {
+            console.log('📊 Performance real-time update - items:', payload.eventType);
+            setTimeout(fetchAndUpdate, 1000);
+          }
+        )
+        .on(
+          'postgres_changes',
+          {
+            event: '*',
+            schema: 'public',
+            table: 'ai_suggestions',
+          },
+          async (payload) => {
+            console.log('🤖 Performance real-time update - AI:', payload.eventType);
+            setTimeout(fetchAndUpdate, 1000);
+          }
+        )
+        .subscribe((status) => {
+          console.log('📊 Performance subscription status:', status);
+        });
     };
 
-    fetchAndSubscribe();
+    setupRealtimeUpdates();
     
     // Listen for manual data sync events
     const handleDataSync = () => {
       console.log('📢 Data sync event received in usePerformanceData');
-      if (profile?.merchant_id) {
-        fetchAndSubscribe();
-      }
+      fetchAndUpdate();
     };
     
     window.addEventListener('dataSync', handleDataSync);
@@ -265,23 +263,14 @@ export const usePerformanceData = () => {
       window.removeEventListener('dataSync', handleDataSync);
       window.removeEventListener('profileUpdated', handleDataSync);
     };
-  }, [profile?.merchant_id]);
+  }, [profile?.merchant_id, fetchAndUpdate]);
 
-  const refetch = async () => {
+  const refetch = useCallback(async () => {
     if (!profile?.merchant_id) return;
     
     console.log('🔄 Manual refetch requested for performance...');
-    setLoading(true);
-    
-    try {
-      const event = new CustomEvent('dataSync');
-      window.dispatchEvent(event);
-      setTimeout(() => {}, 100); // Small delay to let the event propagate
-    } catch (err) {
-      console.error('💥 Error refetching performance:', err);
-      setError(err instanceof Error ? err.message : 'Unknown error');
-    }
-  };
+    await fetchAndUpdate();
+  }, [profile?.merchant_id, fetchAndUpdate]);
 
   return {
     performanceData,
