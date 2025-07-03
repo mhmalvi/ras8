@@ -1,168 +1,180 @@
 
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import { ExternalLink, Store, Shield, Zap } from 'lucide-react';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { useToast } from '@/hooks/use-toast';
+import { ExternalLink, Shield, Zap, BarChart3 } from 'lucide-react';
 
-export const ShopifyInstallation = () => {
+const ShopifyInstallation = () => {
   const [shopDomain, setShopDomain] = useState('');
-  const [isInstalling, setIsInstalling] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [installing, setInstalling] = useState(false);
+  const { toast } = useToast();
 
-  const handleInstallation = async () => {
+  // Shopify App configuration - use proper client ID
+  const SHOPIFY_CLIENT_ID = 'your-shopify-client-id'; // This should be set via environment
+  const SCOPES = 'read_orders,write_orders,read_customers,read_products';
+  const CALLBACK_URL = `${window.location.origin}/functions/v1/shopify-oauth-callback`;
+
+  const handleInstall = async () => {
     if (!shopDomain.trim()) {
-      setError('Please enter your shop domain');
+      toast({
+        title: "Shop domain required",
+        description: "Please enter your Shopify shop domain.",
+        variant: "destructive",
+      });
       return;
     }
 
-    setIsInstalling(true);
-    setError(null);
+    // Clean up shop domain
+    const cleanDomain = shopDomain.replace(/^https?:\/\//, '').replace(/\/$/, '');
+    if (!cleanDomain.includes('.myshopify.com') && !cleanDomain.includes('.')) {
+      const correctedDomain = `${cleanDomain}.myshopify.com`;
+      setShopDomain(correctedDomain);
+    }
+
+    setInstalling(true);
 
     try {
-      // Clean up the shop domain
-      let cleanDomain = shopDomain.trim().toLowerCase();
-      cleanDomain = cleanDomain.replace(/^https?:\/\//, '');
-      cleanDomain = cleanDomain.replace(/\/$/, '');
-      
-      if (!cleanDomain.endsWith('.myshopify.com')) {
-        if (cleanDomain.includes('.')) {
-          // Custom domain, add .myshopify.com equivalent
-          const shopname = cleanDomain.split('.')[0];
-          cleanDomain = `${shopname}.myshopify.com`;
-        } else {
-          cleanDomain = `${cleanDomain}.myshopify.com`;
-        }
-      }
+      // Generate state parameter for security
+      const state = crypto.randomUUID();
+      sessionStorage.setItem('shopify_oauth_state', state);
 
-      // Build OAuth URL
-      const clientId = '2da34c83e89f6645ad1fb2028c7532dd';
-      const redirectUri = `${window.location.origin}/api/auth/shopify/callback`;
-      const scopes = 'read_orders,write_orders,read_products,read_customers';
-      const state = encodeURIComponent(window.location.origin);
-      
-      const oauthUrl = `https://${cleanDomain}/admin/oauth/authorize?` +
-        `client_id=${clientId}&` +
-        `scope=${encodeURIComponent(scopes)}&` +
-        `redirect_uri=${encodeURIComponent(redirectUri)}&` +
-        `state=${state}`;
+      // Build Shopify OAuth URL with proper parameters
+      const authUrl = new URL(`https://${cleanDomain}/admin/oauth/authorize`);
+      authUrl.searchParams.set('client_id', SHOPIFY_CLIENT_ID);
+      authUrl.searchParams.set('scope', SCOPES);
+      authUrl.searchParams.set('redirect_uri', CALLBACK_URL);
+      authUrl.searchParams.set('state', state);
+      authUrl.searchParams.set('grant_options[]', 'per-user'); // For proper app embedding
 
-      console.log('Redirecting to Shopify OAuth:', oauthUrl);
-      
       // Redirect to Shopify OAuth
-      window.location.href = oauthUrl;
+      window.location.href = authUrl.toString();
 
-    } catch (err) {
-      console.error('Installation error:', err);
-      setError(err instanceof Error ? err.message : 'Installation failed');
-      setIsInstalling(false);
+    } catch (error) {
+      console.error('Installation error:', error);
+      toast({
+        title: "Installation failed",
+        description: "There was an error starting the installation process.",
+        variant: "destructive",
+      });
+      setInstalling(false);
     }
   };
 
-  const handleDomainChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setShopDomain(e.target.value);
-    if (error) setError(null);
-  };
-
   return (
-    <div className="max-w-2xl mx-auto p-6 space-y-6">
-      <div className="text-center space-y-4">
-        <div className="flex items-center justify-center space-x-2">
-          <Store className="h-8 w-8 text-blue-600" />
-          <h1 className="text-3xl font-bold">Install Returns Automation</h1>
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
+      <div className="max-w-4xl w-full">
+        <div className="text-center mb-8">
+          <h1 className="text-4xl font-bold text-gray-900 mb-4">
+            Returns Automation for Shopify
+          </h1>
+          <p className="text-xl text-gray-600 max-w-2xl mx-auto">
+            Transform your returns process with AI-powered automation. 
+            Increase exchanges, reduce refunds, and delight your customers.
+          </p>
         </div>
-        <p className="text-gray-600 text-lg">
-          Connect your Shopify store to start automating returns with AI-powered recommendations
-        </p>
-      </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center space-x-2">
-            <Shield className="h-5 w-5" />
-            <span>Secure Installation</span>
-          </CardTitle>
-          <CardDescription>
-            Enter your Shopify store domain to begin the secure OAuth installation process
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="shop-domain">Shop Domain</Label>
-            <Input
-              id="shop-domain"
-              type="text"
-              placeholder="your-store.myshopify.com"
-              value={shopDomain}
-              onChange={handleDomainChange}
-              disabled={isInstalling}
-            />
-            <p className="text-sm text-gray-500">
-              Enter your shop name or full domain (e.g., "mystore" or "mystore.myshopify.com")
-            </p>
-          </div>
+        <div className="grid md:grid-cols-3 gap-6 mb-8">
+          <Card>
+            <CardHeader className="text-center">
+              <Zap className="h-12 w-12 text-blue-600 mx-auto mb-2" />
+              <CardTitle>AI-Powered Suggestions</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <CardDescription className="text-center">
+                Smart product recommendations that turn returns into exchanges
+              </CardDescription>
+            </CardContent>
+          </Card>
 
-          {error && (
-            <Alert variant="destructive">
-              <AlertDescription>{error}</AlertDescription>
-            </Alert>
-          )}
+          <Card>
+            <CardHeader className="text-center">
+              <BarChart3 className="h-12 w-12 text-green-600 mx-auto mb-2" />
+              <CardTitle>Advanced Analytics</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <CardDescription className="text-center">
+                Detailed insights into return patterns and revenue impact
+              </CardDescription>
+            </CardContent>
+          </Card>
 
-          <Button 
-            onClick={handleInstallation}
-            disabled={isInstalling || !shopDomain.trim()}
-            className="w-full"
-            size="lg"
-          >
-            {isInstalling ? (
-              <>
-                <Zap className="mr-2 h-4 w-4 animate-spin" />
-                Connecting to Shopify...
-              </>
-            ) : (
-              <>
-                <ExternalLink className="mr-2 h-4 w-4" />
-                Install on Shopify
-              </>
-            )}
-          </Button>
-        </CardContent>
-      </Card>
+          <Card>
+            <CardHeader className="text-center">
+              <Shield className="h-12 w-12 text-purple-600 mx-auto mb-2" />
+              <CardTitle>Secure & Compliant</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <CardDescription className="text-center">
+                GDPR compliant with enterprise-grade security
+              </CardDescription>
+            </CardContent>
+          </Card>
+        </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>What happens next?</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-3">
-          <div className="flex items-start space-x-3">
-            <div className="w-6 h-6 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center text-sm font-semibold">1</div>
+        <Card className="max-w-md mx-auto">
+          <CardHeader className="text-center">
+            <CardTitle>Install Returns Automation</CardTitle>
+            <CardDescription>
+              Enter your Shopify store domain to get started
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
             <div>
-              <p className="font-medium">Shopify Authorization</p>
-              <p className="text-sm text-gray-600">You'll be redirected to Shopify to authorize the app</p>
+              <label htmlFor="shop-domain" className="block text-sm font-medium text-gray-700 mb-2">
+                Shop Domain
+              </label>
+              <Input
+                id="shop-domain"
+                type="text"
+                value={shopDomain}
+                onChange={(e) => setShopDomain(e.target.value)}
+                placeholder="your-store.myshopify.com"
+                className="w-full"
+                disabled={installing}
+              />
             </div>
-          </div>
-          <div className="flex items-start space-x-3">
-            <div className="w-6 h-6 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center text-sm font-semibold">2</div>
-            <div>
-              <p className="font-medium">Permission Review</p>
-              <p className="text-sm text-gray-600">Review and approve the requested permissions</p>
-            </div>
-          </div>
-          <div className="flex items-start space-x-3">
-            <div className="w-6 h-6 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center text-sm font-semibold">3</div>
-            <div>
-              <p className="font-medium">Installation Complete</p>
-              <p className="text-sm text-gray-600">Start managing returns with AI automation</p>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+            
+            <Button 
+              onClick={handleInstall}
+              disabled={installing}
+              className="w-full"
+              size="lg"
+            >
+              {installing ? (
+                <>
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                  Installing...
+                </>
+              ) : (
+                <>
+                  Install App
+                  <ExternalLink className="ml-2 h-4 w-4" />
+                </>
+              )}
+            </Button>
 
-      <div className="text-center text-sm text-gray-500">
-        <p>This app requires permissions to read orders, products, and customers to provide return automation services.</p>
+            <div className="text-xs text-gray-500 text-center mt-4">
+              <p>By installing, you agree to our Terms of Service and Privacy Policy.</p>
+              <p className="mt-1">
+                <strong>Permissions:</strong> Read orders, customers, and products to provide return automation.
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+
+        <div className="text-center mt-8">
+          <p className="text-gray-600">
+            Need help? Contact our support team at{' '}
+            <a href="mailto:support@returnsautomation.com" className="text-blue-600 hover:underline">
+              support@returnsautomation.com
+            </a>
+          </p>
+        </div>
       </div>
     </div>
   );
 };
+
+export default ShopifyInstallation;

@@ -5,6 +5,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
+import { AppBridgeProvider } from "@/components/AppBridgeProvider";
 import { SidebarProvider } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/AppSidebar";
 import ProtectedRoute from "@/components/ProtectedRoute";
@@ -35,47 +36,49 @@ const App = () => (
   <GlobalErrorBoundary>
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
-        <AuthProvider>
-          <Toaster />
-          <Sonner />
-          <BrowserRouter>
-            <Routes>
-              {/* Public routes */}
-              <Route path="/landing" element={<Landing />} />
-              <Route path="/auth" element={<Auth />} />
-              <Route path="/install" element={<ShopifyInstall />} />
-              <Route path="/customer-portal" element={<CustomerPortal />} />
-              
-              {/* Protected routes with sidebar */}
-              <Route path="/*" element={
-                <ProtectedRoute>
-                  <SidebarProvider>
-                    <div className="flex min-h-screen w-full">
-                      <AppSidebar />
-                      <main className="flex-1 p-6">
-                        <Routes>
-                          <Route path="/" element={<Index />} />
-                          <Route path="/returns" element={<Returns />} />
-                          <Route path="/analytics" element={<Analytics />} />
-                          <Route path="/settings" element={<Settings />} />
-                          <Route path="/customers" element={<Customers />} />
-                          <Route path="/products" element={<Products />} />
-                          <Route path="/test-data" element={<TestData />} />
-                          <Route path="/ai-insights" element={<AIInsights />} />
-                          <Route path="/automations" element={<Automations />} />
-                          <Route path="/performance" element={<Performance />} />
-                          <Route path="/notifications" element={<Notifications />} />
-                          <Route path="/security" element={<Security />} />
-                          <Route path="*" element={<NotFound />} />
-                        </Routes>
-                      </main>
-                    </div>
-                  </SidebarProvider>
-                </ProtectedRoute>
-              } />
-            </Routes>
-          </BrowserRouter>
-        </AuthProvider>
+        <AppBridgeProvider>
+          <AuthProvider>
+            <Toaster />
+            <Sonner />
+            <BrowserRouter>
+              <Routes>
+                {/* Public routes */}
+                <Route path="/landing" element={<Landing />} />
+                <Route path="/auth" element={<Auth />} />
+                <Route path="/install" element={<ShopifyInstall />} />
+                <Route path="/customer-portal" element={<CustomerPortal />} />
+                
+                {/* Protected routes with sidebar */}
+                <Route path="/*" element={
+                  <ProtectedRoute>
+                    <SidebarProvider>
+                      <div className="flex min-h-screen w-full">
+                        <AppSidebar />
+                        <main className="flex-1 p-6">
+                          <Routes>
+                            <Route path="/" element={<Index />} />
+                            <Route path="/returns" element={<Returns />} />
+                            <Route path="/analytics" element={<Analytics />} />
+                            <Route path="/settings" element={<Settings />} />
+                            <Route path="/customers" element={<Customers />} />
+                            <Route path="/products" element={<Products />} />
+                            <Route path="/test-data" element={<TestData />} />
+                            <Route path="/ai-insights" element={<AIInsights />} />
+                            <Route path="/automations" element={<Automations />} />
+                            <Route path="/performance" element={<Performance />} />
+                            <Route path="/notifications" element={<Notifications />} />
+                            <Route path="/security" element={<Security />} />
+                            <Route path="*" element={<NotFound />} />
+                          </Routes>
+                        </main>
+                      </div>
+                    </SidebarProvider>
+                  </ProtectedRoute>
+                } />
+              </Routes>
+            </BrowserRouter>
+          </AuthProvider>
+        </AppBridgeProvider>
       </TooltipProvider>
     </QueryClientProvider>
   </GlobalErrorBoundary>

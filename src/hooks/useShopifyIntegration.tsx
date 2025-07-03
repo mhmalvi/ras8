@@ -2,6 +2,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { TokenEncryption } from '@/utils/tokenEncryption';
 
 interface ShopifyMerchant {
   id: string;
@@ -10,6 +11,7 @@ interface ShopifyMerchant {
   settings: any;
   created_at: string;
   updated_at: string;
+  access_token?: string;
 }
 
 export const useShopifyIntegration = () => {
@@ -36,7 +38,9 @@ export const useShopifyIntegration = () => {
           throw error;
         }
       } else {
-        setMerchant(data);
+        // Don't expose access_token to frontend for security
+        const { access_token, ...merchantData } = data;
+        setMerchant(merchantData);
       }
     } catch (err) {
       console.error('Error fetching merchant data:', err);
@@ -50,17 +54,22 @@ export const useShopifyIntegration = () => {
     if (!merchant) return;
 
     try {
+      // Use proper encrypted token invalidation
+      const encryptedDisconnectedToken = await TokenEncryption.encryptToken('DISCONNECTED');
+      
       const { error } = await supabase
         .from('merchants')
         .update({ 
-          access_token: 'DISCONNECTED',
+          access_token: encryptedDisconnectedToken,
+          token_encrypted_at: new Date().toISOString(),
+          token_encryption_version: 2,
           updated_at: new Date().toISOString()
         })
         .eq('id', merchant.id);
 
       if (error) throw error;
 
-      // Log disconnection event
+      // Log disconnection event with audit trail
       await supabase
         .from('analytics_events')
         .insert({
@@ -68,7 +77,8 @@ export const useShopifyIntegration = () => {
           event_type: 'app_disconnected',
           event_data: {
             shop_domain: merchant.shop_domain,
-            disconnected_at: new Date().toISOString()
+            disconnected_at: new Date().toISOString(),
+            user_id: (await supabase.auth.getUser()).data.user?.id
           }
         });
 
@@ -92,16 +102,21 @@ export const useShopifyIntegration = () => {
     if (!merchant?.shop_domain) return { success: false, error: 'No merchant connected' };
 
     try {
-      // Test connection by trying to fetch shop info
-      const response = await fetch(`https://${merchant.shop_domain}/admin/api/2023-10/shop.json`, {
+      // Call our secure backend endpoint to test connection
+      const response = await fetch('/api/v1/shopify/test-connection', {
+        method: 'POST',
         headers: {
-          'X-Shopify-Access-Token': 'test-connection', // This will fail but we can check the response
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${(await supabase.auth.getSession()).data.session?.access_token}`
         },
+        body: JSON.stringify({ merchant_id: merchant.id })
       });
 
+      const result = await response.json();
+      
       return { 
-        success: response.status === 401, // 401 means our token is being checked
-        error: response.status === 404 ? 'Store not found' : null 
+        success: result.success, 
+        error: result.error || null 
       };
     } catch (err) {
       return { 
