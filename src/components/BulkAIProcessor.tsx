@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -32,9 +31,9 @@ const BulkAIProcessor = () => {
   const [processingJob, setProcessingJob] = useState<BulkProcessingJob | null>(null);
   const [processingResults, setProcessingResults] = useState<any[]>([]);
 
-  // Filter returns that can be processed (requested/pending status)
+  // Filter returns that can be processed (requested status only - fixed the type issue)
   const processableReturns = returns.filter(r => 
-    r.status === 'requested' || r.status === 'pending'
+    r.status === 'requested'
   );
   
   const allSelected = selectedReturns.length === processableReturns.length;
@@ -392,7 +391,7 @@ const BulkAIProcessor = () => {
                       <div className="p-8 text-center text-muted-foreground">
                         <Clock className="h-12 w-12 mx-auto mb-4 opacity-50" />
                         <p>No processable returns found.</p>
-                        <p className="text-sm">Returns with status 'requested' or 'pending' can be processed.</p>
+                        <p className="text-sm">Returns with status 'requested' can be processed.</p>
                       </div>
                     ) : (
                       <Table>
