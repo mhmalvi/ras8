@@ -179,74 +179,6 @@ export class N8nService {
     });
   }
 
-  async processRetentionCampaign(customerData: any, webhookUrl?: string): Promise<N8nResponse> {
-    const defaultWebhookUrl = `${this.baseUrl}/webhook/retention-campaign`;
-    
-    return await this.triggerWorkflow({
-      workflowName: 'retention-campaign',
-      webhookUrl: webhookUrl || defaultWebhookUrl,
-      data: {
-        customerEmail: customerData.email,
-        customerName: customerData.name,
-        lastOrderDate: customerData.lastOrderDate,
-        totalSpent: customerData.totalSpent,
-        merchantId: customerData.merchantId,
-        campaignType: 'win_back',
-        segmentation: {
-          tier: customerData.tier || 'standard',
-          daysSinceLastOrder: customerData.daysSinceLastOrder
-        },
-        metadata: {
-          source: 'retention_automation',
-          triggeredAt: new Date().toISOString()
-        }
-      }
-    });
-  }
-
-  async processNotification(notificationData: any, webhookUrl?: string): Promise<N8nResponse> {
-    const defaultWebhookUrl = `${this.baseUrl}/webhook/notification-dispatch`;
-    
-    return await this.triggerWorkflow({
-      workflowName: 'notification-dispatch',
-      webhookUrl: webhookUrl || defaultWebhookUrl,
-      data: {
-        type: notificationData.type,
-        recipient: notificationData.recipient,
-        subject: notificationData.subject,
-        message: notificationData.message,
-        channel: notificationData.channel || 'email',
-        priority: notificationData.priority || 'normal',
-        metadata: {
-          ...notificationData.metadata,
-          source: 'notification_system',
-          queuedAt: new Date().toISOString()
-        }
-      }
-    });
-  }
-
-  async processOrderSync(orderData: any, webhookUrl?: string): Promise<N8nResponse> {
-    const defaultWebhookUrl = `${this.baseUrl}/webhook/order-sync`;
-    
-    return await this.triggerWorkflow({
-      workflowName: 'order-sync',
-      webhookUrl: webhookUrl || defaultWebhookUrl,
-      data: {
-        orderId: orderData.id,
-        shopifyOrderId: orderData.shopify_order_id,
-        customerEmail: orderData.customer_email,
-        totalAmount: orderData.total_amount,
-        status: orderData.status,
-        items: orderData.items || [],
-        metadata: {
-          source: 'order_webhook',
-          syncedAt: new Date().toISOString()
-        }
-      }
-    });
-  }
-
   private async logWebhookActivity(activityData: {
     webhookUrl: string;
     workflowName: string;
@@ -299,42 +231,8 @@ export class N8nService {
         actions: ['generate_ai_suggestion', 'notify_customer', 'log_suggestion'],
         active: true,
         webhookUrl: `${this.baseUrl}/webhook/ai-exchange-suggestions`
-      },
-      {
-        id: '3',
-        name: 'Follow-up reminders',
-        description: 'Send automated follow-up reminders for pending returns',
-        trigger: 'scheduled',
-        conditions: { status: 'pending', age: { greater_than: '24h' } },
-        actions: ['send_reminder', 'escalate_if_needed', 'log_event'],
-        active: true,
-        webhookUrl: `${this.baseUrl}/webhook/follow-up-reminders`
-      },
-      {
-        id: '4',
-        name: 'Customer retention campaign',
-        description: 'Trigger retention workflows for customers with multiple returns',
-        trigger: 'return_pattern_detected',
-        conditions: { return_count: { greater_than: 3 }, days: { within: 30 } },
-        actions: ['send_personalized_offer', 'flag_for_review', 'update_customer_tier'],
-        active: false,
-        webhookUrl: `${this.baseUrl}/webhook/retention-campaign`
       }
     ];
-  }
-
-  async testWebhookConnection(webhookUrl: string): Promise<N8nResponse> {
-    await this.ensureConfigLoaded();
-    
-    return await this.triggerWorkflow({
-      workflowName: 'connection-test',
-      webhookUrl,
-      data: {
-        test: true,
-        timestamp: new Date().toISOString(),
-        message: 'Connection test from Returns Automation SaaS'
-      }
-    });
   }
 }
 
