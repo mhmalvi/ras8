@@ -1,4 +1,5 @@
 
+import { supabase } from '@/integrations/supabase/client';
 import { SecurityMiddleware } from '@/middleware/securityMiddleware';
 
 // API security utilities for frontend requests

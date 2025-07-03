@@ -51,12 +51,8 @@ export class SecurityMiddleware {
         return { valid: false, error: 'Invalid or expired token' };
       }
 
-      // Check if token is not expired (additional validation)
-      const now = Math.floor(Date.now() / 1000);
-      if (user.aud && user.exp && user.exp < now) {
-        return { valid: false, error: 'Token expired' };
-      }
-
+      // Note: Supabase User type doesn't expose JWT claims directly
+      // Token expiration is handled by Supabase automatically
       return { valid: true, userId: user.id };
     } catch (error) {
       console.error('JWT validation error:', error);
