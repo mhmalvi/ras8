@@ -51,6 +51,11 @@ const AnalyticsDashboard = () => {
     );
   }
 
+  // Calculate exchange rate from available data
+  const exchangeRate = analytics?.totalReturns > 0 
+    ? Math.round(((analytics.totalExchanges || 0) / analytics.totalReturns) * 100)
+    : 0;
+
   return (
     <div className="space-y-6">
       <div>
@@ -71,7 +76,7 @@ const AnalyticsDashboard = () => {
         
         <MetricCard
           title="Exchange Rate"
-          value={`${analytics?.exchangeRate || 0}%`}
+          value={`${exchangeRate}%`}
           description="vs refund rate"
           trend="up"
           icon={<RefreshCw className="h-4 w-4 text-muted-foreground" />}
@@ -87,7 +92,7 @@ const AnalyticsDashboard = () => {
         
         <MetricCard
           title="Revenue Retained"
-          value={`$${analytics?.revenueRetained || 0}`}
+          value={`$${analytics?.revenueImpact || 0}`}
           description="Through exchanges"
           trend="up"
           icon={<DollarSign className="h-4 w-4 text-muted-foreground" />}
@@ -97,17 +102,19 @@ const AnalyticsDashboard = () => {
       <div className="grid gap-4 md:grid-cols-2">
         <Card>
           <CardHeader>
-            <CardTitle>Return Reasons</CardTitle>
-            <CardDescription>Most common reasons for returns</CardDescription>
+            <CardTitle>Return Status Breakdown</CardTitle>
+            <CardDescription>Current status of all returns</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="space-y-2">
-              {analytics?.topReasons?.map((reason, index) => (
-                <div key={reason.reason} className="flex justify-between">
-                  <span className="text-sm">{reason.reason}</span>
-                  <span className="text-sm font-semibold">{reason.count}</span>
-                </div>
-              )) || (
+              {analytics?.returnsByStatus ? (
+                Object.entries(analytics.returnsByStatus).map(([status, count]) => (
+                  <div key={status} className="flex justify-between">
+                    <span className="text-sm capitalize">{status.replace('_', ' ')}</span>
+                    <span className="text-sm font-semibold">{count}</span>
+                  </div>
+                ))
+              ) : (
                 <p className="text-sm text-muted-foreground">No data available</p>
               )}
             </div>
@@ -116,21 +123,21 @@ const AnalyticsDashboard = () => {
 
         <Card>
           <CardHeader>
-            <CardTitle>Recent Activity</CardTitle>
-            <CardDescription>Latest return processing events</CardDescription>
+            <CardTitle>Monthly Trends</CardTitle>
+            <CardDescription>Returns activity over time</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="space-y-2">
-              {analytics?.recentActivity?.map((activity, index) => (
+              {analytics?.monthlyTrends?.slice(-3).map((trend, index) => (
                 <div key={index} className="flex items-center space-x-2 text-sm">
                   <Users className="h-3 w-3 text-muted-foreground" />
-                  <span>{activity.description}</span>
-                  <span className="text-muted-foreground text-xs ml-auto">
-                    {new Date(activity.timestamp).toLocaleDateString()}
-                  </span>
+                  <span>{trend.month}: {trend.returns} returns</span>
+                  {trend.exchanges > 0 && (
+                    <span className="text-green-600">({trend.exchanges} exchanges)</span>
+                  )}
                 </div>
               )) || (
-                <p className="text-sm text-muted-foreground">No recent activity</p>
+                <p className="text-sm text-muted-foreground">No trend data available</p>
               )}
             </div>
           </CardContent>
