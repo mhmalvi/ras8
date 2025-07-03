@@ -1,13 +1,13 @@
+
 import { useState, useMemo } from "react";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { CheckCircle, XCircle, Clock, Package, Sparkles, Download, Loader2, Brain } from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
+import { Eye, Calendar, User, Package, Brain, Loader2 } from "lucide-react";
+import { format } from "date-fns";
 import { useRealReturnsData } from "@/hooks/useRealReturnsData";
-import { useAIInsights } from "@/hooks/useAIInsights";
+import ReturnProcessingModal from "./ReturnProcessingModal";
+import { useToast } from "@/hooks/use-toast";
 
 interface RealReturnsTableProps {
   searchTerm: string;
@@ -15,304 +15,197 @@ interface RealReturnsTableProps {
 }
 
 const RealReturnsTable = ({ searchTerm, statusFilter }: RealReturnsTableProps) => {
+  const { returns, loading, error, refetch } = useRealReturnsData();
   const { toast } = useToast();
   const [selectedReturn, setSelectedReturn] = useState<any>(null);
-  const [generatingAI, setGeneratingAI] = useState<string | null>(null);
-  const { returns, loading, error, refetch } = useRealReturnsData();
-  const { generateInsightForReturn } = useAIInsights();
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
-  // Enhanced filtering logic
+  // Filter returns based on search term and status
   const filteredReturns = useMemo(() => {
     return returns.filter(returnItem => {
-      // Search filter
-      if (searchTerm) {
-        const searchLower = searchTerm.toLowerCase();
-        const matchesSearch = 
-          returnItem.shopify_order_id.toLowerCase().includes(searchLower) ||
-          returnItem.customer_email.toLowerCase().includes(searchLower) ||
-          returnItem.reason.toLowerCase().includes(searchLower);
-        if (!matchesSearch) return false;
-      }
-
-      // Status filter
-      if (statusFilter !== 'all' && returnItem.status !== statusFilter) {
-        return false;
-      }
-
-      return true;
+      const matchesSearch = !searchTerm || 
+        returnItem.customer_email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        returnItem.shopify_order_id.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        returnItem.reason.toLowerCase().includes(searchTerm.toLowerCase());
+      
+      const matchesStatus = statusFilter === 'all' || returnItem.status === statusFilter;
+      
+      return matchesSearch && matchesStatus;
     });
   }, [returns, searchTerm, statusFilter]);
 
-  const getStatusBadge = (status: string) => {
-    const statusConfig = {
-      requested: { label: "Requested", variant: "secondary" as const, icon: Clock },
-      approved: { label: "Approved", variant: "default" as const, icon: CheckCircle },
-      in_transit: { label: "In Transit", variant: "outline" as const, icon: Package },
-      completed: { label: "Completed", variant: "default" as const, icon: CheckCircle }
-    };
-
-    const config = statusConfig[status as keyof typeof statusConfig] || statusConfig.requested;
-    const Icon = config.icon;
-
-    return (
-      <Badge variant={config.variant} className="flex items-center gap-1">
-        <Icon className="h-3 w-3" />
-        {config.label}
-      </Badge>
-    );
-  };
-
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD'
-    }).format(amount);
-  };
-
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString();
-  };
-
-  const getCustomerName = (email: string) => {
-    // Extract name from email or create initials
-    const namePart = email.split('@')[0];
-    return namePart.split('.').map(part => 
-      part.charAt(0).toUpperCase() + part.slice(1)
-    ).join(' ');
-  };
-
-  const handleGenerateAI = async (returnItem: any) => {
-    if (returnItem.ai_suggestions && returnItem.ai_suggestions.length > 0) {
-      toast({
-        title: "AI recommendation already exists",
-        description: "This return already has an AI recommendation."
-      });
-      return;
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'requested': return 'bg-yellow-100 text-yellow-800 border-yellow-200';
+      case 'approved': return 'bg-blue-100 text-blue-800 border-blue-200';
+      case 'in_transit': return 'bg-purple-100 text-purple-800 border-purple-200';
+      case 'completed': return 'bg-green-100 text-green-800 border-green-200';
+      default: return 'bg-gray-100 text-gray-800 border-gray-200';
     }
+  };
 
-    setGeneratingAI(returnItem.id);
-    try {
-      await generateInsightForReturn(returnItem);
-      await refetch(); // Refresh data to show new AI suggestion
-      toast({
-        title: "AI recommendation generated",
-        description: "New AI suggestion has been created for this return."
-      });
-    } catch (error) {
-      toast({
-        title: "Error generating AI recommendation",
-        description: "Please try again or check your OpenAI API configuration.",
-        variant: "destructive"
-      });
-    } finally {
-      setGeneratingAI(null);
-    }
+  const handleViewReturn = (returnItem: any) => {
+    console.log('📋 Opening return details for:', returnItem.id);
+    setSelectedReturn(returnItem);
+    setIsModalOpen(true);
+  };
+
+  const handleProcessingComplete = async (result: any) => {
+    console.log('✅ Processing completed:', result);
+    
+    toast({
+      title: "Return Processed",
+      description: `Return ${result.action} successfully.`,
+    });
+    
+    // Refresh the data
+    await refetch();
   };
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center p-8">
-        <Loader2 className="h-8 w-8 animate-spin" />
-        <span className="ml-2">Loading returns data...</span>
+      <div className="flex items-center justify-center py-12">
+        <Loader2 className="h-6 w-6 animate-spin mr-2" />
+        <span className="text-muted-foreground">Loading returns...</span>
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="text-center p-8">
-        <p className="text-red-600 mb-4">Error loading returns: {error}</p>
-        <Button onClick={refetch}>Retry</Button>
+      <div className="text-center py-12">
+        <div className="text-red-600 mb-4">
+          <Package className="h-12 w-12 mx-auto mb-2 opacity-50" />
+          <p className="font-medium">Error loading returns</p>
+          <p className="text-sm text-muted-foreground">{error}</p>
+        </div>
+        <Button onClick={refetch} variant="outline">
+          Try Again
+        </Button>
+      </div>
+    );
+  }
+
+  if (filteredReturns.length === 0) {
+    return (
+      <div className="text-center py-12">
+        <Package className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
+        <h3 className="text-lg font-semibold text-muted-foreground mb-2">
+          {returns.length === 0 ? 'No returns found' : 'No matching returns'}
+        </h3>
+        <p className="text-sm text-muted-foreground">
+          {returns.length === 0 
+            ? 'When customers submit returns, they will appear here.' 
+            : 'Try adjusting your search or filter criteria.'
+          }
+        </p>
       </div>
     );
   }
 
   return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <p className="text-sm text-slate-500">
-          Showing {filteredReturns.length} of {returns.length} returns
-        </p>
-        <div className="flex gap-2">
-          <Button variant="outline" size="sm" onClick={refetch}>
-            Refresh
-          </Button>
-        </div>
-      </div>
-
-      <div className="rounded-md border">
+    <>
+      <div className="rounded-lg border">
         <Table>
           <TableHeader>
-            <TableRow>
-              <TableHead>Customer</TableHead>
-              <TableHead>Order</TableHead>
-              <TableHead>Items</TableHead>
-              <TableHead>Reason</TableHead>
-              <TableHead>Value</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead>AI Suggestions</TableHead>
-              <TableHead className="text-right">Actions</TableHead>
+            <TableRow className="bg-slate-50">
+              <TableHead className="font-semibold">Order ID</TableHead>
+              <TableHead className="font-semibold">Customer</TableHead>
+              <TableHead className="font-semibold">Items</TableHead>
+              <TableHead className="font-semibold">Reason</TableHead>
+              <TableHead className="font-semibold">Amount</TableHead>
+              <TableHead className="font-semibold">Status</TableHead>
+              <TableHead className="font-semibold">AI Insights</TableHead>
+              <TableHead className="font-semibold">Date</TableHead>
+              <TableHead className="font-semibold text-center">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
-            {filteredReturns.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={8} className="text-center py-8 text-slate-500">
-                  {returns.length === 0 
-                    ? "No returns found. Returns will appear here once customers submit them."
-                    : "No returns found matching your filters."
-                  }
+            {filteredReturns.map((returnItem) => (
+              <TableRow key={returnItem.id} className="hover:bg-slate-50">
+                <TableCell className="font-medium">
+                  #{returnItem.shopify_order_id.slice(0, 8)}
+                </TableCell>
+                <TableCell>
+                  <div className="flex items-center space-x-2">
+                    <User className="h-4 w-4 text-muted-foreground" />
+                    <span className="text-sm">{returnItem.customer_email}</span>
+                  </div>
+                </TableCell>
+                <TableCell>
+                  <div className="flex items-center space-x-2">
+                    <Package className="h-4 w-4 text-muted-foreground" />
+                    <span className="text-sm">
+                      {returnItem.return_items?.length || 1} item(s)
+                    </span>
+                  </div>
+                </TableCell>
+                <TableCell>
+                  <span className="text-sm text-muted-foreground max-w-32 truncate block">
+                    {returnItem.reason}
+                  </span>
+                </TableCell>
+                <TableCell className="font-medium">
+                  ${returnItem.total_amount.toFixed(2)}
+                </TableCell>
+                <TableCell>
+                  <Badge 
+                    variant="outline" 
+                    className={getStatusColor(returnItem.status)}
+                  >
+                    {returnItem.status.replace('_', ' ')}
+                  </Badge>
+                </TableCell>
+                <TableCell>
+                  {returnItem.ai_suggestions && returnItem.ai_suggestions.length > 0 ? (
+                    <div className="flex items-center space-x-2">
+                      <Brain className="h-4 w-4 text-purple-600" />
+                      <Badge variant="outline" className="text-purple-600 border-purple-200 bg-purple-50">
+                        {Math.round((returnItem.ai_suggestions[0]?.confidence_score || 0) * 100)}%
+                      </Badge>
+                    </div>
+                  ) : (
+                    <span className="text-xs text-muted-foreground">No AI data</span>
+                  )}
+                </TableCell>
+                <TableCell>
+                  <div className="flex items-center space-x-2 text-sm text-muted-foreground">
+                    <Calendar className="h-4 w-4" />
+                    <span>
+                      {format(new Date(returnItem.created_at), 'MMM dd, yyyy')}
+                    </span>
+                  </div>
+                </TableCell>
+                <TableCell className="text-center">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleViewReturn(returnItem)}
+                    className="flex items-center space-x-1"
+                  >
+                    <Eye className="h-4 w-4" />
+                    <span>View</span>
+                  </Button>
                 </TableCell>
               </TableRow>
-            ) : (
-              filteredReturns.map((returnItem) => (
-                <TableRow key={returnItem.id} className="hover:bg-slate-50/50">
-                  <TableCell>
-                    <div className="flex items-center space-x-3">
-                      <Avatar className="h-8 w-8">
-                        <AvatarFallback>
-                          {getCustomerName(returnItem.customer_email).split(' ').map(n => n[0]).join('')}
-                        </AvatarFallback>
-                      </Avatar>
-                      <div>
-                        <div className="font-medium text-sm">{getCustomerName(returnItem.customer_email)}</div>
-                        <div className="text-xs text-slate-500">{returnItem.customer_email}</div>
-                      </div>
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <div className="font-mono text-sm">#{returnItem.shopify_order_id}</div>
-                    <div className="text-xs text-slate-500">{formatDate(returnItem.created_at)}</div>
-                  </TableCell>
-                  <TableCell>
-                    <div className="text-sm">
-                      {returnItem.return_items?.length || 0} item{(returnItem.return_items?.length || 0) !== 1 ? 's' : ''}
-                    </div>
-                    {returnItem.return_items?.[0] && (
-                      <div className="text-xs text-slate-500 truncate max-w-32">
-                        {returnItem.return_items[0].product_name}
-                      </div>
-                    )}
-                  </TableCell>
-                  <TableCell>
-                    <div className="text-sm">{returnItem.reason}</div>
-                  </TableCell>
-                  <TableCell>
-                    <div className="font-medium">{formatCurrency(returnItem.total_amount)}</div>
-                  </TableCell>
-                  <TableCell>
-                    {getStatusBadge(returnItem.status)}
-                  </TableCell>
-                  <TableCell>
-                    {returnItem.ai_suggestions && returnItem.ai_suggestions.length > 0 ? (
-                      <div className="flex items-center space-x-2">
-                        <Sparkles className="h-4 w-4 text-purple-500" />
-                        <div>
-                          <div className="text-sm font-medium text-purple-700 truncate max-w-32">
-                            {returnItem.ai_suggestions[0].suggested_product_name}
-                          </div>
-                          <div className="text-xs text-purple-500">
-                            {returnItem.ai_suggestions[0].confidence_score}% confidence
-                          </div>
-                        </div>
-                      </div>
-                    ) : (
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleGenerateAI(returnItem)}
-                        disabled={generatingAI === returnItem.id}
-                        className="text-xs text-slate-400 hover:text-purple-600"
-                      >
-                        {generatingAI === returnItem.id ? (
-                          <Loader2 className="h-3 w-3 animate-spin" />
-                        ) : (
-                          <Brain className="h-3 w-3" />
-                        )}
-                        {generatingAI === returnItem.id ? 'Generating...' : 'Generate AI'}
-                      </Button>
-                    )}
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <Dialog>
-                      <DialogTrigger asChild>
-                        <Button variant="outline" size="sm" onClick={() => setSelectedReturn(returnItem)}>
-                          View Details
-                        </Button>
-                      </DialogTrigger>
-                      <DialogContent className="max-w-2xl">
-                        <DialogHeader>
-                          <DialogTitle>Return Details - {returnItem.id.slice(0, 8)}</DialogTitle>
-                          <DialogDescription>
-                            Manage this return request and AI recommendations
-                          </DialogDescription>
-                        </DialogHeader>
-                        {selectedReturn && (
-                          <div className="space-y-6">
-                            <div className="grid grid-cols-2 gap-4">
-                              <div>
-                                <h4 className="font-medium mb-2">Customer Information</h4>
-                                <div className="space-y-1 text-sm">
-                                  <p><strong>Name:</strong> {getCustomerName(selectedReturn.customer_email)}</p>
-                                  <p><strong>Email:</strong> {selectedReturn.customer_email}</p>
-                                  <p><strong>Order:</strong> #{selectedReturn.shopify_order_id}</p>
-                                </div>
-                              </div>
-                              <div>
-                                <h4 className="font-medium mb-2">Return Information</h4>
-                                <div className="space-y-1 text-sm">
-                                  <p><strong>Items:</strong> {selectedReturn.return_items?.length || 0}</p>
-                                  <p><strong>Reason:</strong> {selectedReturn.reason}</p>
-                                  <p><strong>Value:</strong> {formatCurrency(selectedReturn.total_amount)}</p>
-                                  <p><strong>Status:</strong> {selectedReturn.status}</p>
-                                </div>
-                              </div>
-                            </div>
-                            
-                            {selectedReturn.ai_suggestions && selectedReturn.ai_suggestions.length > 0 && (
-                              <div className="border rounded-lg p-4 bg-purple-50">
-                                <div className="flex items-center space-x-2 mb-3">
-                                  <Sparkles className="h-5 w-5 text-purple-600" />
-                                  <h4 className="font-medium text-purple-900">AI Recommendation</h4>
-                                </div>
-                                <div className="space-y-2">
-                                  <p className="text-sm font-medium">{selectedReturn.ai_suggestions[0].suggested_product_name}</p>
-                                  <p className="text-xs text-slate-600">{selectedReturn.ai_suggestions[0].reasoning}</p>
-                                  <div className="flex items-center justify-between">
-                                    <span className="text-sm text-purple-600">
-                                      Confidence: {selectedReturn.ai_suggestions[0].confidence_score}%
-                                    </span>
-                                    <Badge variant="outline" className="bg-white">
-                                      {selectedReturn.ai_suggestions[0].confidence_score >= 90 ? 'High Match' : 
-                                       selectedReturn.ai_suggestions[0].confidence_score >= 70 ? 'Medium Match' : 'Low Match'}
-                                    </Badge>
-                                  </div>
-                                </div>
-                              </div>
-                            )}
-
-                            <div className="flex justify-end space-x-2">
-                              <Button variant="outline">
-                                <XCircle className="h-4 w-4 mr-2" />
-                                Reject
-                              </Button>
-                              <Button>
-                                <CheckCircle className="h-4 w-4 mr-2" />
-                                Approve
-                              </Button>
-                            </div>
-                          </div>
-                        )}
-                      </DialogContent>
-                    </Dialog>
-                  </TableCell>
-                </TableRow>
-              ))
-            )}
+            ))}
           </TableBody>
         </Table>
       </div>
-    </div>
+
+      {/* Return Processing Modal */}
+      {selectedReturn && (
+        <ReturnProcessingModal
+          isOpen={isModalOpen}
+          onClose={() => {
+            setIsModalOpen(false);
+            setSelectedReturn(null);
+          }}
+          returnData={selectedReturn}
+          onProcessingComplete={handleProcessingComplete}
+        />
+      )}
+    </>
   );
 };
 

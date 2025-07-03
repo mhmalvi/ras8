@@ -32,6 +32,7 @@ interface AISuggestion {
   suggestion_type: string;
   confidence_score: number;
   reasoning: string;
+  accepted?: boolean | null;
 }
 
 // Helper function to execute the returns query and process data
@@ -55,7 +56,7 @@ const fetchReturnsQuery = async (merchantId: string) => {
   
   console.log('✅ Raw returns data:', data?.length, 'returns');
   
-  // Type assertion to ensure proper typing
+  // Type assertion and data processing
   return (data || []).map(item => ({
     ...item,
     status: item.status as 'requested' | 'approved' | 'in_transit' | 'completed',
@@ -63,7 +64,10 @@ const fetchReturnsQuery = async (merchantId: string) => {
       ...returnItem,
       action: returnItem.action as 'refund' | 'exchange'
     })) as ReturnItem[],
-    ai_suggestions: (item.ai_suggestions || []) as AISuggestion[]
+    ai_suggestions: (item.ai_suggestions || []).map((suggestion: any) => ({
+      ...suggestion,
+      accepted: suggestion.accepted
+    })) as AISuggestion[]
   })) as Return[];
 };
 
@@ -89,13 +93,13 @@ export const useRealReturnsData = () => {
       try {
         console.log('🚀 Setting up real-time returns for merchant:', profile.merchant_id);
         setLoading(true);
+        setError(null);
         
         // Fetch initial data
         const typedData = await fetchReturnsQuery(profile.merchant_id);
         
         console.log('✅ Processed returns data:', typedData.length, 'returns');
         setReturns(typedData);
-        setError(null);
 
         // Set up real-time subscription
         channel = supabase
@@ -103,7 +107,7 @@ export const useRealReturnsData = () => {
           .on(
             'postgres_changes',
             {
-              event: '*', // Listen to all events
+              event: '*',
               schema: 'public',
               table: 'returns',
               filter: `merchant_id=eq.${profile.merchant_id}`
@@ -130,7 +134,6 @@ export const useRealReturnsData = () => {
             async (payload) => {
               console.log('🔄 Return items real-time update:', payload.eventType);
               
-              // Refetch returns data when return items change
               try {
                 const updatedData = await fetchReturnsQuery(profile.merchant_id);
                 setReturns(updatedData);
@@ -149,7 +152,6 @@ export const useRealReturnsData = () => {
             async (payload) => {
               console.log('🤖 AI suggestions real-time update:', payload.eventType);
               
-              // Refetch returns data when AI suggestions change
               try {
                 const updatedData = await fetchReturnsQuery(profile.merchant_id);
                 setReturns(updatedData);
@@ -209,11 +211,11 @@ export const useRealReturnsData = () => {
     
     try {
       setLoading(true);
+      setError(null);
       const typedData = await fetchReturnsQuery(profile.merchant_id);
       
       console.log('🔄 Refetch complete:', typedData.length, 'returns');
       setReturns(typedData);
-      setError(null);
     } catch (err) {
       console.error('💥 Error refetching returns:', err);
       setError(err instanceof Error ? err.message : 'Unknown error');
