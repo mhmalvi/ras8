@@ -32,15 +32,26 @@ const BulkAIProcessor = () => {
   const [processingJob, setProcessingJob] = useState<BulkProcessingJob | null>(null);
   const [processingResults, setProcessingResults] = useState<any[]>([]);
 
-  const pendingReturns = returns.filter(r => r.status === 'requested');
-  const allSelected = selectedReturns.length === pendingReturns.length;
+  // Filter returns that can be processed (requested/pending status)
+  const processableReturns = returns.filter(r => 
+    r.status === 'requested' || r.status === 'pending'
+  );
+  
+  const allSelected = selectedReturns.length === processableReturns.length;
   const someSelected = selectedReturns.length > 0;
+
+  console.log('📊 BulkAIProcessor - Returns data:', {
+    totalReturns: returns.length,
+    processableReturns: processableReturns.length,
+    selectedReturns: selectedReturns.length,
+    loading
+  });
 
   const toggleSelectAll = () => {
     if (allSelected) {
       setSelectedReturns([]);
     } else {
-      setSelectedReturns(pendingReturns.map(r => r.id));
+      setSelectedReturns(processableReturns.map(r => r.id));
     }
   };
 
@@ -81,8 +92,14 @@ const BulkAIProcessor = () => {
       description: `Processing ${selectedReturns.length} returns with ${selectedAction.replace('_', ' ')}`,
     });
 
+    console.log('⚡ Starting bulk processing:', {
+      action: selectedAction,
+      returnCount: selectedReturns.length,
+      returnIds: selectedReturns
+    });
+
     // Process returns in batches to avoid overwhelming the API
-    const batchSize = 5;
+    const batchSize = 3; // Reduced batch size for better reliability
     const batches = [];
     for (let i = 0; i < selectedReturns.length; i += batchSize) {
       batches.push(selectedReturns.slice(i, i + batchSize));
@@ -94,15 +111,21 @@ const BulkAIProcessor = () => {
     const results: any[] = [];
 
     for (const batch of batches) {
+      console.log(`📦 Processing batch with ${batch.length} returns`);
+      
       const batchPromises = batch.map(async (returnId) => {
         const returnData = returns.find(r => r.id === returnId);
-        if (!returnData) return { returnId, success: false, error: 'Return not found' };
+        if (!returnData) {
+          console.error('❌ Return not found:', returnId);
+          return { returnId, success: false, error: 'Return not found' };
+        }
 
         try {
           let result;
           
           switch (selectedAction) {
             case 'generate_recommendations':
+              console.log('🤖 Generating recommendations for return:', returnId);
               result = await supabase.functions.invoke('generate-exchange-recommendation', {
                 body: {
                   returnReason: returnData.reason,
@@ -113,17 +136,20 @@ const BulkAIProcessor = () => {
               });
               
               if (result.data?.success) {
+                // Save AI suggestion to database
                 await supabase.from('ai_suggestions').insert({
                   return_id: returnId,
-                  suggested_product_name: result.data.data.suggestedProduct,
+                  suggested_product_name: result.data.data?.suggestedProduct || 'AI Recommendation',
                   suggestion_type: 'exchange',
-                  confidence_score: result.data.data.confidence / 100,
-                  reasoning: result.data.data.reasoning
+                  confidence_score: (result.data.data?.confidence || 75) / 100,
+                  reasoning: result.data.data?.reasoning || 'AI-generated exchange recommendation'
                 });
+                console.log('✅ AI suggestion saved for return:', returnId);
               }
               break;
 
             case 'risk_analysis':
+              console.log('🔍 Analyzing risk for return:', returnId);
               result = await supabase.functions.invoke('analyze-return-risk', {
                 body: {
                   returnId,
@@ -136,7 +162,8 @@ const BulkAIProcessor = () => {
               break;
 
             case 'auto_approve':
-              // Auto-approve returns with high AI confidence and low risk
+              console.log('⚡ Auto-approving return:', returnId);
+              // First check risk level
               const riskResult = await supabase.functions.invoke('analyze-return-risk', {
                 body: {
                   returnId,
@@ -146,19 +173,30 @@ const BulkAIProcessor = () => {
                 }
               });
 
-              if (riskResult.data?.riskLevel === 'low') {
-                await supabase.from('returns').update({ 
-                  status: 'approved',
-                  updated_at: new Date().toISOString()
-                }).eq('id', returnId);
-                
-                result = { data: { success: true, action: 'approved' } };
+              if (riskResult.data?.riskLevel === 'low' || riskResult.data?.risk === 'low') {
+                const { error: updateError } = await supabase
+                  .from('returns')
+                  .update({ 
+                    status: 'approved',
+                    updated_at: new Date().toISOString()
+                  })
+                  .eq('id', returnId);
+
+                if (!updateError) {
+                  result = { data: { success: true, action: 'approved' } };
+                  console.log('✅ Return auto-approved:', returnId);
+                } else {
+                  console.error('❌ Error updating return status:', updateError);
+                  result = { data: { success: false, reason: 'Database update failed' } };
+                }
               } else {
                 result = { data: { success: false, reason: 'High risk - manual review required' } };
+                console.log('⚠️ Return requires manual review:', returnId);
               }
               break;
 
             case 'generate_messages':
+              console.log('📨 Generating message for return:', returnId);
               result = await supabase.functions.invoke('generate-customer-message', {
                 body: {
                   returnId,
@@ -176,12 +214,13 @@ const BulkAIProcessor = () => {
 
           return { 
             returnId, 
-            success: true, 
+            success: result?.data?.success || false, 
             result: result?.data,
             customerEmail: returnData.customer_email,
             reason: returnData.reason
           };
         } catch (error: any) {
+          console.error('❌ Error processing return:', returnId, error);
           return { 
             returnId, 
             success: false, 
@@ -216,7 +255,7 @@ const BulkAIProcessor = () => {
 
       // Small delay between batches to prevent rate limiting
       if (batches.indexOf(batch) < batches.length - 1) {
-        await new Promise(resolve => setTimeout(resolve, 1000));
+        await new Promise(resolve => setTimeout(resolve, 2000)); // Increased delay
       }
     }
 
@@ -227,26 +266,39 @@ const BulkAIProcessor = () => {
       completedAt: new Date().toISOString()
     } : null);
 
+    console.log('🏁 Bulk processing completed:', {
+      total: totalProcessed,
+      successful: totalSuccessful,
+      failed: totalFailed
+    });
+
     toast({
       title: "Bulk Processing Complete",
       description: `Processed ${totalProcessed} returns. ${totalSuccessful} successful, ${totalFailed} failed.`,
     });
 
-    // Refresh returns data
+    // Refresh returns data to show updated statuses
     await refetch();
   };
 
   const exportResults = () => {
-    if (processingResults.length === 0) return;
+    if (processingResults.length === 0) {
+      toast({
+        title: "No Results to Export",
+        description: "Complete a bulk processing job first.",
+        variant: "destructive"
+      });
+      return;
+    }
 
     const csvContent = [
       ['Return ID', 'Customer Email', 'Reason', 'Status', 'Result'],
       ...processingResults.map(result => [
         result.returnId,
-        result.customerEmail,
-        result.reason,
+        result.customerEmail || 'N/A',
+        result.reason || 'N/A',
         result.success ? 'Success' : 'Failed',
-        result.success ? JSON.stringify(result.result) : result.error
+        result.success ? 'Processed successfully' : (result.error || 'Unknown error')
       ])
     ].map(row => row.join(',')).join('\n');
 
@@ -255,8 +307,15 @@ const BulkAIProcessor = () => {
     const a = document.createElement('a');
     a.href = url;
     a.download = `bulk-processing-results-${Date.now()}.csv`;
+    document.body.appendChild(a);
     a.click();
+    document.body.removeChild(a);
     URL.revokeObjectURL(url);
+
+    toast({
+      title: "Results Exported",
+      description: "Processing results have been downloaded as CSV.",
+    });
   };
 
   const resetJob = () => {
@@ -264,6 +323,19 @@ const BulkAIProcessor = () => {
     setProcessingResults([]);
     setSelectedReturns([]);
   };
+
+  if (loading) {
+    return (
+      <Card>
+        <CardContent className="pt-6">
+          <div className="flex items-center justify-center py-8">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+            <span className="ml-2">Loading returns data...</span>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -303,10 +375,10 @@ const BulkAIProcessor = () => {
                         <Checkbox
                           checked={allSelected}
                           onCheckedChange={toggleSelectAll}
-                          className="mr-2"
+                          disabled={processableReturns.length === 0}
                         />
                         <span className="font-medium">
-                          Pending Returns ({pendingReturns.length})
+                          Processable Returns ({processableReturns.length})
                         </span>
                       </div>
                       <Badge variant="outline">
@@ -316,33 +388,45 @@ const BulkAIProcessor = () => {
                   </div>
                   
                   <div className="max-h-64 overflow-y-auto">
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead className="w-12"></TableHead>
-                          <TableHead>Customer</TableHead>
-                          <TableHead>Reason</TableHead>
-                          <TableHead>Amount</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {pendingReturns.map((returnItem) => (
-                          <TableRow key={returnItem.id}>
-                            <TableCell>
-                              <Checkbox
-                                checked={selectedReturns.includes(returnItem.id)}
-                                onCheckedChange={() => toggleSelectReturn(returnItem.id)}
-                              />
-                            </TableCell>
-                            <TableCell className="font-medium">
-                              {returnItem.customer_email}
-                            </TableCell>
-                            <TableCell>{returnItem.reason}</TableCell>
-                            <TableCell>${returnItem.total_amount}</TableCell>
+                    {processableReturns.length === 0 ? (
+                      <div className="p-8 text-center text-muted-foreground">
+                        <Clock className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                        <p>No processable returns found.</p>
+                        <p className="text-sm">Returns with status 'requested' or 'pending' can be processed.</p>
+                      </div>
+                    ) : (
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead className="w-12"></TableHead>
+                            <TableHead>Customer</TableHead>
+                            <TableHead>Reason</TableHead>
+                            <TableHead>Amount</TableHead>
+                            <TableHead>Status</TableHead>
                           </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
+                        </TableHeader>
+                        <TableBody>
+                          {processableReturns.map((returnItem) => (
+                            <TableRow key={returnItem.id}>
+                              <TableCell>
+                                <Checkbox
+                                  checked={selectedReturns.includes(returnItem.id)}
+                                  onCheckedChange={() => toggleSelectReturn(returnItem.id)}
+                                />
+                              </TableCell>
+                              <TableCell className="font-medium">
+                                {returnItem.customer_email}
+                              </TableCell>
+                              <TableCell>{returnItem.reason}</TableCell>
+                              <TableCell>${returnItem.total_amount}</TableCell>
+                              <TableCell>
+                                <Badge variant="outline">{returnItem.status}</Badge>
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    )}
                   </div>
                 </div>
 
