@@ -1,11 +1,18 @@
+
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.0';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
+
+interface StandardResponse {
+  success: boolean;
+  data?: any;
+  error?: string;
+  fallback?: boolean;
+}
 
 serve(async (req) => {
   // Handle CORS preflight requests
@@ -18,7 +25,20 @@ serve(async (req) => {
 
     const openAIApiKey = Deno.env.get('OPENAI_API_KEY');
     if (!openAIApiKey) {
-      throw new Error('OpenAI API key not configured');
+      console.error('OpenAI API key not configured');
+      return new Response(JSON.stringify({
+        success: false,
+        error: 'OpenAI API key not configured',
+        fallback: true,
+        data: {
+          suggestedProduct: `Enhanced ${productName}`,
+          confidence: 75,
+          reasoning: 'Fallback recommendation - API key not configured'
+        }
+      } as StandardResponse), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 200
+      });
     }
 
     const prompt = `
@@ -42,6 +62,7 @@ CONFIDENCE: [number between 70-99]
 REASONING: [brief explanation]
 `;
 
+    console.log('Making OpenAI API request...');
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -66,11 +87,13 @@ REASONING: [brief explanation]
     });
 
     if (!response.ok) {
+      console.error(`OpenAI API error: ${response.statusText}`);
       throw new Error(`OpenAI API error: ${response.statusText}`);
     }
 
     const data = await response.json();
     const content = data.choices[0]?.message?.content || '';
+    console.log('OpenAI response received:', content.substring(0, 100) + '...');
 
     // Parse the AI response
     const lines = content.split('\n');
@@ -90,11 +113,16 @@ REASONING: [brief explanation]
     });
 
     const result = {
-      suggestedProduct: suggestedProduct || 'Enhanced Version of Original Product',
-      confidence: Math.max(70, Math.min(99, confidence)),
-      reasoning: reasoning || 'Based on the return reason, this alternative should better meet customer needs.'
-    };
+      success: true,
+      fallback: false,
+      data: {
+        suggestedProduct: suggestedProduct || 'Enhanced Version of Original Product',
+        confidence: Math.max(70, Math.min(99, confidence)),
+        reasoning: reasoning || 'Based on the return reason, this alternative should better meet customer needs.'
+      }
+    } as StandardResponse;
 
+    console.log('Sending successful response:', result.data);
     return new Response(JSON.stringify(result), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
@@ -102,7 +130,6 @@ REASONING: [brief explanation]
   } catch (error) {
     console.error('Error in generate-exchange-recommendation function:', error);
     
-    // Return fallback recommendation
     const fallbackProducts = [
       'Premium Version',
       'Enhanced Model',
@@ -113,15 +140,20 @@ REASONING: [brief explanation]
 
     const randomProduct = fallbackProducts[Math.floor(Math.random() * fallbackProducts.length)];
     
-    const fallback = {
-      suggestedProduct: `${randomProduct} of the original product`,
-      confidence: 75,
-      reasoning: 'Recommendation based on common exchange patterns for similar return reasons.'
-    };
+    const fallbackResponse = {
+      success: false,
+      error: error.message,
+      fallback: true,
+      data: {
+        suggestedProduct: `${randomProduct} of the original product`,
+        confidence: 75,
+        reasoning: 'Fallback recommendation due to API error - based on common exchange patterns'
+      }
+    } as StandardResponse;
 
-    return new Response(JSON.stringify(fallback), {
+    return new Response(JSON.stringify(fallbackResponse), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      status: 200, // Return 200 for fallback to maintain user experience
+      status: 200
     });
   }
 });

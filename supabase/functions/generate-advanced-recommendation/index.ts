@@ -2,12 +2,17 @@
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 
-const openAIApiKey = Deno.env.get('OPENAI_API_KEY');
-
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
+
+interface StandardResponse {
+  success: boolean;
+  data?: any;
+  error?: string;
+  fallback?: boolean;
+}
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -28,6 +33,28 @@ serve(async (req) => {
     } = await req.json();
 
     console.log('Generating advanced AI recommendation for:', productName);
+
+    const openAIApiKey = Deno.env.get('OPENAI_API_KEY');
+    if (!openAIApiKey) {
+      console.error('OpenAI API key not configured');
+      return new Response(JSON.stringify({
+        success: false,
+        error: 'OpenAI API key not configured',
+        fallback: true,
+        data: {
+          type: 'exchange',
+          suggestedProduct: `Enhanced ${productName}`,
+          confidence: 75,
+          reasoning: 'Fallback recommendation - API key not configured',
+          expectedOutcome: 'Standard processing',
+          alternativeOptions: ['Refund', 'Store credit'],
+          customerRetentionScore: 70
+        }
+      } as StandardResponse), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 200
+      });
+    }
 
     const systemPrompt = `You are an advanced AI assistant specializing in e-commerce return optimization. Your role is to analyze return requests and provide intelligent recommendations that maximize customer retention and business value.
 
@@ -65,6 +92,7 @@ Consider:
 - Inventory considerations
 - Business impact`;
 
+    console.log('Making OpenAI API request for advanced recommendation...');
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -88,13 +116,14 @@ Consider:
 
     const data = await response.json();
     const content = data.choices[0].message.content;
+    console.log('OpenAI advanced recommendation response received:', content.substring(0, 100) + '...');
 
     // Try to parse JSON response
     let recommendation;
     try {
       recommendation = JSON.parse(content);
     } catch (e) {
-      // Fallback if AI doesn't return valid JSON
+      console.warn('Failed to parse AI response as JSON, using structured fallback');
       recommendation = {
         type: 'exchange',
         suggestedProduct: `Alternative ${productName}`,
@@ -107,7 +136,7 @@ Consider:
     }
 
     // Ensure all required fields are present
-    const response_data = {
+    const responseData = {
       type: recommendation.type || 'exchange',
       suggestedProduct: recommendation.suggestedProduct || `Enhanced ${productName}`,
       confidence: Math.max(60, Math.min(99, recommendation.confidence || 75)),
@@ -117,24 +146,37 @@ Consider:
       customerRetentionScore: Math.max(0, Math.min(100, recommendation.customerRetentionScore || 75))
     };
 
-    console.log('Generated recommendation:', response_data);
+    const result = {
+      success: true,
+      fallback: false,
+      data: responseData
+    } as StandardResponse;
 
-    return new Response(JSON.stringify(response_data), {
+    console.log('Generated recommendation:', result.data);
+
+    return new Response(JSON.stringify(result), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   } catch (error) {
     console.error('Error in advanced recommendation function:', error);
-    return new Response(JSON.stringify({ 
+    
+    const fallbackResponse = {
+      success: false,
       error: error.message,
-      type: 'exchange',
-      suggestedProduct: 'Alternative product',
-      confidence: 70,
-      reasoning: 'Fallback recommendation due to processing error',
-      expectedOutcome: 'Standard processing',
-      alternativeOptions: ['Refund', 'Store credit'],
-      customerRetentionScore: 70
-    }), {
-      status: 200, // Return 200 with fallback data instead of error
+      fallback: true,
+      data: {
+        type: 'exchange',
+        suggestedProduct: 'Alternative product',
+        confidence: 70,
+        reasoning: 'Fallback recommendation due to processing error',
+        expectedOutcome: 'Standard processing',
+        alternativeOptions: ['Refund', 'Store credit'],
+        customerRetentionScore: 70
+      }
+    } as StandardResponse;
+
+    return new Response(JSON.stringify(fallbackResponse), {
+      status: 200,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   }
