@@ -1,3 +1,4 @@
+
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
@@ -153,13 +154,7 @@ const Performance = () => {
 
                   {/* AI Integration Status */}
                   <div className="mb-6">
-                    <AIIntegrationStatus
-                      aiAcceptanceRate={performanceData ? Math.round(
-                        (performanceData.processingEfficiency.progress + performanceData.exchangeRate.progress) / 2
-                      ) : 0}
-                      processingEfficiency={performanceData?.processingEfficiency.progress || 0}
-                      edgeFunctionsStatus="needs_config"
-                    />
+                    <AIIntegrationStatus />
                   </div>
 
                   {/* Performance Goals Card */}
