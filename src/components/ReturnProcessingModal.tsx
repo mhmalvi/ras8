@@ -5,9 +5,10 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Separator } from "@/components/ui/separator";
-import { Brain, FileText, Sparkles, CheckCircle, XCircle, Loader2 } from 'lucide-react';
+import { Brain, FileText, Sparkles, CheckCircle, XCircle, Loader2, MessageSquare } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from "@/hooks/use-toast";
+import CustomerCommunicationAI from './CustomerCommunicationAI';
 
 interface ReturnProcessingModalProps {
   isOpen: boolean;
@@ -41,7 +42,7 @@ const ReturnProcessingModal = ({
   onProcessingComplete 
 }: ReturnProcessingModalProps) => {
   const { toast } = useToast();
-  const [processingMethod, setProcessingMethod] = useState<'smart' | 'manual'>('smart');
+  const [processingMethod, setProcessingMethod] = useState<'smart' | 'manual' | 'communication'>('smart');
   const [aiRecommendation, setAiRecommendation] = useState<AIRecommendation | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -230,7 +231,7 @@ const ReturnProcessingModal = ({
             Return Details - {returnData.id.slice(0, 8)}
           </DialogTitle>
           <p className="text-sm text-muted-foreground">
-            Manage this return request and AI recommendations
+            Manage this return request with AI recommendations and customer communication
           </p>
         </DialogHeader>
 
@@ -259,11 +260,15 @@ const ReturnProcessingModal = ({
 
           <Separator />
 
-          <Tabs value={processingMethod} onValueChange={(value) => setProcessingMethod(value as 'smart' | 'manual')}>
-            <TabsList className="grid w-full grid-cols-2">
+          <Tabs value={processingMethod} onValueChange={(value) => setProcessingMethod(value as 'smart' | 'manual' | 'communication')}>
+            <TabsList className="grid w-full grid-cols-3">
               <TabsTrigger value="smart" className="flex items-center gap-2">
                 <Brain className="h-4 w-4" />
                 AI Smart Processing
+              </TabsTrigger>
+              <TabsTrigger value="communication" className="flex items-center gap-2">
+                <MessageSquare className="h-4 w-4" />
+                Customer Communication
               </TabsTrigger>
               <TabsTrigger value="manual" className="flex items-center gap-2">
                 <FileText className="h-4 w-4" />
@@ -374,6 +379,10 @@ const ReturnProcessingModal = ({
                   Approve
                 </Button>
               </div>
+            </TabsContent>
+
+            <TabsContent value="communication" className="mt-6">
+              <CustomerCommunicationAI returnData={returnData} />
             </TabsContent>
 
             <TabsContent value="manual" className="mt-6">
