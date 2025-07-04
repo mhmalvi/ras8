@@ -54,7 +54,6 @@ export const useCustomerPortal = () => {
   const clearError = () => setError(null);
 
   const lookupOrder = async (orderNumber: string, email: string) => {
-    console.log('🚀 Starting order lookup process...');
     setLoading(true);
     setError(null);
     
@@ -62,14 +61,8 @@ export const useCustomerPortal = () => {
       // Clean the inputs
       const cleanOrderNumber = orderNumber.replace(/^#/, '').trim();
       const cleanEmail = email.trim().toLowerCase();
-      
-      console.log('🔍 Cleaned search params:', { 
-        original: { orderNumber, email }, 
-        cleaned: { cleanOrderNumber, cleanEmail } 
-      });
 
       // Fetch the order with items directly
-      console.log('🔍 Fetching order with items...');
       const { data: orderData, error: orderError } = await supabase
         .from('orders')
         .select(`
@@ -80,18 +73,7 @@ export const useCustomerPortal = () => {
         .eq('customer_email', cleanEmail)
         .single();
 
-      console.log('📊 Order lookup result:', { 
-        orderData: orderData ? {
-          id: orderData.id,
-          shopify_order_id: orderData.shopify_order_id,
-          customer_email: orderData.customer_email,
-          items_count: orderData.order_items?.length || 0
-        } : null,
-        error: orderError 
-      });
-
       if (orderError) {
-        console.error('❌ Order lookup error:', orderError);
         if (orderError.code === 'PGRST116') {
           throw new Error(`Order ${orderNumber} not found for email ${email}. Please check your order number and email address.`);
         }
@@ -99,7 +81,6 @@ export const useCustomerPortal = () => {
       }
 
       if (!orderData) {
-        console.log('❌ No order data returned');
         throw new Error(`Order ${orderNumber} not found`);
       }
 
@@ -109,18 +90,10 @@ export const useCustomerPortal = () => {
         items: orderData.order_items || []
       };
 
-      console.log('✅ Final order object created:', {
-        id: orderWithItems.id,
-        shopify_order_id: orderWithItems.shopify_order_id,
-        items_count: orderWithItems.items.length
-      });
-
       setOrder(orderWithItems);
       
       // Fetch existing returns
       await fetchCustomerReturns(cleanEmail, cleanOrderNumber);
-      
-      console.log('✅ Order lookup completed successfully');
       
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to lookup order';
