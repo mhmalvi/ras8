@@ -66,7 +66,7 @@ export const useCustomerPortal = () => {
       
       console.log('🔍 Cleaned search params:', { cleanOrderNumber, cleanEmail });
 
-      // First try exact match with case-insensitive email
+      // Use maybeSingle() instead of single() to avoid throwing errors when no data found
       const { data: orderData, error: orderError } = await supabase
         .from('orders')
         .select(`
@@ -75,24 +75,18 @@ export const useCustomerPortal = () => {
         `)
         .eq('shopify_order_id', cleanOrderNumber)
         .ilike('customer_email', cleanEmail)
-        .single();
+        .maybeSingle();
 
       console.log('📊 Order query result:', { orderData, orderError });
 
       if (orderError) {
-        console.error('❌ Order lookup error:', orderError);
-        
-        if (orderError.code === 'PGRST116') {
-          // No rows returned
-          throw new Error(`Order ${orderNumber} not found for email ${email}. Please check that both the order number and email address are correct.`);
-        } else {
-          // Other database error
-          throw new Error(`Database error: ${orderError.message}`);
-        }
+        console.error('❌ Order lookup database error:', orderError);
+        throw new Error(`Database error: ${orderError.message}`);
       }
 
       if (!orderData) {
-        throw new Error(`Order ${orderNumber} not found for email ${email}. Please verify your order details.`);
+        console.log('❌ No order found with these details');
+        throw new Error(`Order ${orderNumber} not found for email ${email}. Please check that both the order number and email address are correct.`);
       }
 
       console.log('✅ Order found:', orderData);
