@@ -66,18 +66,13 @@ export const useCustomerPortal = () => {
       
       console.log('🔍 Cleaned search params:', { cleanOrderNumber, cleanEmail });
 
-      // Let's first check what orders exist in the database
-      const { data: allOrders, error: debugError } = await supabase
-        .from('orders')
-        .select('shopify_order_id, customer_email')
-        .limit(10);
-      
-      console.log('🔍 All orders in database:', allOrders, 'Error:', debugError);
-
-      // Now try the specific lookup
+      // Direct order lookup with items in a single query
       const { data: orderData, error: orderError } = await supabase
         .from('orders')
-        .select('*')
+        .select(`
+          *,
+          order_items (*)
+        `)
         .eq('shopify_order_id', cleanOrderNumber)
         .eq('customer_email', cleanEmail)
         .maybeSingle();
@@ -94,22 +89,10 @@ export const useCustomerPortal = () => {
         throw new Error(`Order ${orderNumber} not found for email ${email}. Please check your details.`);
       }
 
-      // Fetch order items
-      const { data: orderItems, error: itemsError } = await supabase
-        .from('order_items')
-        .select('*')
-        .eq('order_id', orderData.id);
-
-      console.log('📦 Order items result:', { orderItems, itemsError });
-
-      if (itemsError) {
-        console.warn('⚠️ Could not fetch order items:', itemsError);
-      }
-
       // Create the order object
       const orderWithItems: Order = {
         ...orderData,
-        items: orderItems || []
+        items: orderData.order_items || []
       };
 
       console.log('✅ Final order object:', orderWithItems);
