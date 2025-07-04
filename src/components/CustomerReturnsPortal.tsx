@@ -6,36 +6,30 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useToast } from '@/hooks/use-toast';
-import { Search, Package, ArrowRight, RefreshCw, AlertCircle } from 'lucide-react';
-
-interface OrderItem {
-  id: string;
-  name: string;
-  price: number;
-  quantity: number;
-  image?: string;
-}
-
-interface Order {
-  id: string;
-  orderNumber: string;
-  items: OrderItem[];
-  total: number;
-  date: string;
-}
+import { useCustomerPortal } from '@/hooks/useCustomerPortal';
+import { Search, Package, ArrowRight, RefreshCw, AlertCircle, CheckCircle } from 'lucide-react';
 
 const CustomerReturnsPortal = () => {
   const [step, setStep] = useState<'lookup' | 'select' | 'reason' | 'confirmation'>('lookup');
   const [orderNumber, setOrderNumber] = useState('');
   const [email, setEmail] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [order, setOrder] = useState<Order | null>(null);
   const [selectedItems, setSelectedItems] = useState<string[]>([]);
-  const [returnReason, setReturnReason] = useState('');
-  const [aiSuggestions, setAiSuggestions] = useState<any[]>([]);
+  const [returnReasons, setReturnReasons] = useState<Record<string, string>>({});
   const { toast } = useToast();
 
-  const returnReasons = [
+  const {
+    loading,
+    error,
+    order,
+    returns,
+    aiRecommendations,
+    lookupOrder,
+    generateAIRecommendations,
+    submitReturn,
+    clearError
+  } = useCustomerPortal();
+
+  const returnReasonOptions = [
     'Defective/Damaged item',
     'Wrong size',
     'Wrong item received',
@@ -55,24 +49,9 @@ const CustomerReturnsPortal = () => {
       return;
     }
 
-    setLoading(true);
     try {
-      // Simulate API call to lookup order
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      
-      // Mock order data - in real implementation, this would come from Shopify API
-      const mockOrder: Order = {
-        id: '1',
-        orderNumber: orderNumber.toUpperCase(),
-        items: [
-          { id: '1', name: 'Premium T-Shirt - Blue', price: 29.99, quantity: 1 },
-          { id: '2', name: 'Denim Jeans - Size 32', price: 79.99, quantity: 1 }
-        ],
-        total: 109.98,
-        date: '2024-01-15'
-      };
-
-      setOrder(mockOrder);
+      clearError();
+      await lookupOrder(orderNumber, email);
       setStep('select');
       
       toast({
@@ -85,8 +64,6 @@ const CustomerReturnsPortal = () => {
         description: "Please check your order number and email address.",
         variant: "destructive",
       });
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -98,36 +75,55 @@ const CustomerReturnsPortal = () => {
     );
   };
 
+  const handleReasonSelection = (itemId: string, reason: string) => {
+    setReturnReasons(prev => ({
+      ...prev,
+      [itemId]: reason
+    }));
+  };
+
   const handleReturnSubmission = async () => {
-    if (!returnReason) {
+    if (selectedItems.length === 0) {
       toast({
-        title: "Reason required",
-        description: "Please select a reason for your return.",
+        title: "No items selected",
+        description: "Please select at least one item to return.",
         variant: "destructive",
       });
       return;
     }
 
-    setLoading(true);
+    const missingReasons = selectedItems.filter(itemId => !returnReasons[itemId]);
+    if (missingReasons.length > 0) {
+      toast({
+        title: "Reason required",
+        description: "Please select a reason for all selected items.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     try {
-      // Simulate return submission and AI suggestion generation
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      clearError();
       
-      // Mock AI suggestions
-      setAiSuggestions([
-        {
-          id: '1',
-          productName: 'Premium T-Shirt - Red',
-          reason: 'Similar style in different color',
-          confidence: 0.85
-        },
-        {
-          id: '2',
-          productName: 'Cotton Blend T-Shirt - Blue',
-          reason: 'Same color, different material',
-          confidence: 0.72
+      // Generate AI recommendations before submitting
+      if (selectedItems.length > 0 && order) {
+        const firstSelectedItem = order.items.find(item => selectedItems.includes(item.id));
+        if (firstSelectedItem) {
+          await generateAIRecommendations(
+            returnReasons[firstSelectedItem.id],
+            firstSelectedItem.product_name,
+            email,
+            order.total_amount
+          );
         }
-      ]);
+      }
+
+      const result = await submitReturn({
+        orderNumber,
+        email,
+        selectedItems,
+        returnReasons
+      });
 
       setStep('confirmation');
       
@@ -135,14 +131,13 @@ const CustomerReturnsPortal = () => {
         title: "Return request submitted!",
         description: "We'll process your return within 1-2 business days.",
       });
+
     } catch (error) {
       toast({
         title: "Submission failed",
-        description: "There was an error submitting your return request.",
+        description: error instanceof Error ? error.message : "There was an error submitting your return request.",
         variant: "destructive",
       });
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -161,6 +156,13 @@ const CustomerReturnsPortal = () => {
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
+              {error && (
+                <Alert variant="destructive">
+                  <AlertCircle className="h-4 w-4" />
+                  <AlertDescription>{error}</AlertDescription>
+                </Alert>
+              )}
+              
               <div>
                 <label htmlFor="order-number" className="block text-sm font-medium mb-2">
                   Order Number
@@ -169,7 +171,7 @@ const CustomerReturnsPortal = () => {
                   id="order-number"
                   value={orderNumber}
                   onChange={(e) => setOrderNumber(e.target.value.toUpperCase())}
-                  placeholder="e.g. #1001"
+                  placeholder="e.g. #1001 or 1001"
                   disabled={loading}
                 />
               </div>
@@ -212,9 +214,9 @@ const CustomerReturnsPortal = () => {
           <div className="max-w-2xl mx-auto space-y-6">
             <Card>
               <CardHeader>
-                <CardTitle>Order {order.orderNumber}</CardTitle>
+                <CardTitle>Order #{order.shopify_order_id}</CardTitle>
                 <CardDescription>
-                  Placed on {new Date(order.date).toLocaleDateString()} • Total: ${order.total}
+                  Placed on {new Date(order.created_at).toLocaleDateString()} • Total: ${order.total_amount.toFixed(2)}
                 </CardDescription>
               </CardHeader>
               <CardContent>
@@ -236,8 +238,8 @@ const CustomerReturnsPortal = () => {
                             <Package className="h-6 w-6 text-gray-400" />
                           </div>
                           <div>
-                            <h4 className="font-medium">{item.name}</h4>
-                            <p className="text-sm text-gray-600">Qty: {item.quantity} • ${item.price}</p>
+                            <h4 className="font-medium">{item.product_name}</h4>
+                            <p className="text-sm text-gray-600">Qty: {item.quantity} • ${item.price.toFixed(2)}</p>
                           </div>
                         </div>
                         {selectedItems.includes(item.id) && (
@@ -270,25 +272,37 @@ const CustomerReturnsPortal = () => {
           <div className="max-w-md mx-auto space-y-6">
             <Card>
               <CardHeader>
-                <CardTitle>Return Reason</CardTitle>
+                <CardTitle>Return Reasons</CardTitle>
                 <CardDescription>
-                  Please tell us why you're returning these items
+                  Please select a reason for each item you're returning
                 </CardDescription>
               </CardHeader>
-              <CardContent className="space-y-3">
-                {returnReasons.map((reason) => (
-                  <div
-                    key={reason}
-                    className={`p-3 border rounded cursor-pointer transition-colors ${
-                      returnReason === reason
-                        ? 'border-blue-500 bg-blue-50'
-                        : 'border-gray-200 hover:border-gray-300'
-                    }`}
-                    onClick={() => setReturnReason(reason)}
-                  >
-                    <p className="text-sm">{reason}</p>
-                  </div>
-                ))}
+              <CardContent className="space-y-4">
+                {selectedItems.map(itemId => {
+                  const item = order?.items.find(i => i.id === itemId);
+                  if (!item) return null;
+                  
+                  return (
+                    <div key={itemId} className="space-y-2">
+                      <h4 className="font-medium text-sm">{item.product_name}</h4>
+                      <div className="space-y-2">
+                        {returnReasonOptions.map((reason) => (
+                          <div
+                            key={reason}
+                            className={`p-3 border rounded cursor-pointer transition-colors ${
+                              returnReasons[itemId] === reason
+                                ? 'border-blue-500 bg-blue-50'
+                                : 'border-gray-200 hover:border-gray-300'
+                            }`}
+                            onClick={() => handleReasonSelection(itemId, reason)}
+                          >
+                            <p className="text-sm">{reason}</p>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  );
+                })}
               </CardContent>
             </Card>
 
@@ -298,7 +312,7 @@ const CustomerReturnsPortal = () => {
               </Button>
               <Button 
                 onClick={handleReturnSubmission}
-                disabled={!returnReason || loading}
+                disabled={loading || selectedItems.some(id => !returnReasons[id])}
               >
                 {loading ? (
                   <>
@@ -320,13 +334,13 @@ const CustomerReturnsPortal = () => {
         return (
           <div className="max-w-2xl mx-auto space-y-6">
             <Alert>
-              <AlertCircle className="h-4 w-4" />
+              <CheckCircle className="h-4 w-4" />
               <AlertDescription>
                 Your return request has been submitted successfully! You'll receive an email confirmation shortly.
               </AlertDescription>
             </Alert>
 
-            {aiSuggestions.length > 0 && (
+            {aiRecommendations.length > 0 && (
               <Card>
                 <CardHeader>
                   <CardTitle>Exchange Suggestions</CardTitle>
@@ -336,16 +350,44 @@ const CustomerReturnsPortal = () => {
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-3">
-                    {aiSuggestions.map((suggestion) => (
-                      <div key={suggestion.id} className="p-3 border rounded">
+                    {aiRecommendations.map((suggestion, index) => (
+                      <div key={index} className="p-3 border rounded">
                         <div className="flex justify-between items-start">
                           <div>
-                            <h4 className="font-medium">{suggestion.productName}</h4>
-                            <p className="text-sm text-gray-600">{suggestion.reason}</p>
+                            <h4 className="font-medium">{suggestion.suggestedProduct}</h4>
+                            <p className="text-sm text-gray-600">{suggestion.reasoning}</p>
                           </div>
                           <Badge variant="secondary">
-                            {Math.round(suggestion.confidence * 100)}% match
+                            {Math.round(suggestion.confidence)}% match
                           </Badge>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
+            {returns.length > 0 && (
+              <Card>
+                <CardHeader>
+                  <CardTitle>Your Return Requests</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-3">
+                    {returns.map((returnRequest) => (
+                      <div key={returnRequest.id} className="p-3 border rounded">
+                        <div className="flex justify-between items-start">
+                          <div>
+                            <h4 className="font-medium">Return #{returnRequest.id.slice(0, 8)}</h4>
+                            <p className="text-sm text-gray-600">
+                              Status: <Badge variant="outline">{returnRequest.status}</Badge>
+                            </p>
+                            <p className="text-sm text-gray-600">Items: {returnRequest.items.length}</p>
+                          </div>
+                          <p className="text-sm text-gray-500">
+                            {new Date(returnRequest.created_at).toLocaleDateString()}
+                          </p>
                         </div>
                       </div>
                     ))}

@@ -44,7 +44,13 @@ export class ShopifyService {
         .single();
 
       if (error) throw error;
-      return data?.access_token || null;
+      
+      // Check if token is valid (not disconnected/uninstalled)
+      if (!data?.access_token || data.access_token === 'DISCONNECTED' || data.access_token === 'UNINSTALLED') {
+        return null;
+      }
+      
+      return data.access_token;
     } catch (error) {
       console.error('Failed to get access token:', error);
       return null;
@@ -59,10 +65,10 @@ export class ShopifyService {
   ): Promise<any> {
     const accessToken = await this.getAccessToken(merchantId);
     if (!accessToken) {
-      throw new Error('No access token available');
+      throw new Error('No valid access token available for merchant');
     }
 
-    const response = await fetch(`https://${shopDomain}/admin/api/2023-10/${endpoint}`, {
+    const response = await fetch(`https://${shopDomain}.myshopify.com/admin/api/2023-10/${endpoint}`, {
       ...options,
       headers: {
         'X-Shopify-Access-Token': accessToken,
@@ -125,58 +131,90 @@ export class ShopifyService {
     }
   }
 
-  static async syncOrdersToDatabase(merchantId: string, shopDomain: string): Promise<void> {
+  static async syncOrdersToDatabase(merchantId: string, shopDomain: string): Promise<{ success: boolean; synced: number; errors: string[] }> {
+    const errors: string[] = [];
+    let syncedCount = 0;
+
     try {
       const orders = await this.getOrders(merchantId, shopDomain);
+      console.log(`🔄 Syncing ${orders.length} orders for merchant ${merchantId}`);
       
       for (const order of orders) {
-        // Upsert order
-        const { error: orderError } = await supabase
-          .from('orders')
-          .upsert({
-            shopify_order_id: order.id.toString(),
-            customer_email: order.email,
-            total_amount: parseFloat(order.total_price),
-            status: 'completed',
-            created_at: order.created_at
-          }, {
-            onConflict: 'shopify_order_id'
-          });
-
-        if (orderError) {
-          console.error('Failed to sync order:', orderError);
-          continue;
-        }
-
-        // Get the inserted order ID
-        const { data: insertedOrder } = await supabase
-          .from('orders')
-          .select('id')
-          .eq('shopify_order_id', order.id.toString())
-          .single();
-
-        if (!insertedOrder) continue;
-
-        // Upsert order items
-        for (const item of order.line_items) {
-          await supabase
-            .from('order_items')
+        try {
+          // Upsert order with proper merchant context
+          const { data: orderData, error: orderError } = await supabase
+            .from('orders')
             .upsert({
-              order_id: insertedOrder.id,
+              shopify_order_id: order.id.toString(),
+              customer_email: order.email,
+              total_amount: parseFloat(order.total_price),
+              status: 'completed',
+              created_at: order.created_at
+            }, {
+              onConflict: 'shopify_order_id',
+              ignoreDuplicates: false
+            })
+            .select('id')
+            .single();
+
+          if (orderError) {
+            console.error('Failed to sync order:', orderError);
+            errors.push(`Order ${order.id}: ${orderError.message}`);
+            continue;
+          }
+
+          // Sync order items
+          if (orderData?.id && order.line_items?.length > 0) {
+            const orderItems = order.line_items.map(item => ({
+              order_id: orderData.id,
               product_id: item.product_id.toString(),
               product_name: item.name,
               price: parseFloat(item.price),
               quantity: item.quantity
-            }, {
-              onConflict: 'order_id,product_id'
-            });
+            }));
+
+            const { error: itemsError } = await supabase
+              .from('order_items')
+              .upsert(orderItems, {
+                onConflict: 'order_id,product_id',
+                ignoreDuplicates: false
+              });
+
+            if (itemsError) {
+              console.error('Failed to sync order items:', itemsError);
+              errors.push(`Order ${order.id} items: ${itemsError.message}`);
+              continue;
+            }
+          }
+
+          syncedCount++;
+        } catch (itemError) {
+          console.error('Error processing order:', itemError);
+          errors.push(`Order ${order.id}: ${itemError instanceof Error ? itemError.message : 'Unknown error'}`);
         }
       }
 
-      console.log(`✅ Synced ${orders.length} orders for merchant ${merchantId}`);
+      // Log sync event
+      await supabase
+        .from('analytics_events')
+        .insert({
+          merchant_id: merchantId,
+          event_type: 'orders_sync_completed', 
+          event_data: {
+            synced_count: syncedCount,
+            total_orders: orders.length,
+            errors_count: errors.length,
+            timestamp: new Date().toISOString()
+          }
+        });
+
+      console.log(`✅ Synced ${syncedCount}/${orders.length} orders for merchant ${merchantId}`);
+      return { success: errors.length === 0, synced: syncedCount, errors };
+
     } catch (error) {
       console.error('Failed to sync orders:', error);
-      throw error;
+      const errorMessage = error instanceof Error ? error.message : 'Unknown sync error';
+      return { success: false, synced: syncedCount, errors: [...errors, errorMessage] };
     }
   }
 
@@ -209,6 +247,62 @@ export class ShopifyService {
       return { 
         success: false, 
         error: error instanceof Error ? error.message : 'Unknown error' 
+      };
+    }
+  }
+
+  static async createMerchantFromShopify(shopDomain: string, accessToken: string, planType: string = 'starter'): Promise<{ merchantId: string; error?: string }> {
+    try {
+      // Create merchant record
+      const { data: merchantData, error: merchantError } = await supabase
+        .from('merchants')
+        .insert({
+          shop_domain: shopDomain,
+          access_token: accessToken,
+          plan_type: planType,
+          settings: {},
+          token_encrypted_at: new Date().toISOString(),
+          token_encryption_version: 2
+        })
+        .select('id')
+        .single();
+
+      if (merchantError) throw merchantError;
+
+      // Get current user and create/update profile
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        await supabase
+          .from('profiles')
+          .upsert({
+            id: user.id,
+            email: user.email || '',
+            merchant_id: merchantData.id,
+            role: 'admin'
+          }, {
+            onConflict: 'id'
+          });
+      }
+
+      // Log merchant creation
+      await supabase
+        .from('analytics_events')
+        .insert({
+          merchant_id: merchantData.id,
+          event_type: 'merchant_created',
+          event_data: {
+            shop_domain: shopDomain,
+            plan_type: planType,
+            created_at: new Date().toISOString()
+          }
+        });
+
+      return { merchantId: merchantData.id };
+    } catch (error) {
+      console.error('Error creating merchant:', error);
+      return { 
+        merchantId: '', 
+        error: error instanceof Error ? error.message : 'Failed to create merchant' 
       };
     }
   }

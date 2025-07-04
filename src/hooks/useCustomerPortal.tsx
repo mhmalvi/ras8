@@ -59,12 +59,17 @@ export const useCustomerPortal = () => {
     setError(null);
     
     try {
+      console.log('🔍 Looking up order:', orderNumber, 'for email:', email);
+      
+      // Clean order number (remove # if present)
+      const cleanOrderNumber = orderNumber.replace('#', '');
+      
       // First, find the order
       const { data: orderData, error: orderError } = await supabase
         .from('orders')
         .select('*')
-        .eq('shopify_order_id', orderNumber)
-        .eq('customer_email', email)
+        .eq('shopify_order_id', cleanOrderNumber)
+        .eq('customer_email', email.toLowerCase())
         .single();
 
       if (orderError) {
@@ -73,6 +78,8 @@ export const useCustomerPortal = () => {
         }
         throw orderError;
       }
+
+      console.log('✅ Order found:', orderData);
 
       // Then fetch the order items
       const { data: itemsData, error: itemsError } = await supabase
@@ -90,10 +97,13 @@ export const useCustomerPortal = () => {
       setOrder(orderWithItems);
       
       // Also fetch existing returns for this order
-      await fetchCustomerReturns(email, orderNumber);
+      await fetchCustomerReturns(email, cleanOrderNumber);
+      
+      console.log('✅ Order lookup completed successfully');
       
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to lookup order';
+      console.error('❌ Order lookup failed:', errorMessage);
       setError(errorMessage);
       throw err;
     } finally {
@@ -103,13 +113,15 @@ export const useCustomerPortal = () => {
 
   const fetchCustomerReturns = async (email: string, orderNumber?: string) => {
     try {
+      console.log('🔍 Fetching returns for:', email, orderNumber);
+      
       let query = supabase
         .from('returns')
         .select(`
           *,
           return_items (*)
         `)
-        .eq('customer_email', email);
+        .eq('customer_email', email.toLowerCase());
 
       if (orderNumber) {
         query = query.eq('shopify_order_id', orderNumber);
@@ -125,8 +137,9 @@ export const useCustomerPortal = () => {
       })) || [];
 
       setReturns(returnsWithItems);
+      console.log('✅ Fetched returns:', returnsWithItems.length);
     } catch (err) {
-      console.error('Error fetching returns:', err);
+      console.error('❌ Error fetching returns:', err);
     }
   };
 
@@ -138,6 +151,8 @@ export const useCustomerPortal = () => {
   ) => {
     setLoading(true);
     try {
+      console.log('🤖 Generating AI recommendations...');
+      
       const { data, error } = await supabase.functions.invoke('generate-exchange-recommendation', {
         body: {
           returnReason,
@@ -151,10 +166,12 @@ export const useCustomerPortal = () => {
 
       if (data?.recommendations) {
         setAIRecommendations(data.recommendations);
+        console.log('✅ AI recommendations generated:', data.recommendations.length);
       }
     } catch (err) {
-      console.warn('AI recommendations failed:', err);
+      console.warn('⚠️ AI recommendations failed:', err);
       // Don't throw error - recommendations are optional
+      setAIRecommendations([]);
     } finally {
       setLoading(false);
     }
@@ -170,20 +187,29 @@ export const useCustomerPortal = () => {
     setError(null);
 
     try {
+      console.log('📝 Submitting return request...', returnData);
+      
       if (!order) throw new Error('Order not found');
 
       const selectedOrderItems = order.items.filter(item => 
         returnData.selectedItems.includes(item.id)
       );
 
-      const totalAmount = selectedOrderItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
+      if (selectedOrderItems.length === 0) {
+        throw new Error('No items selected for return');
+      }
+
+      const totalAmount = selectedOrderItems.reduce(
+        (sum, item) => sum + (item.price * item.quantity), 
+        0
+      );
 
       // Create the return record
       const { data: returnRecord, error: returnError } = await supabase
         .from('returns')
         .insert({
-          shopify_order_id: returnData.orderNumber,
-          customer_email: returnData.email,
+          shopify_order_id: returnData.orderNumber.replace('#', ''),
+          customer_email: returnData.email.toLowerCase(),
           reason: Object.values(returnData.returnReasons).join(', '),
           total_amount: totalAmount,
           status: 'requested'
@@ -193,6 +219,8 @@ export const useCustomerPortal = () => {
 
       if (returnError) throw returnError;
 
+      console.log('✅ Return record created:', returnRecord.id);
+
       // Create return items
       const returnItems = selectedOrderItems.map(item => ({
         return_id: returnRecord.id,
@@ -200,7 +228,7 @@ export const useCustomerPortal = () => {
         product_name: item.product_name,
         quantity: item.quantity,
         price: item.price,
-        action: 'refund'
+        action: 'refund' as const
       }));
 
       const { error: itemsError } = await supabase
@@ -208,6 +236,8 @@ export const useCustomerPortal = () => {
         .insert(returnItems);
 
       if (itemsError) throw itemsError;
+
+      console.log('✅ Return items created:', returnItems.length);
 
       // Store AI suggestions if available
       if (aiRecommendations.length > 0) {
@@ -219,15 +249,26 @@ export const useCustomerPortal = () => {
           confidence_score: rec.confidence / 100
         }));
 
-        await supabase.from('ai_suggestions').insert(suggestions);
+        const { error: suggestionsError } = await supabase
+          .from('ai_suggestions')
+          .insert(suggestions);
+
+        if (suggestionsError) {
+          console.warn('⚠️ Failed to store AI suggestions:', suggestionsError);
+        } else {
+          console.log('✅ AI suggestions stored:', suggestions.length);
+        }
       }
 
       // Refresh returns list
       await fetchCustomerReturns(returnData.email, returnData.orderNumber);
 
+      console.log('✅ Return submission completed successfully');
       return { returnId: returnRecord.id };
+
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to submit return';
+      console.error('❌ Return submission failed:', errorMessage);
       setError(errorMessage);
       throw err;
     } finally {
@@ -243,6 +284,8 @@ export const useCustomerPortal = () => {
     setError(null);
 
     try {
+      console.log('🔄 Updating return:', returnId, updates);
+      
       const { data: returnData, error: fetchError } = await supabase
         .from('returns')
         .select('*, return_items(*)')
@@ -274,9 +317,12 @@ export const useCustomerPortal = () => {
         await fetchCustomerReturns(currentReturn.customer_email);
       }
 
+      console.log('✅ Return updated successfully');
       return { success: true };
+      
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to update return';
+      console.error('❌ Return update failed:', errorMessage);
       setError(errorMessage);
       throw err;
     } finally {
@@ -289,6 +335,8 @@ export const useCustomerPortal = () => {
     setError(null);
 
     try {
+      console.log('❌ Cancelling return:', returnId);
+      
       const { data: returnData, error: fetchError } = await supabase
         .from('returns')
         .select('*')
@@ -312,9 +360,12 @@ export const useCustomerPortal = () => {
       // Refresh returns list
       await fetchCustomerReturns(returnData.customer_email);
 
+      console.log('✅ Return cancelled successfully');
       return { success: true };
+      
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to cancel return';
+      console.error('❌ Return cancellation failed:', errorMessage);
       setError(errorMessage);
       throw err;
     } finally {

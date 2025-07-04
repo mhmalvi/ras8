@@ -6,6 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { ExternalLink, Check, ArrowRight, Store, Shield, Zap } from 'lucide-react';
+import { ShopifyService } from '@/services/shopifyService';
 
 interface MerchantOnboardingProps {
   onComplete?: () => void;
@@ -61,12 +62,21 @@ const MerchantOnboarding: React.FC<MerchantOnboardingProps> = ({ onComplete }) =
         cleanDomain = `${cleanDomain}.myshopify.com`;
       }
 
+      // Validate domain format
+      if (!cleanDomain.includes('.')) {
+        throw new Error('Please enter a valid shop domain');
+      }
+
+      console.log('🚀 Starting Shopify installation for:', cleanDomain);
+
       // Generate state parameter for security
       const state = crypto.randomUUID();
       sessionStorage.setItem('shopify_oauth_state', state);
+      sessionStorage.setItem('selected_plan', selectedPlan);
+      sessionStorage.setItem('shop_domain', cleanDomain);
 
-      // Shopify OAuth parameters
-      const SHOPIFY_CLIENT_ID = 'your-shopify-client-id'; // Should be from environment
+      // Shopify OAuth parameters - these should come from environment
+      const SHOPIFY_CLIENT_ID = 'your-shopify-client-id'; // This should be from Supabase secrets
       const SCOPES = 'read_orders,write_orders,read_customers,read_products';
       const CALLBACK_URL = `${window.location.origin}/api/auth/shopify/callback`;
 
@@ -76,23 +86,81 @@ const MerchantOnboarding: React.FC<MerchantOnboardingProps> = ({ onComplete }) =
       authUrl.searchParams.set('scope', SCOPES);
       authUrl.searchParams.set('redirect_uri', CALLBACK_URL);
       authUrl.searchParams.set('state', state);
+      authUrl.searchParams.set('grant_options[]', 'per-user');
 
-      // Store selected plan for after OAuth
-      sessionStorage.setItem('selected_plan', selectedPlan);
+      console.log('🔗 Redirecting to Shopify OAuth:', authUrl.toString());
 
       // Redirect to Shopify OAuth
       window.location.href = authUrl.toString();
 
     } catch (error) {
-      console.error('Installation error:', error);
+      console.error('❌ Installation error:', error);
       toast({
         title: "Installation failed",
-        description: "There was an error starting the installation process.",
+        description: error instanceof Error ? error.message : "There was an error starting the installation process.",
         variant: "destructive",
       });
       setInstalling(false);
     }
   };
+
+  // Handle OAuth callback completion
+  React.useEffect(() => {
+    const handleOAuthCallback = async () => {
+      const urlParams = new URLSearchParams(window.location.search);
+      const code = urlParams.get('code');
+      const state = urlParams.get('state');
+      const shop = urlParams.get('shop');
+      
+      if (code && state && shop) {
+        const savedState = sessionStorage.getItem('shopify_oauth_state');
+        const savedPlan = sessionStorage.getItem('selected_plan') as 'starter' | 'growth' | 'pro';
+        const savedDomain = sessionStorage.getItem('shop_domain');
+        
+        if (state === savedState && savedDomain) {
+          try {
+            console.log('✅ OAuth callback received, completing installation...');
+            
+            // Exchange code for access token (this would typically be done server-side)
+            // For now, we'll simulate the merchant creation
+            const { merchantId, error } = await ShopifyService.createMerchantFromShopify(
+              savedDomain,
+              `temp_token_${Date.now()}`, // This would be the real access token
+              savedPlan || 'starter'
+            );
+            
+            if (error) {
+              throw new Error(error);
+            }
+            
+            // Clear session storage
+            sessionStorage.removeItem('shopify_oauth_state');
+            sessionStorage.removeItem('selected_plan');
+            sessionStorage.removeItem('shop_domain');
+            
+            toast({
+              title: "Installation successful!",
+              description: "Your Shopify store has been connected successfully.",
+            });
+            
+            if (onComplete) {
+              onComplete();
+            }
+            
+          } catch (error) {
+            console.error('❌ OAuth completion failed:', error);
+            toast({
+              title: "Installation failed",
+              description: error instanceof Error ? error.message : "Failed to complete installation",
+              variant: "destructive",
+            });
+          }
+        }
+      }
+    };
+    
+    handleOAuthCallback();
+  }, [onComplete, toast]);
 
   const renderStepContent = () => {
     switch (step) {
