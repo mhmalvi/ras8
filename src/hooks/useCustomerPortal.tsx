@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -233,7 +232,7 @@ export const useCustomerPortal = () => {
         0
       );
 
-      // Create the return record
+      // Create the return record - merchant_id can be null for customer-initiated returns
       const { data: returnRecord, error: returnError } = await supabase
         .from('returns')
         .insert({
@@ -241,12 +240,16 @@ export const useCustomerPortal = () => {
           customer_email: returnData.email.toLowerCase(),
           reason: Object.values(returnData.returnReasons).join(', '),
           total_amount: totalAmount,
-          status: 'requested'
+          status: 'requested',
+          merchant_id: null // Customer-initiated returns don't have a merchant context
         })
         .select()
         .single();
 
-      if (returnError) throw returnError;
+      if (returnError) {
+        console.error('❌ Return creation error:', returnError);
+        throw new Error(`Failed to create return: ${returnError.message}`);
+      }
 
       console.log('✅ Return record created:', returnRecord.id);
 
@@ -264,7 +267,10 @@ export const useCustomerPortal = () => {
         .from('return_items')
         .insert(returnItems);
 
-      if (itemsError) throw itemsError;
+      if (itemsError) {
+        console.error('❌ Return items creation error:', itemsError);
+        throw new Error(`Failed to create return items: ${itemsError.message}`);
+      }
 
       console.log('✅ Return items created:', returnItems.length);
 
