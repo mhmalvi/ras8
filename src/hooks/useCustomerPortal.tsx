@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -66,37 +67,47 @@ export const useCustomerPortal = () => {
       
       console.log('🔍 Cleaned search params:', { cleanOrderNumber, cleanEmail });
 
-      // Use maybeSingle() instead of single() to avoid throwing errors when no data found
-      const { data: orderData, error: orderError } = await supabase
+      // First, let's find the order without joining to debug the issue
+      const { data: orderOnly, error: orderOnlyError } = await supabase
         .from('orders')
-        .select(`
-          *,
-          order_items (*)
-        `)
+        .select('*')
         .eq('shopify_order_id', cleanOrderNumber)
         .ilike('customer_email', cleanEmail)
         .maybeSingle();
 
-      console.log('📊 Order query result:', { orderData, orderError });
+      console.log('📊 Order only query result:', { orderOnly, orderOnlyError });
 
-      if (orderError) {
-        console.error('❌ Order lookup database error:', orderError);
-        throw new Error(`Database error: ${orderError.message}`);
+      if (orderOnlyError) {
+        console.error('❌ Order lookup database error:', orderOnlyError);
+        throw new Error(`Database error: ${orderOnlyError.message}`);
       }
 
-      if (!orderData) {
+      if (!orderOnly) {
         console.log('❌ No order found with these details');
         throw new Error(`Order ${orderNumber} not found for email ${email}. Please check that both the order number and email address are correct.`);
       }
 
-      console.log('✅ Order found:', orderData);
-      console.log('✅ Order items found:', orderData.order_items?.length || 0);
+      // Now fetch the order items separately using the correct order ID
+      const { data: orderItems, error: itemsError } = await supabase
+        .from('order_items')
+        .select('*')
+        .eq('order_id', orderOnly.id);
+
+      console.log('📦 Order items query result:', { orderItems, itemsError, orderOnly_id: orderOnly.id });
+
+      if (itemsError) {
+        console.error('❌ Order items lookup error:', itemsError);
+        // Don't throw here, just log the error and continue with empty items
+        console.warn('⚠️ Could not fetch order items, continuing with empty items array');
+      }
 
       // Transform the data to match our interface
       const orderWithItems: Order = {
-        ...orderData,
-        items: orderData.order_items || []
+        ...orderOnly,
+        items: orderItems || []
       };
+
+      console.log('✅ Final order object:', orderWithItems);
 
       setOrder(orderWithItems);
       
