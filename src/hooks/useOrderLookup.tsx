@@ -21,15 +21,19 @@ export const useOrderLookup = () => {
   const clearOrder = () => setOrder(null);
 
   const lookupOrder = async (orderNumber: string, email: string) => {
+    console.log('🎯 useOrderLookup.lookupOrder called with:', { orderNumber, email });
+    
     setLoading(true);
     setError(null);
     setOrder(null);
     
     try {
       const orderData = await OrderService.lookupOrder(orderNumber, email);
+      console.log('✅ Order lookup successful:', orderData);
       setOrder(orderData);
       return orderData;
     } catch (err) {
+      console.error('❌ Order lookup failed:', err);
       const errorMessage = err instanceof Error ? err.message : 'Failed to lookup order';
       setError(errorMessage);
       throw err;

@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -40,6 +39,8 @@ const CustomerReturnsPortal = () => {
   ];
 
   const handleOrderLookup = async () => {
+    console.log('🚀 Starting order lookup...', { orderNumber, email });
+    
     if (!orderNumber.trim() || !email.trim()) {
       toast({
         title: "Missing information",
@@ -51,7 +52,9 @@ const CustomerReturnsPortal = () => {
 
     try {
       clearError();
+      console.log('📞 Calling lookupOrder...');
       await lookupOrder(orderNumber, email);
+      console.log('🎉 Order lookup completed, setting step to select');
       setStep('select');
       
       toast({
@@ -59,6 +62,7 @@ const CustomerReturnsPortal = () => {
         description: `Order ${orderNumber.toUpperCase()} has been located.`,
       });
     } catch (error) {
+      console.error('💥 Order lookup error in component:', error);
       toast({
         title: "Order not found",
         description: error instanceof Error ? error.message : "Please check your order number and email address.",
