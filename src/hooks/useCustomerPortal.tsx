@@ -107,8 +107,6 @@ export const useCustomerPortal = () => {
 
   const fetchCustomerReturns = async (email: string, orderNumber?: string) => {
     try {
-      console.log('🔍 Fetching returns for:', email, orderNumber);
-      
       let query = supabase
         .from('returns')
         .select(`
@@ -134,7 +132,6 @@ export const useCustomerPortal = () => {
       })) || [];
 
       setReturns(returnsWithItems);
-      console.log('✅ Fetched returns:', returnsWithItems.length);
     } catch (err) {
       console.error('❌ Error fetching returns:', err);
     }
@@ -148,8 +145,6 @@ export const useCustomerPortal = () => {
   ) => {
     setLoading(true);
     try {
-      console.log('🤖 Generating AI recommendations...');
-      
       const { data, error } = await supabase.functions.invoke('generate-exchange-recommendation', {
         body: {
           returnReason,
@@ -167,7 +162,6 @@ export const useCustomerPortal = () => {
 
       if (data?.recommendations) {
         setAIRecommendations(data.recommendations);
-        console.log('✅ AI recommendations generated:', data.recommendations.length);
       }
     } catch (err) {
       console.warn('⚠️ AI recommendations failed:', err);
@@ -187,8 +181,6 @@ export const useCustomerPortal = () => {
     setError(null);
 
     try {
-      console.log('📝 Submitting return request...', returnData);
-      
       if (!order) throw new Error('Order not found');
 
       const selectedOrderItems = order.items.filter(item => 
@@ -223,8 +215,6 @@ export const useCustomerPortal = () => {
         throw new Error(`Failed to create return: ${returnError.message}`);
       }
 
-      console.log('✅ Return record created:', returnRecord.id);
-
       // Create return items
       const returnItems = selectedOrderItems.map(item => ({
         return_id: returnRecord.id,
@@ -244,8 +234,6 @@ export const useCustomerPortal = () => {
         throw new Error(`Failed to create return items: ${itemsError.message}`);
       }
 
-      console.log('✅ Return items created:', returnItems.length);
-
       // Store AI suggestions if available
       if (aiRecommendations.length > 0) {
         const suggestions = aiRecommendations.map(rec => ({
@@ -262,15 +250,12 @@ export const useCustomerPortal = () => {
 
         if (suggestionsError) {
           console.warn('⚠️ Failed to store AI suggestions:', suggestionsError);
-        } else {
-          console.log('✅ AI suggestions stored:', suggestions.length);
         }
       }
 
       // Refresh returns list
       await fetchCustomerReturns(returnData.email, returnData.orderNumber);
 
-      console.log('✅ Return submission completed successfully');
       return { returnId: returnRecord.id };
 
     } catch (err) {
@@ -291,7 +276,6 @@ export const useCustomerPortal = () => {
     setError(null);
 
     try {
-      console.log('🔄 Updating return:', returnId, updates);
       
       const { data: returnData, error: fetchError } = await supabase
         .from('returns')
@@ -324,7 +308,6 @@ export const useCustomerPortal = () => {
         await fetchCustomerReturns(currentReturn.customer_email);
       }
 
-      console.log('✅ Return updated successfully');
       return { success: true };
       
     } catch (err) {
@@ -342,7 +325,6 @@ export const useCustomerPortal = () => {
     setError(null);
 
     try {
-      console.log('❌ Cancelling return:', returnId);
       
       const { data: returnData, error: fetchError } = await supabase
         .from('returns')
@@ -367,7 +349,6 @@ export const useCustomerPortal = () => {
       // Refresh returns list
       await fetchCustomerReturns(returnData.customer_email);
 
-      console.log('✅ Return cancelled successfully');
       return { success: true };
       
     } catch (err) {
