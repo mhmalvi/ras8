@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -81,6 +80,8 @@ export const useCustomerPortal = () => {
 
       console.log('📊 Order query result:', { orderData, orderError });
 
+      let finalOrderData = orderData;
+
       if (orderError) {
         if (orderError.code === 'PGRST116') {
           // Try without the ORD- prefix as fallback
@@ -98,19 +99,19 @@ export const useCustomerPortal = () => {
             throw new Error('Order not found. Please check your order number and email address.');
           }
           
-          orderData = fallbackData;
+          finalOrderData = fallbackData;
         } else {
           throw orderError;
         }
       }
 
-      console.log('✅ Order found:', orderData);
+      console.log('✅ Order found:', finalOrderData);
 
       // Then fetch the order items
       const { data: itemsData, error: itemsError } = await supabase
         .from('order_items')
         .select('*')
-        .eq('order_id', orderData.id);
+        .eq('order_id', finalOrderData.id);
 
       if (itemsError) {
         console.error('❌ Error fetching order items:', itemsError);
@@ -120,7 +121,7 @@ export const useCustomerPortal = () => {
       console.log('✅ Order items found:', itemsData?.length || 0);
 
       const orderWithItems: Order = {
-        ...orderData,
+        ...finalOrderData,
         items: itemsData || []
       };
 
