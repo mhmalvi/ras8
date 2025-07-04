@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -61,82 +60,51 @@ export const useCustomerPortal = () => {
     try {
       console.log('🔍 Looking up order:', orderNumber, 'for email:', email);
       
-      // Clean and normalize the order number and email
-      const cleanOrderNumber = orderNumber.replace('#', '').trim();
-      const cleanEmail = email.toLowerCase().trim();
+      // Simple cleanup - just remove # if present and trim
+      const cleanOrderNumber = orderNumber.replace(/^#/, '').trim();
+      const cleanEmail = email.trim().toLowerCase();
       
       console.log('🔍 Cleaned search params:', { cleanOrderNumber, cleanEmail });
 
-      // Query the orders table with exact match first
+      // First try exact match with case-insensitive email
       const { data: orderData, error: orderError } = await supabase
         .from('orders')
-        .select('*')
+        .select(`
+          *,
+          order_items (*)
+        `)
         .eq('shopify_order_id', cleanOrderNumber)
-        .eq('customer_email', cleanEmail)
+        .ilike('customer_email', cleanEmail)
         .single();
 
       console.log('📊 Order query result:', { orderData, orderError });
 
       if (orderError) {
-        // If exact match fails, try case-insensitive email search
-        console.log('🔄 Trying case-insensitive search...');
+        console.error('❌ Order lookup error:', orderError);
         
-        const { data: fallbackData, error: fallbackError } = await supabase
-          .from('orders')
-          .select('*')
-          .eq('shopify_order_id', cleanOrderNumber)
-          .ilike('customer_email', cleanEmail);
-
-        console.log('📊 Fallback query result:', { fallbackData, fallbackError });
-
-        if (fallbackError || !fallbackData || fallbackData.length === 0) {
-          throw new Error(`Order ${orderNumber} not found for email ${email}. Please check your order number and email address match exactly as shown on your order confirmation.`);
+        if (orderError.code === 'PGRST116') {
+          // No rows returned
+          throw new Error(`Order ${orderNumber} not found for email ${email}. Please check that both the order number and email address are correct.`);
+        } else {
+          // Other database error
+          throw new Error(`Database error: ${orderError.message}`);
         }
-
-        // Use the first matching order from fallback
-        const matchedOrder = fallbackData[0];
-        console.log('✅ Found order via fallback:', matchedOrder);
-
-        // Fetch the order items for this order
-        const { data: itemsData, error: itemsError } = await supabase
-          .from('order_items')
-          .select('*')
-          .eq('order_id', matchedOrder.id);
-
-        if (itemsError) {
-          console.error('❌ Error fetching order items:', itemsError);
-        }
-
-        console.log('✅ Order items found:', itemsData?.length || 0);
-
-        const orderWithItems: Order = {
-          ...matchedOrder,
-          items: itemsData || []
-        };
-
-        setOrder(orderWithItems);
-      } else {
-        console.log('✅ Order found via exact match:', orderData);
-
-        // Fetch the order items for this order
-        const { data: itemsData, error: itemsError } = await supabase
-          .from('order_items')
-          .select('*')
-          .eq('order_id', orderData.id);
-
-        if (itemsError) {
-          console.error('❌ Error fetching order items:', itemsError);
-        }
-
-        console.log('✅ Order items found:', itemsData?.length || 0);
-
-        const orderWithItems: Order = {
-          ...orderData,
-          items: itemsData || []
-        };
-
-        setOrder(orderWithItems);
       }
+
+      if (!orderData) {
+        throw new Error(`Order ${orderNumber} not found for email ${email}. Please verify your order details.`);
+      }
+
+      console.log('✅ Order found:', orderData);
+      console.log('✅ Order items found:', orderData.order_items?.length || 0);
+
+      // Transform the data to match our interface
+      const orderWithItems: Order = {
+        ...orderData,
+        items: orderData.order_items || []
+      };
+
+      setOrder(orderWithItems);
       
       // Fetch existing returns for this order
       await fetchCustomerReturns(cleanEmail, cleanOrderNumber);
@@ -163,7 +131,7 @@ export const useCustomerPortal = () => {
           *,
           return_items (*)
         `)
-        .eq('customer_email', email.toLowerCase());
+        .ilike('customer_email', email);
 
       if (orderNumber) {
         query = query.eq('shopify_order_id', orderNumber);
