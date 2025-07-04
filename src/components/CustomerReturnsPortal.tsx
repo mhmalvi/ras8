@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -6,7 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useToast } from '@/hooks/use-toast';
 import { useCustomerPortal } from '@/hooks/useCustomerPortal';
-import { Search, Package, ArrowRight, RefreshCw, AlertCircle, CheckCircle, Info } from 'lucide-react';
+import { Search, Package, ArrowRight, RefreshCw, AlertCircle, CheckCircle } from 'lucide-react';
 
 const CustomerReturnsPortal = () => {
   const [step, setStep] = useState<'lookup' | 'select' | 'reason' | 'confirmation'>('lookup');
@@ -118,7 +119,7 @@ const CustomerReturnsPortal = () => {
         }
       }
 
-      const result = await submitReturn({
+      await submitReturn({
         orderNumber,
         email,
         selectedItems,
@@ -163,15 +164,6 @@ const CustomerReturnsPortal = () => {
                 </Alert>
               )}
               
-              <Alert>
-                <Info className="h-4 w-4" />
-                <AlertDescription>
-                  Try these sample orders for testing:<br/>
-                  <strong>ORD-2024-1505</strong> with <strong>john.smith@example.org</strong><br/>
-                  <strong>ORD-2024-3008</strong> with <strong>sarah.johnson@email.com</strong>
-                </AlertDescription>
-              </Alert>
-              
               <div>
                 <label htmlFor="order-number" className="block text-sm font-medium mb-2">
                   Order Number
@@ -180,7 +172,7 @@ const CustomerReturnsPortal = () => {
                   id="order-number"
                   value={orderNumber}
                   onChange={(e) => setOrderNumber(e.target.value.toUpperCase())}
-                  placeholder="e.g. ORD-2024-1505 or 2024-1505"
+                  placeholder="e.g. ORD-2024-1505"
                   disabled={loading}
                 />
               </div>
@@ -193,7 +185,7 @@ const CustomerReturnsPortal = () => {
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  placeholder="john.smith@example.org"
+                  placeholder="your-email@example.com"
                   disabled={loading}
                 />
               </div>

@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -60,17 +61,10 @@ export const useCustomerPortal = () => {
     try {
       console.log('🔍 Looking up order:', orderNumber, 'for email:', email);
       
-      // Clean order number (remove # if present and normalize)
+      // Clean and normalize the order number
       let cleanOrderNumber = orderNumber.replace('#', '').trim();
       
-      // If it doesn't start with ORD-, try adding it
-      if (!cleanOrderNumber.startsWith('ORD-')) {
-        cleanOrderNumber = `ORD-${cleanOrderNumber}`;
-      }
-      
-      console.log('🔍 Searching for cleaned order number:', cleanOrderNumber);
-      
-      // First, find the order with exact match
+      // Try exact match first
       const { data: orderData, error: orderError } = await supabase
         .from('orders')
         .select('*')
@@ -80,38 +74,21 @@ export const useCustomerPortal = () => {
 
       console.log('📊 Order query result:', { orderData, orderError });
 
-      let finalOrderData = orderData;
-
       if (orderError) {
         if (orderError.code === 'PGRST116') {
-          // Try without the ORD- prefix as fallback
-          const fallbackOrderNumber = orderNumber.replace('#', '').replace('ORD-', '').trim();
-          console.log('🔄 Trying fallback order number:', fallbackOrderNumber);
-          
-          const { data: fallbackData, error: fallbackError } = await supabase
-            .from('orders')
-            .select('*')
-            .eq('shopify_order_id', fallbackOrderNumber)
-            .eq('customer_email', email.toLowerCase().trim())
-            .single();
-
-          if (fallbackError) {
-            throw new Error('Order not found. Please check your order number and email address.');
-          }
-          
-          finalOrderData = fallbackData;
+          throw new Error('Order not found. Please check your order number and email address.');
         } else {
           throw orderError;
         }
       }
 
-      console.log('✅ Order found:', finalOrderData);
+      console.log('✅ Order found:', orderData);
 
-      // Then fetch the order items
+      // Fetch the order items
       const { data: itemsData, error: itemsError } = await supabase
         .from('order_items')
         .select('*')
-        .eq('order_id', finalOrderData.id);
+        .eq('order_id', orderData.id);
 
       if (itemsError) {
         console.error('❌ Error fetching order items:', itemsError);
@@ -121,13 +98,13 @@ export const useCustomerPortal = () => {
       console.log('✅ Order items found:', itemsData?.length || 0);
 
       const orderWithItems: Order = {
-        ...finalOrderData,
+        ...orderData,
         items: itemsData || []
       };
 
       setOrder(orderWithItems);
       
-      // Also fetch existing returns for this order
+      // Fetch existing returns for this order
       await fetchCustomerReturns(email, cleanOrderNumber);
       
       console.log('✅ Order lookup completed successfully');
@@ -201,7 +178,6 @@ export const useCustomerPortal = () => {
       }
     } catch (err) {
       console.warn('⚠️ AI recommendations failed:', err);
-      // Don't throw error - recommendations are optional
       setAIRecommendations([]);
     } finally {
       setLoading(false);
