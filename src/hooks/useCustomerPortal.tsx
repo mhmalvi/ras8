@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -67,27 +66,62 @@ export const useCustomerPortal = () => {
       
       console.log('🔍 Cleaned search params:', { cleanOrderNumber, cleanEmail });
 
-      // Query the orders table directly
-      const { data: orderData, error: orderError } = await supabase
+      // First, let's check what orders exist in the database
+      const { data: allOrders, error: allOrdersError } = await supabase
+        .from('orders')
+        .select('shopify_order_id, customer_email')
+        .limit(10);
+
+      console.log('📋 Sample orders in database:', allOrders);
+
+      // Try exact match first
+      let orderQuery = supabase
         .from('orders')
         .select('*')
         .eq('shopify_order_id', cleanOrderNumber)
-        .eq('customer_email', cleanEmail)
-        .single();
+        .eq('customer_email', cleanEmail);
 
-      console.log('📊 Order query result:', { orderData, orderError });
+      let { data: orderData, error: orderError } = await orderQuery.single();
 
-      if (orderError) {
-        console.error('❌ Order query error:', orderError);
-        if (orderError.code === 'PGRST116') {
-          throw new Error('Order not found. Please check your order number and email address.');
-        } else {
-          throw new Error(`Database error: ${orderError.message}`);
+      console.log('📊 Exact match result:', { orderData, orderError });
+
+      // If exact match fails, try partial matches
+      if (orderError && orderError.code === 'PGRST116') {
+        console.log('🔄 Trying partial matches...');
+        
+        // Try case-insensitive email match
+        const { data: emailOrders, error: emailError } = await supabase
+          .from('orders')
+          .select('*')
+          .ilike('customer_email', cleanEmail);
+
+        console.log('📧 Email match results:', emailOrders);
+
+        // Try order number variations
+        const { data: orderNumOrders, error: orderNumError } = await supabase
+          .from('orders')
+          .select('*')
+          .or(`shopify_order_id.eq.${cleanOrderNumber},shopify_order_id.eq.#${cleanOrderNumber},shopify_order_id.ilike.%${cleanOrderNumber}%`);
+
+        console.log('🔢 Order number match results:', orderNumOrders);
+
+        // Find intersection of email and order matches
+        if (emailOrders && orderNumOrders) {
+          const matchingOrder = emailOrders.find(emailOrder => 
+            orderNumOrders.some(orderNumOrder => orderNumOrder.id === emailOrder.id)
+          );
+
+          if (matchingOrder) {
+            orderData = matchingOrder;
+            orderError = null;
+            console.log('✅ Found matching order through partial match:', matchingOrder);
+          }
         }
       }
 
-      if (!orderData) {
-        throw new Error('Order not found. Please check your order number and email address.');
+      if (orderError || !orderData) {
+        console.error('❌ Order query error:', orderError);
+        throw new Error('Order not found. Please check your order number and email address. Make sure they match exactly as shown on your order confirmation.');
       }
 
       console.log('✅ Order found:', orderData);
@@ -100,7 +134,6 @@ export const useCustomerPortal = () => {
 
       if (itemsError) {
         console.error('❌ Error fetching order items:', itemsError);
-        // Don't throw error for items, just log it
         console.warn('⚠️ Could not fetch order items, continuing without them');
       }
 
