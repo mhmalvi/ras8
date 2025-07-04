@@ -60,86 +60,62 @@ export const useCustomerPortal = () => {
     try {
       console.log('🔍 Looking up order:', orderNumber, 'for email:', email);
       
-      // Clean the inputs more thoroughly
-      const cleanOrderNumber = orderNumber.replace(/^#/, '').trim().toUpperCase();
+      // Clean the inputs
+      const cleanOrderNumber = orderNumber.replace(/^#/, '').trim();
       const cleanEmail = email.trim().toLowerCase();
       
       console.log('🔍 Cleaned search params:', { cleanOrderNumber, cleanEmail });
 
-      // First, let's try to find the order using exact match on shopify_order_id
+      // Let's first check what orders exist in the database
+      const { data: allOrders, error: debugError } = await supabase
+        .from('orders')
+        .select('shopify_order_id, customer_email')
+        .limit(10);
+      
+      console.log('🔍 All orders in database:', allOrders, 'Error:', debugError);
+
+      // Now try the specific lookup
       const { data: orderData, error: orderError } = await supabase
         .from('orders')
         .select('*')
         .eq('shopify_order_id', cleanOrderNumber)
         .eq('customer_email', cleanEmail)
-        .single();
+        .maybeSingle();
 
-      console.log('📊 Order query result:', { orderData, orderError });
+      console.log('📊 Order lookup result:', { orderData, orderError });
 
       if (orderError) {
-        console.error('❌ Order lookup database error:', orderError);
-        
-        // If single() fails, try with maybeSingle() for better error handling
-        const { data: orderDataMaybe, error: orderErrorMaybe } = await supabase
-          .from('orders')
-          .select('*')
-          .eq('shopify_order_id', cleanOrderNumber)
-          .eq('customer_email', cleanEmail)
-          .maybeSingle();
-
-        console.log('📊 Order query (maybe) result:', { orderDataMaybe, orderErrorMaybe });
-
-        if (orderErrorMaybe) {
-          throw new Error(`Database error: ${orderErrorMaybe.message}`);
-        }
-
-        if (!orderDataMaybe) {
-          // Let's also try to find similar orders for debugging
-          const { data: similarOrders } = await supabase
-            .from('orders')
-            .select('shopify_order_id, customer_email')
-            .limit(5);
-          
-          console.log('📋 Available orders in database:', similarOrders);
-          
-          throw new Error(`Order ${orderNumber} not found for email ${email}. Please check that both the order number and email address are correct.`);
-        }
-
-        // Use the maybe result if single() failed
-        var finalOrderData = orderDataMaybe;
-      } else {
-        var finalOrderData = orderData;
+        console.error('❌ Database error:', orderError);
+        throw new Error(`Database error: ${orderError.message}`);
       }
 
-      if (!finalOrderData) {
-        console.log('❌ No order found with these details');
-        throw new Error(`Order ${orderNumber} not found for email ${email}. Please check that both the order number and email address are correct.`);
+      if (!orderData) {
+        console.log('❌ No order found');
+        throw new Error(`Order ${orderNumber} not found for email ${email}. Please check your details.`);
       }
 
-      // Now fetch the order items
+      // Fetch order items
       const { data: orderItems, error: itemsError } = await supabase
         .from('order_items')
         .select('*')
-        .eq('order_id', finalOrderData.id);
+        .eq('order_id', orderData.id);
 
-      console.log('📦 Order items query result:', { orderItems, itemsError, order_id: finalOrderData.id });
+      console.log('📦 Order items result:', { orderItems, itemsError });
 
       if (itemsError) {
-        console.error('❌ Order items lookup error:', itemsError);
-        console.warn('⚠️ Could not fetch order items, continuing with empty items array');
+        console.warn('⚠️ Could not fetch order items:', itemsError);
       }
 
-      // Transform the data to match our interface
+      // Create the order object
       const orderWithItems: Order = {
-        ...finalOrderData,
+        ...orderData,
         items: orderItems || []
       };
 
       console.log('✅ Final order object:', orderWithItems);
-
       setOrder(orderWithItems);
       
-      // Fetch existing returns for this order
+      // Fetch existing returns
       await fetchCustomerReturns(cleanEmail, cleanOrderNumber);
       
       console.log('✅ Order lookup completed successfully');
