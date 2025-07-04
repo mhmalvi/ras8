@@ -1,233 +1,79 @@
 
 import { useState, useEffect } from 'react';
-import { supabase } from '@/integrations/supabase/client';
-import { useProfile } from './useProfile';
-
-interface Return {
-  id: string;
-  shopify_order_id: string;
-  customer_email: string;
-  status: 'requested' | 'approved' | 'in_transit' | 'completed';
-  reason: string;
-  total_amount: number;
-  created_at: string;
-  updated_at: string;
-  merchant_id: string;
-  return_items?: ReturnItem[];
-  ai_suggestions?: AISuggestion[];
-}
-
-interface ReturnItem {
-  id: string;
-  product_id: string;
-  product_name: string;
-  quantity: number;
-  price: number;
-  action: 'refund' | 'exchange';
-}
-
-interface AISuggestion {
-  id: string;
-  suggested_product_name: string;
-  suggestion_type: string;
-  confidence_score: number;
-  reasoning: string;
-  accepted?: boolean | null;
-}
-
-// Helper function to execute the returns query and process data
-const fetchReturnsQuery = async (merchantId: string) => {
-  console.log('🚀 Fetching returns for merchant_id:', merchantId);
-  
-  const { data, error } = await supabase
-    .from('returns')
-    .select(`
-      *,
-      return_items (*),
-      ai_suggestions (*)
-    `)
-    .eq('merchant_id', merchantId)
-    .order('created_at', { ascending: false });
-
-  if (error) {
-    console.error('❌ Error fetching returns:', error);
-    throw error;
-  }
-  
-  console.log('✅ Raw returns data:', data?.length, 'returns');
-  
-  // Type assertion and data processing
-  return (data || []).map(item => ({
-    ...item,
-    status: item.status as 'requested' | 'approved' | 'in_transit' | 'completed',
-    return_items: (item.return_items || []).map((returnItem: any) => ({
-      ...returnItem,
-      action: returnItem.action as 'refund' | 'exchange'
-    })) as ReturnItem[],
-    ai_suggestions: (item.ai_suggestions || []).map((suggestion: any) => ({
-      ...suggestion,
-      accepted: suggestion.accepted
-    })) as AISuggestion[]
-  })) as Return[];
-};
+import { MerchantReturnsService, ReturnData } from '@/services/merchantReturnsService';
+import { useToast } from '@/hooks/use-toast';
 
 export const useRealReturnsData = () => {
-  const { profile } = useProfile();
-  const [returns, setReturns] = useState<Return[]>([]);
+  const [returns, setReturns] = useState<ReturnData[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const { toast } = useToast();
 
-  useEffect(() => {
-    console.log('🔍 useRealReturnsData: Profile changed:', profile);
-    
-    if (!profile?.merchant_id) {
-      console.log('❌ No merchant_id in profile:', profile);
-      setReturns([]);
-      setLoading(false);
-      return;
-    }
-
-    let channel: any;
-
-    const fetchAndSubscribe = async () => {
-      try {
-        console.log('🚀 Setting up real-time returns for merchant:', profile.merchant_id);
-        setLoading(true);
-        setError(null);
-        
-        // Fetch initial data
-        const typedData = await fetchReturnsQuery(profile.merchant_id);
-        
-        console.log('✅ Processed returns data:', typedData.length, 'returns');
-        setReturns(typedData);
-
-        // Set up real-time subscription
-        channel = supabase
-          .channel(`returns-realtime-${profile.merchant_id}`)
-          .on(
-            'postgres_changes',
-            {
-              event: '*',
-              schema: 'public',
-              table: 'returns',
-              filter: `merchant_id=eq.${profile.merchant_id}`
-            },
-            async (payload) => {
-              console.log('🔄 Returns real-time update:', payload.eventType, payload);
-              
-              try {
-                // Refetch all data to ensure consistency with related tables
-                const updatedData = await fetchReturnsQuery(profile.merchant_id);
-                setReturns(updatedData);
-              } catch (error) {
-                console.error('Error updating returns from real-time:', error);
-              }
-            }
-          )
-          .on(
-            'postgres_changes',
-            {
-              event: '*',
-              schema: 'public',
-              table: 'return_items'
-            },
-            async (payload) => {
-              console.log('🔄 Return items real-time update:', payload.eventType);
-              
-              try {
-                const updatedData = await fetchReturnsQuery(profile.merchant_id);
-                setReturns(updatedData);
-              } catch (error) {
-                console.error('Error updating returns from return_items change:', error);
-              }
-            }
-          )
-          .on(
-            'postgres_changes',
-            {
-              event: '*',
-              schema: 'public',
-              table: 'ai_suggestions'
-            },
-            async (payload) => {
-              console.log('🤖 AI suggestions real-time update:', payload.eventType);
-              
-              try {
-                const updatedData = await fetchReturnsQuery(profile.merchant_id);
-                setReturns(updatedData);
-              } catch (error) {
-                console.error('Error updating returns from ai_suggestions change:', error);
-              }
-            }
-          )
-          .subscribe((status) => {
-            console.log('📡 Returns subscription status:', status);
-          });
-
-      } catch (err) {
-        console.error('💥 Error fetching returns:', err);
-        setError(err instanceof Error ? err.message : 'Unknown error');
-        setReturns([]);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchAndSubscribe();
-    
-    // Listen for manual sync events
-    const handleDataSync = () => {
-      console.log('📢 Data sync event received in useRealReturnsData');
-      if (profile?.merchant_id) {
-        fetchAndSubscribe();
-      }
-    };
-    
-    const handleProfileUpdate = () => {
-      console.log('📢 Profile update event received in useRealReturnsData');
-      if (profile?.merchant_id) {
-        fetchAndSubscribe();
-      }
-    };
-    
-    window.addEventListener('dataSync', handleDataSync);
-    window.addEventListener('profileUpdated', handleProfileUpdate);
-    
-    return () => {
-      if (channel) {
-        supabase.removeChannel(channel);
-      }
-      window.removeEventListener('dataSync', handleDataSync);
-      window.removeEventListener('profileUpdated', handleProfileUpdate);
-    };
-  }, [profile?.merchant_id]);
-
-  const refetch = async () => {
-    console.log('🔄 Manual refetch requested...');
-    if (!profile?.merchant_id) {
-      console.log('❌ No merchant_id for refetch');
-      return;
-    }
-    
+  const fetchReturns = async () => {
     try {
       setLoading(true);
       setError(null);
-      const typedData = await fetchReturnsQuery(profile.merchant_id);
-      
-      console.log('🔄 Refetch complete:', typedData.length, 'returns');
-      setReturns(typedData);
+      const data = await MerchantReturnsService.fetchReturns();
+      setReturns(data);
     } catch (err) {
-      console.error('💥 Error refetching returns:', err);
-      setError(err instanceof Error ? err.message : 'Unknown error');
+      const errorMessage = err instanceof Error ? err.message : 'Failed to fetch returns';
+      setError(errorMessage);
+      console.error('Error fetching returns:', err);
     } finally {
       setLoading(false);
     }
   };
 
+  const updateReturnStatus = async (returnId: string, status: string, reason?: string) => {
+    try {
+      await MerchantReturnsService.updateReturnStatus(returnId, status, reason);
+      await fetchReturns(); // Refresh the data
+      
+      toast({
+        title: "Return Updated",
+        description: `Return status changed to ${status}`,
+      });
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to update return';
+      toast({
+        title: "Update Failed",
+        description: errorMessage,
+        variant: "destructive",
+      });
+      throw err;
+    }
+  };
+
+  const bulkUpdateReturns = async (returnIds: string[], status: string) => {
+    try {
+      await MerchantReturnsService.bulkUpdateReturns(returnIds, status);
+      await fetchReturns(); // Refresh the data
+      
+      toast({
+        title: "Bulk Update Complete",
+        description: `${returnIds.length} returns updated to ${status}`,
+      });
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to bulk update returns';
+      toast({
+        title: "Bulk Update Failed",
+        description: errorMessage,
+        variant: "destructive",
+      });
+      throw err;
+    }
+  };
+
+  useEffect(() => {
+    fetchReturns();
+  }, []);
+
   return {
     returns,
     loading,
     error,
-    refetch
+    fetchReturns,
+    updateReturnStatus,
+    bulkUpdateReturns
   };
 };
