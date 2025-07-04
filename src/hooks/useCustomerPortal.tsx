@@ -54,19 +54,54 @@ export const useCustomerPortal = () => {
   const clearError = () => setError(null);
 
   const lookupOrder = async (orderNumber: string, email: string) => {
+    console.log('🚀 Starting order lookup process...');
     setLoading(true);
     setError(null);
     
     try {
-      console.log('🔍 Looking up order:', orderNumber, 'for email:', email);
-      
       // Clean the inputs
       const cleanOrderNumber = orderNumber.replace(/^#/, '').trim();
       const cleanEmail = email.trim().toLowerCase();
       
-      console.log('🔍 Cleaned search params:', { cleanOrderNumber, cleanEmail });
+      console.log('🔍 Cleaned search params:', { 
+        original: { orderNumber, email }, 
+        cleaned: { cleanOrderNumber, cleanEmail } 
+      });
 
-      // Direct order lookup with items in a single query
+      // First, let's check if we can find the order at all
+      console.log('🔍 Step 1: Checking if order exists...');
+      const { data: orderCheck, error: orderCheckError } = await supabase
+        .from('orders')
+        .select('*')
+        .eq('shopify_order_id', cleanOrderNumber);
+
+      console.log('📊 Order check result:', { 
+        found: orderCheck?.length || 0, 
+        orders: orderCheck,
+        error: orderCheckError 
+      });
+
+      if (orderCheckError) {
+        console.error('❌ Order check error:', orderCheckError);
+        throw new Error(`Database error during order check: ${orderCheckError.message}`);
+      }
+
+      // Check if order exists but with different email
+      if (orderCheck && orderCheck.length > 0) {
+        const foundOrder = orderCheck[0];
+        console.log('🔍 Found order with email:', foundOrder.customer_email, 'vs searched:', cleanEmail);
+        
+        if (foundOrder.customer_email.toLowerCase() !== cleanEmail) {
+          console.log('❌ Email mismatch');
+          throw new Error(`Order ${orderNumber} exists but the email doesn't match. Please check your email address.`);
+        }
+      } else {
+        console.log('❌ No order found with that order number');
+        throw new Error(`Order ${orderNumber} not found. Please check your order number.`);
+      }
+
+      // Now fetch the full order with items
+      console.log('🔍 Step 2: Fetching order with items...');
       const { data: orderData, error: orderError } = await supabase
         .from('orders')
         .select(`
@@ -75,18 +110,26 @@ export const useCustomerPortal = () => {
         `)
         .eq('shopify_order_id', cleanOrderNumber)
         .eq('customer_email', cleanEmail)
-        .maybeSingle();
+        .single();
 
-      console.log('📊 Order lookup result:', { orderData, orderError });
+      console.log('📊 Full order lookup result:', { 
+        orderData: orderData ? {
+          id: orderData.id,
+          shopify_order_id: orderData.shopify_order_id,
+          customer_email: orderData.customer_email,
+          items_count: orderData.order_items?.length || 0
+        } : null,
+        error: orderError 
+      });
 
       if (orderError) {
-        console.error('❌ Database error:', orderError);
-        throw new Error(`Database error: ${orderError.message}`);
+        console.error('❌ Full order lookup error:', orderError);
+        throw new Error(`Failed to fetch order details: ${orderError.message}`);
       }
 
       if (!orderData) {
-        console.log('❌ No order found');
-        throw new Error(`Order ${orderNumber} not found for email ${email}. Please check your details.`);
+        console.log('❌ No order data returned from full lookup');
+        throw new Error(`Order details not found`);
       }
 
       // Create the order object
@@ -95,7 +138,17 @@ export const useCustomerPortal = () => {
         items: orderData.order_items || []
       };
 
-      console.log('✅ Final order object:', orderWithItems);
+      console.log('✅ Final order object created:', {
+        id: orderWithItems.id,
+        shopify_order_id: orderWithItems.shopify_order_id,
+        items_count: orderWithItems.items.length,
+        items: orderWithItems.items.map(item => ({
+          id: item.id,
+          product_name: item.product_name,
+          price: item.price
+        }))
+      });
+
       setOrder(orderWithItems);
       
       // Fetch existing returns
@@ -105,7 +158,7 @@ export const useCustomerPortal = () => {
       
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to lookup order';
-      console.error('❌ Order lookup failed:', errorMessage);
+      console.error('❌ Order lookup failed:', errorMessage, err);
       setError(errorMessage);
       throw err;
     } finally {
