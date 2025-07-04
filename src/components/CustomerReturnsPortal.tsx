@@ -11,8 +11,8 @@ import { Search, Package, ArrowRight, RefreshCw, AlertCircle, CheckCircle } from
 
 const CustomerReturnsPortal = () => {
   const [step, setStep] = useState<'lookup' | 'select' | 'reason' | 'confirmation'>('lookup');
-  const [orderNumber, setOrderNumber] = useState('');
-  const [email, setEmail] = useState('');
+  const [orderNumber, setOrderNumber] = useState('ORD-2024-2020');
+  const [email, setEmail] = useState('lisa.wong@startup.io');
   const [selectedItems, setSelectedItems] = useState<string[]>([]);
   const [returnReasons, setReturnReasons] = useState<Record<string, string>>({});
   const { toast } = useToast();
@@ -51,7 +51,9 @@ const CustomerReturnsPortal = () => {
 
     try {
       clearError();
+      console.log('🔍 Starting order lookup...', { orderNumber, email });
       await lookupOrder(orderNumber, email);
+      console.log('✅ Order lookup successful, moving to select step');
       setStep('select');
       
       toast({
@@ -59,7 +61,7 @@ const CustomerReturnsPortal = () => {
         description: `Order ${orderNumber.toUpperCase()} has been located.`,
       });
     } catch (error) {
-      console.error('Order lookup error:', error);
+      console.error('❌ Order lookup error:', error);
       toast({
         title: "Order not found",
         description: "Please check your order number and email address. Make sure they match your original order.",
@@ -69,18 +71,35 @@ const CustomerReturnsPortal = () => {
   };
 
   const handleItemSelection = (itemId: string) => {
-    setSelectedItems(prev => 
-      prev.includes(itemId) 
+    console.log('🔄 Item selection:', itemId);
+    setSelectedItems(prev => {
+      const newSelection = prev.includes(itemId) 
         ? prev.filter(id => id !== itemId)
-        : [...prev, itemId]
-    );
+        : [...prev, itemId];
+      console.log('✅ Updated selection:', newSelection);
+      return newSelection;
+    });
   };
 
   const handleReasonSelection = (itemId: string, reason: string) => {
+    console.log('🔄 Reason selection:', { itemId, reason });
     setReturnReasons(prev => ({
       ...prev,
       [itemId]: reason
     }));
+  };
+
+  const handleContinueToReason = () => {
+    if (selectedItems.length === 0) {
+      toast({
+        title: "No items selected",
+        description: "Please select at least one item to return.",
+        variant: "destructive",
+      });
+      return;
+    }
+    console.log('✅ Moving to reason step with items:', selectedItems);
+    setStep('reason');
   };
 
   const handleReturnSubmission = async () => {
@@ -105,11 +124,13 @@ const CustomerReturnsPortal = () => {
 
     try {
       clearError();
+      console.log('📝 Submitting return...', { orderNumber, email, selectedItems, returnReasons });
       
-      // Generate AI recommendations before submitting
+      // Generate AI recommendations first
       if (selectedItems.length > 0 && order) {
         const firstSelectedItem = order.items.find(item => selectedItems.includes(item.id));
         if (firstSelectedItem) {
+          console.log('🤖 Generating AI recommendations...');
           await generateAIRecommendations(
             returnReasons[firstSelectedItem.id],
             firstSelectedItem.product_name,
@@ -126,6 +147,7 @@ const CustomerReturnsPortal = () => {
         returnReasons
       });
 
+      console.log('✅ Return submitted successfully, moving to confirmation');
       setStep('confirmation');
       
       toast({
@@ -134,6 +156,7 @@ const CustomerReturnsPortal = () => {
       });
 
     } catch (error) {
+      console.error('❌ Return submission failed:', error);
       toast({
         title: "Submission failed",
         description: error instanceof Error ? error.message : "There was an error submitting your return request.",
@@ -172,7 +195,7 @@ const CustomerReturnsPortal = () => {
                   id="order-number"
                   value={orderNumber}
                   onChange={(e) => setOrderNumber(e.target.value.toUpperCase())}
-                  placeholder="e.g. ORD-2024-1505"
+                  placeholder="e.g. ORD-2024-2020"
                   disabled={loading}
                 />
               </div>
@@ -185,7 +208,7 @@ const CustomerReturnsPortal = () => {
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  placeholder="your-email@example.com"
+                  placeholder="lisa.wong@startup.io"
                   disabled={loading}
                 />
               </div>
@@ -223,32 +246,36 @@ const CustomerReturnsPortal = () => {
               <CardContent>
                 <div className="space-y-4">
                   <p className="text-sm font-medium">Select items to return:</p>
-                  {order.items.map((item) => (
-                    <div 
-                      key={item.id}
-                      className={`p-4 border rounded-lg cursor-pointer transition-colors ${
-                        selectedItems.includes(item.id)
-                          ? 'border-blue-500 bg-blue-50'
-                          : 'border-gray-200 hover:border-gray-300'
-                      }`}
-                      onClick={() => handleItemSelection(item.id)}
-                    >
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-3">
-                          <div className="w-12 h-12 bg-gray-200 rounded flex items-center justify-center">
-                            <Package className="h-6 w-6 text-gray-400" />
+                  {order.items.length > 0 ? (
+                    order.items.map((item) => (
+                      <div 
+                        key={item.id}
+                        className={`p-4 border rounded-lg cursor-pointer transition-colors ${
+                          selectedItems.includes(item.id)
+                            ? 'border-blue-500 bg-blue-50'
+                            : 'border-gray-200 hover:border-gray-300'
+                        }`}
+                        onClick={() => handleItemSelection(item.id)}
+                      >
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-3">
+                            <div className="w-12 h-12 bg-gray-200 rounded flex items-center justify-center">
+                              <Package className="h-6 w-6 text-gray-400" />
+                            </div>
+                            <div>
+                              <h4 className="font-medium">{item.product_name}</h4>
+                              <p className="text-sm text-gray-600">Qty: {item.quantity} • ${item.price.toFixed(2)}</p>
+                            </div>
                           </div>
-                          <div>
-                            <h4 className="font-medium">{item.product_name}</h4>
-                            <p className="text-sm text-gray-600">Qty: {item.quantity} • ${item.price.toFixed(2)}</p>
-                          </div>
+                          {selectedItems.includes(item.id) && (
+                            <Badge>Selected</Badge>
+                          )}
                         </div>
-                        {selectedItems.includes(item.id) && (
-                          <Badge>Selected</Badge>
-                        )}
                       </div>
-                    </div>
-                  ))}
+                    ))
+                  ) : (
+                    <p className="text-gray-500 text-center py-4">No items found for this order</p>
+                  )}
                 </div>
               </CardContent>
             </Card>
@@ -258,7 +285,7 @@ const CustomerReturnsPortal = () => {
                 Back
               </Button>
               <Button 
-                onClick={() => setStep('reason')}
+                onClick={handleContinueToReason}
                 disabled={selectedItems.length === 0}
               >
                 Continue
@@ -398,7 +425,12 @@ const CustomerReturnsPortal = () => {
             )}
 
             <div className="text-center">
-              <Button onClick={() => window.location.reload()}>
+              <Button onClick={() => {
+                setStep('lookup');
+                setSelectedItems([]);
+                setReturnReasons({});
+                clearError();
+              }}>
                 Start New Return
               </Button>
             </div>
