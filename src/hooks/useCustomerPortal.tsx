@@ -61,25 +61,33 @@ export const useCustomerPortal = () => {
     try {
       console.log('🔍 Looking up order:', orderNumber, 'for email:', email);
       
-      // Clean and normalize the order number
-      let cleanOrderNumber = orderNumber.replace('#', '').trim();
+      // Clean and normalize the order number and email
+      const cleanOrderNumber = orderNumber.replace('#', '').trim();
+      const cleanEmail = email.toLowerCase().trim();
       
-      // Try exact match first
+      console.log('🔍 Cleaned search params:', { cleanOrderNumber, cleanEmail });
+
+      // Query the orders table directly
       const { data: orderData, error: orderError } = await supabase
         .from('orders')
         .select('*')
         .eq('shopify_order_id', cleanOrderNumber)
-        .eq('customer_email', email.toLowerCase().trim())
+        .eq('customer_email', cleanEmail)
         .single();
 
       console.log('📊 Order query result:', { orderData, orderError });
 
       if (orderError) {
+        console.error('❌ Order query error:', orderError);
         if (orderError.code === 'PGRST116') {
           throw new Error('Order not found. Please check your order number and email address.');
         } else {
-          throw orderError;
+          throw new Error(`Database error: ${orderError.message}`);
         }
+      }
+
+      if (!orderData) {
+        throw new Error('Order not found. Please check your order number and email address.');
       }
 
       console.log('✅ Order found:', orderData);
@@ -92,7 +100,8 @@ export const useCustomerPortal = () => {
 
       if (itemsError) {
         console.error('❌ Error fetching order items:', itemsError);
-        throw itemsError;
+        // Don't throw error for items, just log it
+        console.warn('⚠️ Could not fetch order items, continuing without them');
       }
 
       console.log('✅ Order items found:', itemsData?.length || 0);
@@ -105,7 +114,7 @@ export const useCustomerPortal = () => {
       setOrder(orderWithItems);
       
       // Fetch existing returns for this order
-      await fetchCustomerReturns(email, cleanOrderNumber);
+      await fetchCustomerReturns(cleanEmail, cleanOrderNumber);
       
       console.log('✅ Order lookup completed successfully');
       
@@ -137,7 +146,10 @@ export const useCustomerPortal = () => {
 
       const { data, error } = await query.order('created_at', { ascending: false });
 
-      if (error) throw error;
+      if (error) {
+        console.error('❌ Error fetching returns:', error);
+        return; // Don't throw, just return empty
+      }
 
       const returnsWithItems = data?.map(returnItem => ({
         ...returnItem,
@@ -170,7 +182,11 @@ export const useCustomerPortal = () => {
         }
       });
 
-      if (error) throw error;
+      if (error) {
+        console.warn('⚠️ AI recommendations failed:', error);
+        setAIRecommendations([]);
+        return;
+      }
 
       if (data?.recommendations) {
         setAIRecommendations(data.recommendations);
