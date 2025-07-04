@@ -21,36 +21,49 @@ interface OrderItem {
 
 export class OrderService {
   static async lookupOrder(orderNumber: string, email: string): Promise<Order> {
-    // Clean the inputs
+    // Clean and validate inputs
     const cleanOrderNumber = orderNumber.replace(/^#/, '').trim();
     const cleanEmail = email.trim().toLowerCase();
 
-    // Simplified query with better error handling
-    const { data: orderData, error: orderError } = await supabase
-      .from('orders')
-      .select(`
-        *,
-        order_items (*)
-      `)
-      .eq('shopify_order_id', cleanOrderNumber)
-      .eq('customer_email', cleanEmail)
-      .single();
+    if (!cleanOrderNumber || !cleanEmail) {
+      throw new Error('Order number and email are required');
+    }
 
-    if (orderError) {
-      if (orderError.code === 'PGRST116') {
-        throw new Error(`Order ${orderNumber} not found for email ${email}. Please check your order number and email address.`);
+    try {
+      // Single optimized query with proper error handling
+      const { data: orderData, error: orderError } = await supabase
+        .from('orders')
+        .select(`
+          *,
+          order_items (*)
+        `)
+        .eq('shopify_order_id', cleanOrderNumber)
+        .ilike('customer_email', cleanEmail)
+        .single();
+
+      if (orderError) {
+        if (orderError.code === 'PGRST116') {
+          throw new Error(`Order ${orderNumber} not found for the provided email address. Please verify your order number and email.`);
+        }
+        throw new Error(`Unable to retrieve order: ${orderError.message}`);
       }
-      throw new Error(`Failed to fetch order: ${orderError.message}`);
-    }
 
-    if (!orderData) {
-      throw new Error(`Order ${orderNumber} not found`);
-    }
+      if (!orderData) {
+        throw new Error(`Order ${orderNumber} not found`);
+      }
 
-    // Return the order with items
-    return {
-      ...orderData,
-      items: orderData.order_items || []
-    };
+      // Return formatted order data
+      return {
+        ...orderData,
+        items: orderData.order_items || []
+      };
+    } catch (error) {
+      // Re-throw with cleaner error message if it's already our custom error
+      if (error instanceof Error && error.message.includes('Order') && error.message.includes('not found')) {
+        throw error;
+      }
+      // Handle unexpected errors
+      throw new Error('Unable to lookup order. Please try again or contact support.');
+    }
   }
 }

@@ -9,7 +9,8 @@ export const useCustomerPortal = () => {
     error: orderError,
     order,
     lookupOrder,
-    clearError: clearOrderError
+    clearError: clearOrderError,
+    clearOrder
   } = useOrderLookup();
 
   const {
@@ -42,24 +43,38 @@ export const useCustomerPortal = () => {
     selectedItems: string[];
     returnReasons: Record<string, string>;
   }) => {
-    // Generate AI recommendations first
-    if (returnData.selectedItems.length > 0 && order) {
+    if (!order) {
+      throw new Error('No order found. Please lookup your order first.');
+    }
+
+    // Generate AI recommendations if items are selected
+    if (returnData.selectedItems.length > 0) {
       const firstSelectedItem = order.items.find(item => returnData.selectedItems.includes(item.id));
-      if (firstSelectedItem) {
-        await generateAIRecommendations(
-          returnData.returnReasons[firstSelectedItem.id],
-          firstSelectedItem.product_name,
-          returnData.email,
-          order.total_amount
-        );
+      if (firstSelectedItem && returnData.returnReasons[firstSelectedItem.id]) {
+        try {
+          await generateAIRecommendations(
+            returnData.returnReasons[firstSelectedItem.id],
+            firstSelectedItem.product_name,
+            returnData.email,
+            order.total_amount
+          );
+        } catch (aiError) {
+          // Don't fail the return if AI fails
+          console.warn('AI recommendations failed:', aiError);
+        }
       }
     }
 
+    // Submit the return
     const result = await submitReturnService(returnData, order);
 
-    // Store AI suggestions
+    // Store AI suggestions if available
     if (aiRecommendations.length > 0) {
-      await storeAISuggestions(result.returnId, aiRecommendations);
+      try {
+        await storeAISuggestions(result.returnId, aiRecommendations);
+      } catch (aiError) {
+        console.warn('Failed to store AI suggestions:', aiError);
+      }
     }
 
     return result;
@@ -77,6 +92,7 @@ export const useCustomerPortal = () => {
     submitReturn,
     updateReturn,
     cancelReturn,
-    clearError
+    clearError,
+    clearOrder
   };
 };

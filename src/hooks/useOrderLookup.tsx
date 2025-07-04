@@ -18,14 +18,17 @@ export const useOrderLookup = () => {
   const [order, setOrder] = useState<Order | null>(null);
 
   const clearError = () => setError(null);
+  const clearOrder = () => setOrder(null);
 
   const lookupOrder = async (orderNumber: string, email: string) => {
     setLoading(true);
     setError(null);
+    setOrder(null);
     
     try {
       const orderData = await OrderService.lookupOrder(orderNumber, email);
       setOrder(orderData);
+      return orderData;
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to lookup order';
       setError(errorMessage);
@@ -40,6 +43,7 @@ export const useOrderLookup = () => {
     error,
     order,
     lookupOrder,
-    clearError
+    clearError,
+    clearOrder
   };
 };

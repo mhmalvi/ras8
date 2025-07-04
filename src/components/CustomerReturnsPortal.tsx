@@ -24,9 +24,9 @@ const CustomerReturnsPortal = () => {
     returns,
     aiRecommendations,
     lookupOrder,
-    generateAIRecommendations,
     submitReturn,
-    clearError
+    clearError,
+    clearOrder
   } = useCustomerPortal();
 
   const returnReasonOptions = [
@@ -51,9 +51,7 @@ const CustomerReturnsPortal = () => {
 
     try {
       clearError();
-      console.log('🔍 Starting order lookup...', { orderNumber, email });
       await lookupOrder(orderNumber, email);
-      console.log('✅ Order lookup successful, moving to select step');
       setStep('select');
       
       toast({
@@ -61,28 +59,23 @@ const CustomerReturnsPortal = () => {
         description: `Order ${orderNumber.toUpperCase()} has been located.`,
       });
     } catch (error) {
-      console.error('❌ Order lookup error:', error);
       toast({
         title: "Order not found",
-        description: "Please check your order number and email address. Make sure they match your original order.",
+        description: error instanceof Error ? error.message : "Please check your order number and email address.",
         variant: "destructive",
       });
     }
   };
 
   const handleItemSelection = (itemId: string) => {
-    console.log('🔄 Item selection:', itemId);
-    setSelectedItems(prev => {
-      const newSelection = prev.includes(itemId) 
+    setSelectedItems(prev => 
+      prev.includes(itemId) 
         ? prev.filter(id => id !== itemId)
-        : [...prev, itemId];
-      console.log('✅ Updated selection:', newSelection);
-      return newSelection;
-    });
+        : [...prev, itemId]
+    );
   };
 
   const handleReasonSelection = (itemId: string, reason: string) => {
-    console.log('🔄 Reason selection:', { itemId, reason });
     setReturnReasons(prev => ({
       ...prev,
       [itemId]: reason
@@ -98,7 +91,6 @@ const CustomerReturnsPortal = () => {
       });
       return;
     }
-    console.log('✅ Moving to reason step with items:', selectedItems);
     setStep('reason');
   };
 
@@ -124,22 +116,6 @@ const CustomerReturnsPortal = () => {
 
     try {
       clearError();
-      console.log('📝 Submitting return...', { orderNumber, email, selectedItems, returnReasons });
-      
-      // Generate AI recommendations first
-      if (selectedItems.length > 0 && order) {
-        const firstSelectedItem = order.items.find(item => selectedItems.includes(item.id));
-        if (firstSelectedItem) {
-          console.log('🤖 Generating AI recommendations...');
-          await generateAIRecommendations(
-            returnReasons[firstSelectedItem.id],
-            firstSelectedItem.product_name,
-            email,
-            order.total_amount
-          );
-        }
-      }
-
       await submitReturn({
         orderNumber,
         email,
@@ -147,7 +123,6 @@ const CustomerReturnsPortal = () => {
         returnReasons
       });
 
-      console.log('✅ Return submitted successfully, moving to confirmation');
       setStep('confirmation');
       
       toast({
@@ -156,13 +131,20 @@ const CustomerReturnsPortal = () => {
       });
 
     } catch (error) {
-      console.error('❌ Return submission failed:', error);
       toast({
         title: "Submission failed",
         description: error instanceof Error ? error.message : "There was an error submitting your return request.",
         variant: "destructive",
       });
     }
+  };
+
+  const resetForm = () => {
+    setStep('lookup');
+    setSelectedItems([]);
+    setReturnReasons({});
+    clearError();
+    clearOrder();
   };
 
   const renderStepContent = () => {
@@ -425,12 +407,7 @@ const CustomerReturnsPortal = () => {
             )}
 
             <div className="text-center">
-              <Button onClick={() => {
-                setStep('lookup');
-                setSelectedItems([]);
-                setReturnReasons({});
-                clearError();
-              }}>
+              <Button onClick={resetForm}>
                 Start New Return
               </Button>
             </div>
