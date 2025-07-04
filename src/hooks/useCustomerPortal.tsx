@@ -61,21 +61,21 @@ export const useCustomerPortal = () => {
     try {
       console.log('🔍 Looking up order:', orderNumber, 'for email:', email);
       
-      // Simple cleanup - just remove # if present and trim
-      const cleanOrderNumber = orderNumber.replace(/^#/, '').trim();
+      // Clean the inputs more thoroughly
+      const cleanOrderNumber = orderNumber.replace(/^#/, '').trim().toUpperCase();
       const cleanEmail = email.trim().toLowerCase();
       
       console.log('🔍 Cleaned search params:', { cleanOrderNumber, cleanEmail });
 
-      // First, let's find the order without joining to debug the issue
+      // Search for the order with case-insensitive matching
       const { data: orderOnly, error: orderOnlyError } = await supabase
         .from('orders')
         .select('*')
-        .eq('shopify_order_id', cleanOrderNumber)
+        .ilike('shopify_order_id', cleanOrderNumber)
         .ilike('customer_email', cleanEmail)
         .maybeSingle();
 
-      console.log('📊 Order only query result:', { orderOnly, orderOnlyError });
+      console.log('📊 Order query result:', { orderOnly, orderOnlyError });
 
       if (orderOnlyError) {
         console.error('❌ Order lookup database error:', orderOnlyError);
@@ -84,10 +84,19 @@ export const useCustomerPortal = () => {
 
       if (!orderOnly) {
         console.log('❌ No order found with these details');
+        
+        // Let's also try to find similar orders for debugging
+        const { data: similarOrders } = await supabase
+          .from('orders')
+          .select('shopify_order_id, customer_email')
+          .limit(5);
+        
+        console.log('📋 Available orders in database:', similarOrders);
+        
         throw new Error(`Order ${orderNumber} not found for email ${email}. Please check that both the order number and email address are correct.`);
       }
 
-      // Now fetch the order items separately using the correct order ID
+      // Now fetch the order items
       const { data: orderItems, error: itemsError } = await supabase
         .from('order_items')
         .select('*')
@@ -97,7 +106,6 @@ export const useCustomerPortal = () => {
 
       if (itemsError) {
         console.error('❌ Order items lookup error:', itemsError);
-        // Don't throw here, just log the error and continue with empty items
         console.warn('⚠️ Could not fetch order items, continuing with empty items array');
       }
 
