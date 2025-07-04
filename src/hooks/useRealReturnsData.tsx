@@ -73,6 +73,7 @@ export const useRealReturnsData = () => {
     loading,
     error,
     fetchReturns,
+    refetch: fetchReturns, // Add refetch as alias for fetchReturns
     updateReturnStatus,
     bulkUpdateReturns
   };

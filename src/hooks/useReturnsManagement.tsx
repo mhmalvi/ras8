@@ -81,8 +81,8 @@ export const useReturnsManagement = () => {
       );
       
       const result = await ReturnService.cancelReturn(returnId);
-      if (returnData.data) {
-        await fetchCustomerReturns(returnData.data.customer_email);
+      if (returnData) {
+        await fetchCustomerReturns(returnData.customer_email);
       }
       return result;
     } catch (err) {
