@@ -61,22 +61,47 @@ export const useCustomerPortal = () => {
     try {
       console.log('🔍 Looking up order:', orderNumber, 'for email:', email);
       
-      // Clean order number (remove # if present)
-      const cleanOrderNumber = orderNumber.replace('#', '');
+      // Clean order number (remove # if present and normalize)
+      let cleanOrderNumber = orderNumber.replace('#', '').trim();
       
-      // First, find the order
+      // If it doesn't start with ORD-, try adding it
+      if (!cleanOrderNumber.startsWith('ORD-')) {
+        cleanOrderNumber = `ORD-${cleanOrderNumber}`;
+      }
+      
+      console.log('🔍 Searching for cleaned order number:', cleanOrderNumber);
+      
+      // First, find the order with exact match
       const { data: orderData, error: orderError } = await supabase
         .from('orders')
         .select('*')
         .eq('shopify_order_id', cleanOrderNumber)
-        .eq('customer_email', email.toLowerCase())
+        .eq('customer_email', email.toLowerCase().trim())
         .single();
+
+      console.log('📊 Order query result:', { orderData, orderError });
 
       if (orderError) {
         if (orderError.code === 'PGRST116') {
-          throw new Error('Order not found. Please check your order number and email address.');
+          // Try without the ORD- prefix as fallback
+          const fallbackOrderNumber = orderNumber.replace('#', '').replace('ORD-', '').trim();
+          console.log('🔄 Trying fallback order number:', fallbackOrderNumber);
+          
+          const { data: fallbackData, error: fallbackError } = await supabase
+            .from('orders')
+            .select('*')
+            .eq('shopify_order_id', fallbackOrderNumber)
+            .eq('customer_email', email.toLowerCase().trim())
+            .single();
+
+          if (fallbackError) {
+            throw new Error('Order not found. Please check your order number and email address.');
+          }
+          
+          orderData = fallbackData;
+        } else {
+          throw orderError;
         }
-        throw orderError;
       }
 
       console.log('✅ Order found:', orderData);
@@ -87,7 +112,12 @@ export const useCustomerPortal = () => {
         .select('*')
         .eq('order_id', orderData.id);
 
-      if (itemsError) throw itemsError;
+      if (itemsError) {
+        console.error('❌ Error fetching order items:', itemsError);
+        throw itemsError;
+      }
+
+      console.log('✅ Order items found:', itemsData?.length || 0);
 
       const orderWithItems: Order = {
         ...orderData,
