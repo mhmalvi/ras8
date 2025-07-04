@@ -66,32 +66,53 @@ export const useCustomerPortal = () => {
       
       console.log('🔍 Cleaned search params:', { cleanOrderNumber, cleanEmail });
 
-      // Search for the order with case-insensitive matching
-      const { data: orderOnly, error: orderOnlyError } = await supabase
+      // First, let's try to find the order using exact match on shopify_order_id
+      const { data: orderData, error: orderError } = await supabase
         .from('orders')
         .select('*')
-        .ilike('shopify_order_id', cleanOrderNumber)
-        .ilike('customer_email', cleanEmail)
-        .maybeSingle();
+        .eq('shopify_order_id', cleanOrderNumber)
+        .eq('customer_email', cleanEmail)
+        .single();
 
-      console.log('📊 Order query result:', { orderOnly, orderOnlyError });
+      console.log('📊 Order query result:', { orderData, orderError });
 
-      if (orderOnlyError) {
-        console.error('❌ Order lookup database error:', orderOnlyError);
-        throw new Error(`Database error: ${orderOnlyError.message}`);
+      if (orderError) {
+        console.error('❌ Order lookup database error:', orderError);
+        
+        // If single() fails, try with maybeSingle() for better error handling
+        const { data: orderDataMaybe, error: orderErrorMaybe } = await supabase
+          .from('orders')
+          .select('*')
+          .eq('shopify_order_id', cleanOrderNumber)
+          .eq('customer_email', cleanEmail)
+          .maybeSingle();
+
+        console.log('📊 Order query (maybe) result:', { orderDataMaybe, orderErrorMaybe });
+
+        if (orderErrorMaybe) {
+          throw new Error(`Database error: ${orderErrorMaybe.message}`);
+        }
+
+        if (!orderDataMaybe) {
+          // Let's also try to find similar orders for debugging
+          const { data: similarOrders } = await supabase
+            .from('orders')
+            .select('shopify_order_id, customer_email')
+            .limit(5);
+          
+          console.log('📋 Available orders in database:', similarOrders);
+          
+          throw new Error(`Order ${orderNumber} not found for email ${email}. Please check that both the order number and email address are correct.`);
+        }
+
+        // Use the maybe result if single() failed
+        var finalOrderData = orderDataMaybe;
+      } else {
+        var finalOrderData = orderData;
       }
 
-      if (!orderOnly) {
+      if (!finalOrderData) {
         console.log('❌ No order found with these details');
-        
-        // Let's also try to find similar orders for debugging
-        const { data: similarOrders } = await supabase
-          .from('orders')
-          .select('shopify_order_id, customer_email')
-          .limit(5);
-        
-        console.log('📋 Available orders in database:', similarOrders);
-        
         throw new Error(`Order ${orderNumber} not found for email ${email}. Please check that both the order number and email address are correct.`);
       }
 
@@ -99,9 +120,9 @@ export const useCustomerPortal = () => {
       const { data: orderItems, error: itemsError } = await supabase
         .from('order_items')
         .select('*')
-        .eq('order_id', orderOnly.id);
+        .eq('order_id', finalOrderData.id);
 
-      console.log('📦 Order items query result:', { orderItems, itemsError, orderOnly_id: orderOnly.id });
+      console.log('📦 Order items query result:', { orderItems, itemsError, order_id: finalOrderData.id });
 
       if (itemsError) {
         console.error('❌ Order items lookup error:', itemsError);
@@ -110,7 +131,7 @@ export const useCustomerPortal = () => {
 
       // Transform the data to match our interface
       const orderWithItems: Order = {
-        ...orderOnly,
+        ...finalOrderData,
         items: orderItems || []
       };
 
