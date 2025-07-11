@@ -3,9 +3,57 @@ import { TrendingUp, TrendingDown, DollarSign, RefreshCw, Sparkles, Users } from
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useRealAnalyticsData } from "@/hooks/useRealAnalyticsData";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useMemo } from "react";
 
 const RealDashboardStats = () => {
   const { analytics, loading, error } = useRealAnalyticsData();
+
+  // Memoize the stats calculation to prevent unnecessary re-renders
+  const stats = useMemo(() => {
+    if (!analytics) return [];
+
+    const formatCurrency = (amount: number) => {
+      return new Intl.NumberFormat('en-US', {
+        style: 'currency',
+        currency: 'USD'
+      }).format(amount);
+    };
+
+    return [
+      {
+        title: "Total Returns",
+        value: analytics.totalReturns.toString(),
+        description: `${analytics.returnsByStatus?.requested || 0} pending approval`,
+        icon: RefreshCw,
+        trend: analytics.totalReturns > 0 ? "up" : "neutral",
+        trendValue: analytics.totalReturns > 0 ? "+12%" : "No data"
+      },
+      {
+        title: "Exchanges",
+        value: analytics.totalExchanges.toString(),
+        description: `${((analytics.totalExchanges / Math.max(analytics.totalReturns, 1)) * 100).toFixed(1)}% exchange rate`,
+        icon: TrendingUp,
+        trend: analytics.totalExchanges > analytics.totalRefunds ? "up" : "down",
+        trendValue: analytics.totalExchanges > analytics.totalRefunds ? "+8%" : "-3%"
+      },
+      {
+        title: "AI Acceptance",
+        value: `${analytics.aiAcceptanceRate.toFixed(1)}%`,
+        description: "AI suggestions accepted",
+        icon: Sparkles,
+        trend: analytics.aiAcceptanceRate > 75 ? "up" : "down",
+        trendValue: analytics.aiAcceptanceRate > 75 ? "+15%" : "-5%"
+      },
+      {
+        title: "Revenue Retained",
+        value: formatCurrency(analytics.revenueImpact),
+        description: "Through exchanges",
+        icon: DollarSign,
+        trend: analytics.revenueImpact > 0 ? "up" : "neutral",
+        trendValue: analytics.revenueImpact > 0 ? "+22%" : "No impact"
+      }
+    ];
+  }, [analytics]);
 
   if (loading) {
     return (
@@ -37,48 +85,6 @@ const RealDashboardStats = () => {
       </div>
     );
   }
-
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD'
-    }).format(amount);
-  };
-
-  const stats = [
-    {
-      title: "Total Returns",
-      value: analytics.totalReturns.toString(),
-      description: `${analytics.returnsByStatus.requested} pending approval`,
-      icon: RefreshCw,
-      trend: analytics.totalReturns > 0 ? "up" : "neutral",
-      trendValue: analytics.totalReturns > 0 ? "+12%" : "No data"
-    },
-    {
-      title: "Exchanges",
-      value: analytics.totalExchanges.toString(),
-      description: `${((analytics.totalExchanges / Math.max(analytics.totalReturns, 1)) * 100).toFixed(1)}% exchange rate`,
-      icon: TrendingUp,
-      trend: analytics.totalExchanges > analytics.totalRefunds ? "up" : "down",
-      trendValue: analytics.totalExchanges > analytics.totalRefunds ? "+8%" : "-3%"
-    },
-    {
-      title: "AI Acceptance",
-      value: `${analytics.aiAcceptanceRate.toFixed(1)}%`,
-      description: "AI suggestions accepted",
-      icon: Sparkles,
-      trend: analytics.aiAcceptanceRate > 75 ? "up" : "down",
-      trendValue: analytics.aiAcceptanceRate > 75 ? "+15%" : "-5%"
-    },
-    {
-      title: "Revenue Retained",
-      value: formatCurrency(analytics.revenueImpact),
-      description: "Through exchanges",
-      icon: DollarSign,
-      trend: analytics.revenueImpact > 0 ? "up" : "neutral",
-      trendValue: analytics.revenueImpact > 0 ? "+22%" : "No impact"
-    }
-  ];
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">

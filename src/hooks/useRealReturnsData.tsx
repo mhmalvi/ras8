@@ -30,12 +30,14 @@ export const useRealReturnsData = () => {
     try {
       setLoading(true);
       setError(null);
+      console.log('🔍 Fetching returns for merchant:', profile.merchant_id);
       const data = await MerchantReturnsService.fetchReturns(profile.merchant_id);
+      console.log('✅ Fetched returns data:', data.length, 'records');
       setReturns(data);
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to fetch returns';
       setError(errorMessage);
-      console.error('Error fetching returns:', err);
+      console.error('💥 Error fetching returns:', err);
     } finally {
       setLoading(false);
     }
@@ -82,7 +84,10 @@ export const useRealReturnsData = () => {
   };
 
   useEffect(() => {
-    fetchReturns();
+    // Only fetch when we have a valid merchant_id and profile is not loading
+    if (!profileLoading && profile?.merchant_id) {
+      fetchReturns();
+    }
   }, [profile?.merchant_id, profileLoading]);
 
   return {

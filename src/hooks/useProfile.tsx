@@ -14,6 +14,10 @@ interface Profile {
   updated_at: string;
 }
 
+// Create a simple cache to prevent multiple fetches
+let profileCache: { [key: string]: Profile } = {};
+let profilePromises: { [key: string]: Promise<Profile | null> } = {};
+
 export const useProfile = () => {
   const { user } = useAuth();
   const [profile, setProfile] = useState<Profile | null>(null);
@@ -34,6 +38,37 @@ export const useProfile = () => {
         return;
       }
 
+      // Check cache first
+      if (profileCache[user.id]) {
+        console.log('✨ Using cached profile for user:', user.id);
+        if (mounted) {
+          setProfile(profileCache[user.id]);
+          setLoading(false);
+          setError(null);
+        }
+        return;
+      }
+
+      // Check if there's already a pending request
+      if (profilePromises[user.id]) {
+        console.log('⏳ Profile fetch already in progress for user:', user.id);
+        try {
+          const cachedProfile = await profilePromises[user.id];
+          if (mounted) {
+            setProfile(cachedProfile);
+            setLoading(false);
+            setError(null);
+          }
+        } catch (err) {
+          if (mounted) {
+            setError(err instanceof Error ? err.message : 'Unknown error');
+            setProfile(null);
+            setLoading(false);
+          }
+        }
+        return;
+      }
+
       console.log('👤 Fetching profile for user:', user.id);
       
       if (mounted) {
@@ -41,30 +76,48 @@ export const useProfile = () => {
         setError(null);
       }
 
-      try {
-        const { data, error: fetchError } = await supabase
-          .from('profiles')
-          .select('*')
-          .eq('id', user.id)
-          .maybeSingle();
+      // Create a promise for this fetch to prevent duplicates
+      profilePromises[user.id] = (async () => {
+        try {
+          const { data, error: fetchError } = await supabase
+            .from('profiles')
+            .select('*')
+            .eq('id', user.id)
+            .maybeSingle();
 
-        if (!mounted) return;
+          if (fetchError) {
+            console.error('💥 Profile fetch error:', fetchError);
+            throw new Error(fetchError.message);
+          }
 
-        if (fetchError) {
-          console.error('💥 Profile fetch error:', fetchError);
-          setError(fetchError.message);
-          setProfile(null);
-        } else {
           console.log('✅ Profile loaded successfully:', data);
-          setProfile(data);
+          
+          // Cache the result
+          if (data) {
+            profileCache[user.id] = data;
+          }
+          
+          return data;
+        } catch (err) {
+          console.error('💥 Profile fetch failed:', err);
+          throw err;
+        } finally {
+          // Clean up the promise
+          delete profilePromises[user.id];
+        }
+      })();
+
+      try {
+        const fetchedProfile = await profilePromises[user.id];
+        if (mounted) {
+          setProfile(fetchedProfile);
           setError(null);
         }
       } catch (err) {
-        if (!mounted) return;
-        
-        console.error('💥 Profile fetch failed:', err);
-        setError(err instanceof Error ? err.message : 'Unknown error');
-        setProfile(null);
+        if (mounted) {
+          setError(err instanceof Error ? err.message : 'Unknown error');
+          setProfile(null);
+        }
       } finally {
         if (mounted) {
           setLoading(false);
@@ -98,6 +151,11 @@ export const useProfile = () => {
         return { error: updateError.message };
       }
       
+      // Update cache
+      if (data) {
+        profileCache[user.id] = data;
+      }
+      
       setProfile(data);
       setError(null);
       return { data, error: null };
@@ -110,9 +168,14 @@ export const useProfile = () => {
 
   const refetch = async () => {
     if (user?.id) {
+      // Clear cache for this user
+      delete profileCache[user.id];
+      delete profilePromises[user.id];
+      
       setError(null);
       setLoading(true);
-      // Trigger re-fetch by updating the dependency
+      
+      // Trigger re-fetch by clearing cache and re-running effect
       const event = new CustomEvent('refetchProfile');
       window.dispatchEvent(event);
     }
