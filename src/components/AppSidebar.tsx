@@ -31,7 +31,7 @@ import {
 } from "@/components/ui/sidebar";
 
 const mainItems = [
-  { title: "Dashboard", url: "/", icon: Home },
+  { title: "Dashboard", url: "/dashboard", icon: Home },
   { title: "Returns", url: "/returns", icon: RefreshCw },
   { title: "Analytics", url: "/analytics", icon: BarChart3 },
   { title: "AI Insights", url: "/ai-insights", icon: Brain },

@@ -19,6 +19,7 @@ import CustomerPortal from '@/pages/CustomerPortal';
 import Notifications from '@/pages/Notifications';
 import Performance from '@/pages/Performance';
 import Security from '@/pages/Security';
+import DebugPanel from '@/pages/DebugPanel';
 import NotFound from '@/pages/NotFound';
 
 const AppRouter: React.FC = () => {
@@ -145,6 +146,14 @@ const AppRouter: React.FC = () => {
         element={
           <ProtectedRoute>
             <Security />
+          </ProtectedRoute>
+        } 
+      />
+      <Route 
+        path="/debug" 
+        element={
+          <ProtectedRoute>
+            <DebugPanel />
           </ProtectedRoute>
         } 
       />
