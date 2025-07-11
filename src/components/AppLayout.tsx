@@ -10,7 +10,6 @@ import { LoadingSpinner } from "@/components/LoadingStates";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { AlertCircle, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { useEffect, useState } from "react";
 
 interface AppLayoutProps {
   children: React.ReactNode;
@@ -21,71 +20,12 @@ interface AppLayoutProps {
 const AppLayout = ({ children, title = "Dashboard", description }: AppLayoutProps) => {
   const { user, loading: authLoading } = useAuth();
   const { profile, loading: profileLoading, error: profileError, refetch } = useProfile();
-  const [loadingTimeout, setLoadingTimeout] = useState(false);
-  const [timeoutTimer, setTimeoutTimer] = useState<NodeJS.Timeout | null>(null);
 
-  // Add timeout for loading state
-  useEffect(() => {
-    // Clear any existing timer
-    if (timeoutTimer) {
-      clearTimeout(timeoutTimer);
-    }
-
-    // Only set timeout if we're actually loading
-    if (authLoading || profileLoading) {
-      console.log('⏰ Setting loading timeout (10 seconds)');
-      const timer = setTimeout(() => {
-        console.warn('⚠️ Loading timeout reached - showing fallback');
-        setLoadingTimeout(true);
-      }, 10000); // Reduced to 10 seconds
-      
-      setTimeoutTimer(timer);
-    } else {
-      // Reset timeout if we're no longer loading
-      setLoadingTimeout(false);
-    }
-
-    return () => {
-      if (timeoutTimer) {
-        clearTimeout(timeoutTimer);
-      }
-    };
-  }, [authLoading, profileLoading]);
-
-  // Show loading spinner with timeout fallback
-  if ((authLoading || profileLoading) && !loadingTimeout) {
+  // Show loading spinner only for a reasonable amount of time
+  if ((authLoading || profileLoading) && !profileError) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <LoadingSpinner size="lg" text="Loading your dashboard..." />
-      </div>
-    );
-  }
-
-  // Handle loading timeout - show recovery options
-  if (loadingTimeout) {
-    return (
-      <div className="min-h-screen flex items-center justify-center p-6">
-        <div className="max-w-md w-full text-center space-y-4">
-          <AlertCircle className="h-12 w-12 text-amber-500 mx-auto" />
-          <h2 className="text-xl font-semibold">Taking longer than expected</h2>
-          <p className="text-slate-600">The app is having trouble loading. This might be a temporary issue.</p>
-          <div className="space-y-2">
-            <Button onClick={() => window.location.reload()} className="w-full">
-              <RefreshCw className="mr-2 h-4 w-4" />
-              Refresh Page
-            </Button>
-            <Button 
-              onClick={() => {
-                setLoadingTimeout(false);
-                refetch();
-              }} 
-              variant="outline" 
-              className="w-full"
-            >
-              Try Again
-            </Button>
-          </div>
-        </div>
       </div>
     );
   }
@@ -114,10 +54,15 @@ const AppLayout = ({ children, title = "Dashboard", description }: AppLayoutProp
           <AlertCircle className="h-12 w-12 text-red-500 mx-auto" />
           <h2 className="text-xl font-semibold">Profile Error</h2>
           <p className="text-slate-600">{profileError}</p>
-          <Button onClick={refetch} className="w-full">
-            <RefreshCw className="mr-2 h-4 w-4" />
-            Try Again
-          </Button>
+          <div className="space-y-2">
+            <Button onClick={refetch} className="w-full">
+              <RefreshCw className="mr-2 h-4 w-4" />
+              Try Again
+            </Button>
+            <Button onClick={() => window.location.reload()} variant="outline" className="w-full">
+              Refresh Page
+            </Button>
+          </div>
         </div>
       </div>
     );

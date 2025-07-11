@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -21,62 +22,71 @@ export const useProfile = () => {
 
   useEffect(() => {
     let mounted = true;
-    let timeoutId: NodeJS.Timeout;
+    let controller: AbortController;
 
     const fetchProfile = async () => {
       if (!user?.id) {
         console.log('⏭️ No user ID available');
-        setLoading(false);
+        if (mounted) {
+          setLoading(false);
+          setProfile(null);
+          setError(null);
+        }
         return;
       }
 
       console.log('👤 Fetching profile for user:', user.id);
-      setLoading(true);
-      setError(null);
+      
+      if (mounted) {
+        setLoading(true);
+        setError(null);
+      }
 
       try {
-        // Set a timeout that actually works
-        timeoutId = setTimeout(() => {
-          if (mounted) {
-            console.log('🚫 Manual timeout reached');
-            setError('Unable to load profile. Please refresh the page.');
-            setProfile(null);
-            setLoading(false);
-          }
-        }, 5000);
+        controller = new AbortController();
+        
+        // Create a simple timeout promise
+        const timeoutPromise = new Promise((_, reject) => {
+          setTimeout(() => reject(new Error('Request timeout')), 5000);
+        });
 
-        // Simple query without complex timeout handling
-        const { data, error: fetchError } = await supabase
+        // Create the query promise
+        const queryPromise = supabase
           .from('profiles')
           .select('*')
           .eq('id', user.id)
+          .abortSignal(controller.signal)
           .maybeSingle();
 
+        console.log('🔍 Executing query with 5s timeout...');
+        
+        // Race between query and timeout
+        const result = await Promise.race([queryPromise, timeoutPromise]);
+        
         if (!mounted) return;
 
-        clearTimeout(timeoutId);
-        console.log('📋 Profile query result:', { data, error: fetchError });
+        const { data, error: fetchError } = result as any;
 
         if (fetchError) {
           console.error('💥 Profile fetch error:', fetchError);
           setError(fetchError.message);
           setProfile(null);
-        } else if (data) {
-          console.log('✅ Profile loaded:', data);
-          setProfile(data);
-          setError(null);
         } else {
-          console.log('ℹ️ No profile found');
-          setProfile(null);
+          console.log('✅ Profile loaded successfully:', data);
+          setProfile(data);
           setError(null);
         }
       } catch (err) {
         if (!mounted) return;
-        clearTimeout(timeoutId);
         
-        console.error('💥 Profile fetch error:', err);
-        const errorMessage = err instanceof Error ? err.message : 'Unknown error';
-        setError(errorMessage);
+        console.error('💥 Profile fetch failed:', err);
+        
+        // If it's a timeout or abort, set a specific error
+        if (err instanceof Error && (err.message.includes('timeout') || err.message.includes('aborted'))) {
+          setError('Unable to load profile. Please refresh the page.');
+        } else {
+          setError(err instanceof Error ? err.message : 'Unknown error');
+        }
         setProfile(null);
       } finally {
         if (mounted) {
@@ -90,7 +100,9 @@ export const useProfile = () => {
 
     return () => {
       mounted = false;
-      clearTimeout(timeoutId);
+      if (controller) {
+        controller.abort();
+      }
     };
   }, [user?.id]);
 
@@ -123,11 +135,13 @@ export const useProfile = () => {
   };
 
   const refetch = () => {
-    // Force re-fetch by updating a dependency
     if (user?.id) {
       setError(null);
-      // This will trigger the effect again
       setLoading(true);
+      // Force re-run of effect by updating dependency
+      setTimeout(() => {
+        window.location.reload();
+      }, 100);
     }
   };
 
