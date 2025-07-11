@@ -71,7 +71,7 @@ class PerformanceMonitor {
       try {
         const fidObserver = new PerformanceObserver((list) => {
           list.getEntries().forEach((entry) => {
-            this.recordMetric('first_input_delay', entry.processingStart - entry.startTime, {
+            this.recordMetric('first_input_delay', (entry as any).processingStart - entry.startTime, {
               type: (entry as any).name
             });
           });
@@ -126,8 +126,8 @@ class PerformanceMonitor {
           this.recordMetric('dns_lookup', navigation.domainLookupEnd - navigation.domainLookupStart);
           this.recordMetric('tcp_connect', navigation.connectEnd - navigation.connectStart);
           this.recordMetric('ttfb', navigation.responseStart - navigation.requestStart);
-          this.recordMetric('dom_content_loaded', navigation.domContentLoadedEventEnd - navigation.navigationStart);
-          this.recordMetric('page_load', navigation.loadEventEnd - navigation.navigationStart);
+          this.recordMetric('dom_content_loaded', navigation.domContentLoadedEventEnd - navigation.fetchStart);
+          this.recordMetric('page_load', navigation.loadEventEnd - navigation.fetchStart);
         }
       }, 1000);
     });
