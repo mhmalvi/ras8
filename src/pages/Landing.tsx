@@ -22,16 +22,18 @@ const Landing = () => {
               </div>
             </div>
             <div className="flex items-center space-x-4">
-              <Link to="/">
-                <Button variant="ghost">Dashboard</Button>
+              <Link to="/auth">
+                <Button variant="ghost">Sign In</Button>
               </Link>
-              <Link to="/returns">
+              <Link to="/customer-portal">
                 <Button variant="ghost">Customer Portal</Button>
               </Link>
-              <Button className="bg-blue-600 hover:bg-blue-700">
-                Get Started
-                <ArrowRight className="ml-2 h-4 w-4" />
-              </Button>
+              <Link to="/auth">
+                <Button className="bg-blue-600 hover:bg-blue-700">
+                  Get Started
+                  <ArrowRight className="ml-2 h-4 w-4" />
+                </Button>
+              </Link>
             </div>
           </div>
         </div>
@@ -52,13 +54,13 @@ const Landing = () => {
             increases exchanges, and delights customers with seamless return experiences.
           </p>
           <div className="flex items-center justify-center space-x-4">
-            <Link to="/">
+            <Link to="/auth">
               <Button size="lg" className="bg-blue-600 hover:bg-blue-700">
-                View Dashboard
+                Start Free Trial
                 <ArrowRight className="ml-2 h-5 w-5" />
               </Button>
             </Link>
-            <Link to="/returns">
+            <Link to="/customer-portal">
               <Button size="lg" variant="outline">
                 Try Customer Portal
               </Button>
@@ -198,13 +200,13 @@ const Landing = () => {
             Start your 14-day free trial today. No credit card required.
           </p>
           <div className="flex items-center justify-center space-x-4">
-            <Link to="/">
+            <Link to="/auth">
               <Button size="lg" variant="secondary" className="bg-white text-blue-600 hover:bg-slate-100">
-                Start Dashboard Tour
+                Start Free Trial
                 <ArrowRight className="ml-2 h-5 w-5" />
               </Button>
             </Link>
-            <Link to="/returns">
+            <Link to="/customer-portal">
               <Button size="lg" variant="outline" className="border-white text-white hover:bg-white/10">
                 Try Customer Portal
               </Button>
@@ -231,9 +233,9 @@ const Landing = () => {
             <div>
               <h4 className="font-semibold text-white mb-4">Product</h4>
               <ul className="space-y-2 text-sm">
-                <li><Link to="/" className="hover:text-white">Dashboard</Link></li>
-                <li><Link to="/returns" className="hover:text-white">Customer Portal</Link></li>
-                <li><Link to="/settings" className="hover:text-white">Settings</Link></li>
+                <li><Link to="/auth" className="hover:text-white">Dashboard</Link></li>
+                <li><Link to="/customer-portal" className="hover:text-white">Customer Portal</Link></li>
+                <li><Link to="/auth" className="hover:text-white">Settings</Link></li>
               </ul>
             </div>
             <div>

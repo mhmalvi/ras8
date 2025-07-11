@@ -45,8 +45,10 @@ function App(): JSX.Element {
         <AuthProvider>
           <BrowserRouter>
             <Routes>
-              {/* Public routes */}
+              {/* Default landing page */}
               <Route path="/landing" element={<Landing />} />
+              
+              {/* Public routes */}
               <Route path="/customer-portal" element={<CustomerPortal />} />
               <Route path="/shopify/install" element={<ShopifyInstall />} />
               
