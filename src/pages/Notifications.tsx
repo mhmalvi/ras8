@@ -30,4 +30,3 @@ const Notifications = () => {
 };
 
 export default Notifications;
-</lov-actions>
