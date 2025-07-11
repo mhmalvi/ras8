@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -25,14 +24,16 @@ export const useProfile = () => {
   const [error, setError] = useState<string | null>(null);
   const [fetchAttempted, setFetchAttempted] = useState(false);
 
-  const fetchProfile = async (userId: string) => {
+  const fetchProfile = async (userId: string, retryCount = 0) => {
+    const maxRetries = 2;
+    
     // Prevent duplicate fetches for the same user
     if (isProfileFetching && currentFetchUserId === userId) {
       console.log('⏭️ Profile fetch already in progress for user:', userId);
       return;
     }
 
-    console.log('👤 Starting profile fetch for user:', userId);
+    console.log(`👤 Starting profile fetch for user: ${userId} (attempt ${retryCount + 1})`);
     isProfileFetching = true;
     currentFetchUserId = userId;
     
@@ -40,28 +41,27 @@ export const useProfile = () => {
       setLoading(true);
       setError(null);
       
-      // Shorter timeout for faster feedback
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => {
-        controller.abort();
-        console.error('⏰ Profile fetch timed out after 3 seconds');
-      }, 3000);
-
       console.log('🔍 Executing Supabase query...');
-      const { data, error: fetchError } = await supabase
+      
+      // Use a Promise.race to ensure we don't hang indefinitely
+      const queryPromise = supabase
         .from('profiles')
         .select('*')
         .eq('id', userId)
-        .abortSignal(controller.signal)
         .maybeSingle();
 
-      clearTimeout(timeoutId);
+      const timeoutPromise = new Promise((_, reject) => {
+        setTimeout(() => reject(new Error('Query timeout')), 2000);
+      });
+
+      const result = await Promise.race([queryPromise, timeoutPromise]);
+      const { data, error: fetchError } = result as any;
+
       console.log('📋 Profile query completed:', { data, error: fetchError, hasData: !!data });
 
       if (fetchError) {
         console.error('💥 Profile fetch error:', fetchError);
-        setError(fetchError.message);
-        setProfile(null);
+        throw fetchError;
       } else if (data) {
         console.log('✅ Profile loaded successfully:', data);
         setProfile(data);
@@ -72,10 +72,22 @@ export const useProfile = () => {
         setError(null);
       }
     } catch (err) {
-      console.error('💥 Unexpected error in profile fetch:', err);
-      if (err instanceof Error && err.name === 'AbortError') {
-        console.log('🚫 Query was aborted due to timeout');
-        setError('Database connection timeout. Please refresh the page.');
+      console.error(`💥 Profile fetch failed (attempt ${retryCount + 1}):`, err);
+      
+      // Retry logic
+      if (retryCount < maxRetries && err instanceof Error && 
+          (err.name === 'AbortError' || err.message.includes('timeout'))) {
+        console.log(`🔄 Retrying profile fetch (${retryCount + 1}/${maxRetries})...`);
+        isProfileFetching = false;
+        currentFetchUserId = null;
+        setTimeout(() => fetchProfile(userId, retryCount + 1), 1000);
+        return;
+      }
+      
+      // Final error handling
+      if (err instanceof Error && (err.name === 'AbortError' || err.message.includes('timeout'))) {
+        console.log('🚫 All retry attempts failed');
+        setError('Unable to load profile. Please refresh the page.');
         setProfile(null);
       } else {
         const errorMessage = err instanceof Error ? err.message : 'Unknown error occurred';
