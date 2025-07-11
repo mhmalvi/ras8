@@ -38,11 +38,9 @@ describe('User Flows Integration Tests', () => {
 
   const renderWithProviders = (component: React.ReactElement) => {
     return render(
-      <QueryClientProvider client={queryClient}>
-        <BrowserRouter>
-          {component}
-        </BrowserRouter>
-      </QueryClientProvider>
+      React.createElement(QueryClientProvider, { client: queryClient },
+        React.createElement(BrowserRouter, null, component)
+      )
     );
   };
 
@@ -54,6 +52,8 @@ describe('User Flows Integration Tests', () => {
         shopify_order_id: '12345',
         customer_email: 'test@example.com',
         total_amount: 200,
+        status: 'completed',
+        created_at: '2024-01-01T00:00:00Z',
         items: [
           {
             id: 'item-1',
@@ -82,19 +82,15 @@ describe('User Flows Integration Tests', () => {
         returnId: 'return-1'
       });
 
-      renderWithProviders(<CustomerReturnsPortal />);
+      renderWithProviders(React.createElement(CustomerReturnsPortal));
 
       // Step 1: Enter order lookup information
-      const orderNumberRegex = /Order Number/i;
-      const emailAddressRegex = /Email Address/i;
-      const orderInput = screen.getByPlaceholderText(orderNumberRegex);
-      const emailInput = screen.getByPlaceholderText(emailAddressRegex);
+      const orderNumberInput = screen.getByPlaceholderText(/Order Number/i);
+      const emailAddressInput = screen.getByPlaceholderText(/Email Address/i);
+      await user.type(orderNumberInput, '12345');
+      await user.type(emailAddressInput, 'test@example.com');
       
-      await user.type(orderInput, '12345');
-      await user.type(emailInput, 'test@example.com');
-      
-      const lookupOrderRegex = /Look up Order/i;
-      const lookupButton = screen.getByText(lookupOrderRegex);
+      const lookupButton = screen.getByText(/Look up Order/i);
       await user.click(lookupButton);
 
       // Wait for order to load
@@ -137,23 +133,19 @@ describe('User Flows Integration Tests', () => {
         new Error('Order not found')
       );
 
-      renderWithProviders(<CustomerReturnsPortal />);
+      renderWithProviders(React.createElement(CustomerReturnsPortal));
 
-      const orderNumberRegex = /Order Number/i;
-      const emailAddressRegex = /Email Address/i;
-      const orderInput = screen.getByPlaceholderText(orderNumberRegex);
-      const emailInput = screen.getByPlaceholderText(emailAddressRegex);
+      const orderInput = screen.getByPlaceholderText(/Order Number/i);
+      const emailInput = screen.getByPlaceholderText(/Email Address/i);
       
       await user.type(orderInput, '99999');
       await user.type(emailInput, 'notfound@example.com');
       
-      const lookupOrderRegex = /Look up Order/i;
-      const lookupButton = screen.getByText(lookupOrderRegex);
+      const lookupButton = screen.getByText(/Look up Order/i);
       await user.click(lookupButton);
 
-      const orderNotFoundRegex = /Order not found/i;
       await waitFor(() => {
-        expect(screen.getByText(orderNotFoundRegex)).toBeInTheDocument();
+        expect(screen.getByText(/Order not found/i)).toBeInTheDocument();
       });
     });
   });
@@ -204,7 +196,7 @@ describe('User Flows Integration Tests', () => {
       }));
 
       renderWithProviders(
-        <RealReturnsTable searchTerm="" statusFilter="all" />
+        React.createElement(RealReturnsTable, { searchTerm: "", statusFilter: "all" })
       );
 
       // Verify returns are displayed
@@ -293,37 +285,31 @@ describe('User Flows Integration Tests', () => {
         new Error('Network error')
       );
 
-      renderWithProviders(<CustomerReturnsPortal />);
+      renderWithProviders(React.createElement(CustomerReturnsPortal));
 
-      const orderNumberRegex = /Order Number/i;
-      const emailAddressRegex = /Email Address/i;
-      const orderInput = screen.getByPlaceholderText(orderNumberRegex);
-      const emailInput = screen.getByPlaceholderText(emailAddressRegex);
+      const orderInput = screen.getByPlaceholderText(/Order Number/i);
+      const emailInput = screen.getByPlaceholderText(/Email Address/i);
       
       await user.type(orderInput, '12345');
       await user.type(emailInput, 'test@example.com');
       
-      const lookupOrderRegex = /Look up Order/i;
-      const lookupButton = screen.getByText(lookupOrderRegex);
+      const lookupButton = screen.getByText(/Look up Order/i);
       await user.click(lookupButton);
 
-      const errorOccurredRegex = /Error occurred/i;
       await waitFor(() => {
-        expect(screen.getByText(errorOccurredRegex)).toBeInTheDocument();
+        expect(screen.getByText(/Error occurred/i)).toBeInTheDocument();
       });
     });
 
     it('should validate required fields', async () => {
-      renderWithProviders(<CustomerReturnsPortal />);
+      renderWithProviders(React.createElement(CustomerReturnsPortal));
 
-      const lookupOrderRegex = /Look up Order/i;
-      const lookupButton = screen.getByText(lookupOrderRegex);
+      const lookupButton = screen.getByText(/Look up Order/i);
       await user.click(lookupButton);
 
       // Should show validation errors for empty fields
-      const orderRequiredRegex = /Order number is required/i;
       await waitFor(() => {
-        expect(screen.getByText(orderRequiredRegex)).toBeInTheDocument();
+        expect(screen.getByText(/Order number is required/i)).toBeInTheDocument();
       });
     });
   });
