@@ -84,13 +84,13 @@ describe('User Flows Integration Tests', () => {
       renderWithProviders(<CustomerReturnsPortal />);
 
       // Step 1: Enter order lookup information
-      const orderInput = screen.getByPlaceholderText('Order Number');
-      const emailInput = screen.getByPlaceholderText('Email Address');
+      const orderInput = screen.getByPlaceholderText(/Order Number/i);
+      const emailInput = screen.getByPlaceholderText(/Email Address/i);
       
       await user.type(orderInput, '12345');
       await user.type(emailInput, 'test@example.com');
       
-      const lookupButton = screen.getByText('Look up Order');
+      const lookupButton = screen.getByText(/Look up Order/i);
       await user.click(lookupButton);
 
       // Wait for order to load
@@ -135,17 +135,17 @@ describe('User Flows Integration Tests', () => {
 
       renderWithProviders(<CustomerReturnsPortal />);
 
-      const orderInput = screen.getByPlaceholderText('Order Number');
-      const emailInput = screen.getByPlaceholderText('Email Address');
+      const orderInput = screen.getByPlaceholderText(/Order Number/i);
+      const emailInput = screen.getByPlaceholderText(/Email Address/i);
       
       await user.type(orderInput, '99999');
       await user.type(emailInput, 'notfound@example.com');
       
-      const lookupButton = screen.getByText('Look up Order');
+      const lookupButton = screen.getByText(/Look up Order/i);
       await user.click(lookupButton);
 
       await waitFor(() => {
-        expect(screen.getByText('Order not found')).toBeInTheDocument();
+        expect(screen.getByText(/Order not found/i)).toBeInTheDocument();
       });
     });
   });
@@ -287,29 +287,29 @@ describe('User Flows Integration Tests', () => {
 
       renderWithProviders(<CustomerReturnsPortal />);
 
-      const orderInput = screen.getByPlaceholderText('Order Number');
-      const emailInput = screen.getByPlaceholderText('Email Address');
+      const orderInput = screen.getByPlaceholderText(/Order Number/i);
+      const emailInput = screen.getByPlaceholderText(/Email Address/i);
       
       await user.type(orderInput, '12345');
       await user.type(emailInput, 'test@example.com');
       
-      const lookupButton = screen.getByText('Look up Order');
+      const lookupButton = screen.getByText(/Look up Order/i);
       await user.click(lookupButton);
 
       await waitFor(() => {
-        expect(screen.getByText('Error occurred')).toBeInTheDocument();
+        expect(screen.getByText(/Error occurred/i)).toBeInTheDocument();
       });
     });
 
     it('should validate required fields', async () => {
       renderWithProviders(<CustomerReturnsPortal />);
 
-      const lookupButton = screen.getByText('Look up Order');
+      const lookupButton = screen.getByText(/Look up Order/i);
       await user.click(lookupButton);
 
       // Should show validation errors for empty fields
       await waitFor(() => {
-        expect(screen.getByText('Order number is required')).toBeInTheDocument();
+        expect(screen.getByText(/Order number is required/i)).toBeInTheDocument();
       });
     });
   });
