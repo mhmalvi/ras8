@@ -31,6 +31,7 @@ export const useProfile = () => {
     }
 
     try {
+      setLoading(true);
       const { data, error } = await supabase
         .from('profiles')
         .select('*')

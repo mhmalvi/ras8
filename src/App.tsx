@@ -1,5 +1,4 @@
-
-import React, { Suspense } from "react";
+import React from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { Toaster } from "@/components/ui/toaster";
@@ -23,7 +22,6 @@ import Notifications from "./pages/Notifications";
 import TestData from "./pages/TestData";
 import Landing from "./pages/Landing";
 import NotFound from "./pages/NotFound";
-import AppFallback from "./components/AppFallback";
 import "./App.css";
 
 // Create QueryClient with better error handling
@@ -42,9 +40,7 @@ const queryClient = new QueryClient({
 
 function App(): JSX.Element {
   return (
-    <React.StrictMode>
-      <Suspense fallback={<AppFallback />}>
-        <QueryClientProvider client={queryClient}>
+    <QueryClientProvider client={queryClient}>
       <GlobalErrorBoundary>
         <AuthProvider>
           <BrowserRouter>
@@ -170,8 +166,6 @@ function App(): JSX.Element {
         </AuthProvider>
       </GlobalErrorBoundary>
     </QueryClientProvider>
-    </Suspense>
-    </React.StrictMode>
   );
 }
 
