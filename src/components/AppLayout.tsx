@@ -21,8 +21,8 @@ const AppLayout = ({ children, title = "Dashboard", description }: AppLayoutProp
   const { user, loading: authLoading } = useAuth();
   const { profile, loading: profileLoading, error: profileError, refetch } = useProfile();
 
-  // Show loading spinner only for a reasonable amount of time
-  if ((authLoading || profileLoading) && !profileError) {
+  // Show loading for reasonable time only
+  if (authLoading || (profileLoading && !profileError)) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <LoadingSpinner size="lg" text="Loading your dashboard..." />
@@ -46,14 +46,16 @@ const AppLayout = ({ children, title = "Dashboard", description }: AppLayoutProp
     );
   }
 
-  // Handle profile error
+  // Handle profile error with better UX
   if (profileError) {
     return (
       <div className="min-h-screen flex items-center justify-center p-6">
         <div className="max-w-md w-full text-center space-y-4">
           <AlertCircle className="h-12 w-12 text-red-500 mx-auto" />
-          <h2 className="text-xl font-semibold">Profile Error</h2>
-          <p className="text-slate-600">{profileError}</p>
+          <h2 className="text-xl font-semibold">Unable to Load Profile</h2>
+          <p className="text-slate-600">
+            We're having trouble connecting to the database. This might be a temporary issue.
+          </p>
           <div className="space-y-2">
             <Button onClick={refetch} className="w-full">
               <RefreshCw className="mr-2 h-4 w-4" />

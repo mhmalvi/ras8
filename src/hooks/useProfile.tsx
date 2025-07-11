@@ -22,7 +22,6 @@ export const useProfile = () => {
 
   useEffect(() => {
     let mounted = true;
-    let controller: AbortController;
 
     const fetchProfile = async () => {
       if (!user?.id) {
@@ -43,29 +42,14 @@ export const useProfile = () => {
       }
 
       try {
-        controller = new AbortController();
-        
-        // Create a simple timeout promise
-        const timeoutPromise = new Promise((_, reject) => {
-          setTimeout(() => reject(new Error('Request timeout')), 5000);
-        });
-
-        // Create the query promise
-        const queryPromise = supabase
+        // Simple query without complex timeout handling
+        const { data, error: fetchError } = await supabase
           .from('profiles')
           .select('*')
           .eq('id', user.id)
-          .abortSignal(controller.signal)
           .maybeSingle();
 
-        console.log('🔍 Executing query with 5s timeout...');
-        
-        // Race between query and timeout
-        const result = await Promise.race([queryPromise, timeoutPromise]);
-        
         if (!mounted) return;
-
-        const { data, error: fetchError } = result as any;
 
         if (fetchError) {
           console.error('💥 Profile fetch error:', fetchError);
@@ -80,13 +64,7 @@ export const useProfile = () => {
         if (!mounted) return;
         
         console.error('💥 Profile fetch failed:', err);
-        
-        // If it's a timeout or abort, set a specific error
-        if (err instanceof Error && (err.message.includes('timeout') || err.message.includes('aborted'))) {
-          setError('Unable to load profile. Please refresh the page.');
-        } else {
-          setError(err instanceof Error ? err.message : 'Unknown error');
-        }
+        setError(err instanceof Error ? err.message : 'Unknown error');
         setProfile(null);
       } finally {
         if (mounted) {
@@ -100,9 +78,6 @@ export const useProfile = () => {
 
     return () => {
       mounted = false;
-      if (controller) {
-        controller.abort();
-      }
     };
   }, [user?.id]);
 
@@ -138,7 +113,7 @@ export const useProfile = () => {
     if (user?.id) {
       setError(null);
       setLoading(true);
-      // Force re-run of effect by updating dependency
+      // Force re-run of effect by updating a state that triggers useEffect
       setTimeout(() => {
         window.location.reload();
       }, 100);
