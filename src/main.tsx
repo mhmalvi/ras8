@@ -1,5 +1,23 @@
-import { createRoot } from 'react-dom/client'
-import App from './App.tsx'
-import './index.css'
 
-createRoot(document.getElementById("root")!).render(<App />);
+import { StrictMode } from "react";
+import { createRoot } from "react-dom/client";
+import App from "./App.tsx";
+import "./index.css";
+import { registerSW } from "./utils/serviceWorkerRegistration";
+
+// Register service worker for caching
+registerSW({
+  onSuccess: () => {
+    console.log('✅ Service Worker: App cached for offline use');
+  },
+  onUpdate: () => {
+    console.log('🔄 Service Worker: New version available, please refresh');
+    // You could show a toast notification here
+  }
+});
+
+createRoot(document.getElementById("root")!).render(
+  <StrictMode>
+    <App />
+  </StrictMode>
+);
