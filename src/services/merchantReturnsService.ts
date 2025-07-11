@@ -27,15 +27,21 @@ export interface ReturnData {
 }
 
 export class MerchantReturnsService {
-  static async fetchReturns(): Promise<ReturnData[]> {
-    const { data, error } = await supabase
+  static async fetchReturns(merchantId?: string): Promise<ReturnData[]> {
+    let query = supabase
       .from('returns')
       .select(`
         *,
         return_items (*),
         ai_suggestions (*)
-      `)
-      .order('created_at', { ascending: false });
+      `);
+
+    // Filter by merchant_id if provided
+    if (merchantId) {
+      query = query.eq('merchant_id', merchantId);
+    }
+
+    const { data, error } = await query.order('created_at', { ascending: false });
 
     if (error) {
       console.error('Error fetching returns:', error);

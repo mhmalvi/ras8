@@ -2,18 +2,35 @@
 import { useState, useEffect } from 'react';
 import { MerchantReturnsService, ReturnData } from '@/services/merchantReturnsService';
 import { useToast } from '@/hooks/use-toast';
+import { useProfile } from './useProfile';
 
 export const useRealReturnsData = () => {
+  const { profile, loading: profileLoading } = useProfile();
   const [returns, setReturns] = useState<ReturnData[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
 
   const fetchReturns = async () => {
+    // Don't proceed if profile is still loading
+    if (profileLoading) {
+      console.log('⏳ Profile still loading, waiting...');
+      return;
+    }
+
+    // Don't proceed if no merchant_id
+    if (!profile?.merchant_id) {
+      console.log('❌ No merchant_id in profile');
+      setReturns([]);
+      setLoading(false);
+      setError('No merchant profile found');
+      return;
+    }
+
     try {
       setLoading(true);
       setError(null);
-      const data = await MerchantReturnsService.fetchReturns();
+      const data = await MerchantReturnsService.fetchReturns(profile.merchant_id);
       setReturns(data);
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to fetch returns';
@@ -66,7 +83,7 @@ export const useRealReturnsData = () => {
 
   useEffect(() => {
     fetchReturns();
-  }, []);
+  }, [profile?.merchant_id, profileLoading]);
 
   return {
     returns,
