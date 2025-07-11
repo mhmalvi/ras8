@@ -55,7 +55,7 @@ export class AIService {
     }
 
     return {
-      suggestedProduct: response.data?.suggestedProduct || response.data?.suggestion,
+      suggestedProduct: response.data?.suggestedProduct || 'Enhanced Product',
       confidence: Math.max(70, Math.min(99, response.data?.confidence || 85)),
       reasoning: response.data?.reasoning || 'AI-generated recommendation based on return analysis',
       alternativeProducts: response.data?.alternativeProducts

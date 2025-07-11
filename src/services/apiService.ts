@@ -139,7 +139,7 @@ export class ApiService {
   // =================
 
   async sendNotification(params: {
-    type: string;
+    type: 'return_status' | 'ai_suggestion' | 'return_approved' | 'return_rejected' | 'exchange_offer';
     recipientEmail: string;
     returnId: string;
     [key: string]: any;
