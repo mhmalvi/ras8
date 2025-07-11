@@ -84,13 +84,16 @@ describe('User Flows Integration Tests', () => {
       renderWithProviders(<CustomerReturnsPortal />);
 
       // Step 1: Enter order lookup information
-      const orderInput = screen.getByPlaceholderText(/Order Number/i);
-      const emailInput = screen.getByPlaceholderText(/Email Address/i);
+      const orderNumberRegex = /Order Number/i;
+      const emailAddressRegex = /Email Address/i;
+      const orderInput = screen.getByPlaceholderText(orderNumberRegex);
+      const emailInput = screen.getByPlaceholderText(emailAddressRegex);
       
       await user.type(orderInput, '12345');
       await user.type(emailInput, 'test@example.com');
       
-      const lookupButton = screen.getByText(/Look up Order/i);
+      const lookupOrderRegex = /Look up Order/i;
+      const lookupButton = screen.getByText(lookupOrderRegex);
       await user.click(lookupButton);
 
       // Wait for order to load
@@ -135,17 +138,21 @@ describe('User Flows Integration Tests', () => {
 
       renderWithProviders(<CustomerReturnsPortal />);
 
-      const orderInput = screen.getByPlaceholderText(/Order Number/i);
-      const emailInput = screen.getByPlaceholderText(/Email Address/i);
+      const orderNumberRegex = /Order Number/i;
+      const emailAddressRegex = /Email Address/i;
+      const orderInput = screen.getByPlaceholderText(orderNumberRegex);
+      const emailInput = screen.getByPlaceholderText(emailAddressRegex);
       
       await user.type(orderInput, '99999');
       await user.type(emailInput, 'notfound@example.com');
       
-      const lookupButton = screen.getByText(/Look up Order/i);
+      const lookupOrderRegex = /Look up Order/i;
+      const lookupButton = screen.getByText(lookupOrderRegex);
       await user.click(lookupButton);
 
+      const orderNotFoundRegex = /Order not found/i;
       await waitFor(() => {
-        expect(screen.getByText(/Order not found/i)).toBeInTheDocument();
+        expect(screen.getByText(orderNotFoundRegex)).toBeInTheDocument();
       });
     });
   });
@@ -287,29 +294,35 @@ describe('User Flows Integration Tests', () => {
 
       renderWithProviders(<CustomerReturnsPortal />);
 
-      const orderInput = screen.getByPlaceholderText(/Order Number/i);
-      const emailInput = screen.getByPlaceholderText(/Email Address/i);
+      const orderNumberRegex = /Order Number/i;
+      const emailAddressRegex = /Email Address/i;
+      const orderInput = screen.getByPlaceholderText(orderNumberRegex);
+      const emailInput = screen.getByPlaceholderText(emailAddressRegex);
       
       await user.type(orderInput, '12345');
       await user.type(emailInput, 'test@example.com');
       
-      const lookupButton = screen.getByText(/Look up Order/i);
+      const lookupOrderRegex = /Look up Order/i;
+      const lookupButton = screen.getByText(lookupOrderRegex);
       await user.click(lookupButton);
 
+      const errorOccurredRegex = /Error occurred/i;
       await waitFor(() => {
-        expect(screen.getByText(/Error occurred/i)).toBeInTheDocument();
+        expect(screen.getByText(errorOccurredRegex)).toBeInTheDocument();
       });
     });
 
     it('should validate required fields', async () => {
       renderWithProviders(<CustomerReturnsPortal />);
 
-      const lookupButton = screen.getByText(/Look up Order/i);
+      const lookupOrderRegex = /Look up Order/i;
+      const lookupButton = screen.getByText(lookupOrderRegex);
       await user.click(lookupButton);
 
       // Should show validation errors for empty fields
+      const orderRequiredRegex = /Order number is required/i;
       await waitFor(() => {
-        expect(screen.getByText(/Order number is required/i)).toBeInTheDocument();
+        expect(screen.getByText(orderRequiredRegex)).toBeInTheDocument();
       });
     });
   });
