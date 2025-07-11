@@ -1,120 +1,74 @@
 
-import React from 'react';
-import { Loader2, Package, Brain, Zap, Users, BarChart3 } from 'lucide-react';
-import { Card, CardContent } from "@/components/ui/card";
-import { Skeleton } from "@/components/ui/skeleton";
+import { Loader2 } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 interface LoadingSpinnerProps {
-  size?: 'sm' | 'md' | 'lg';
+  size?: "sm" | "md" | "lg";
   text?: string;
   className?: string;
 }
 
-export const LoadingSpinner = ({ size = 'md', text, className = '' }: LoadingSpinnerProps) => {
+export const LoadingSpinner = ({ 
+  size = "md", 
+  text = "Loading...", 
+  className 
+}: LoadingSpinnerProps) => {
   const sizeClasses = {
-    sm: 'h-4 w-4',
-    md: 'h-6 w-6',
-    lg: 'h-8 w-8'
+    sm: "h-4 w-4",
+    md: "h-6 w-6", 
+    lg: "h-8 w-8"
   };
 
   return (
-    <div className={`flex items-center justify-center ${className}`}>
-      <Loader2 className={`${sizeClasses[size]} animate-spin mr-2`} />
-      {text && <span className="text-muted-foreground">{text}</span>}
+    <div className={cn("flex items-center justify-center space-x-2", className)}>
+      <Loader2 className={cn("animate-spin", sizeClasses[size])} />
+      {text && <span className="text-sm text-slate-600">{text}</span>}
     </div>
   );
 };
 
-interface LoadingCardProps {
-  title?: string;
-  description?: string;
-  icon?: React.ReactNode;
+interface LoadingStateProps {
+  message?: string;
+  showSpinner?: boolean;
 }
 
-export const LoadingCard = ({ title = 'Loading...', description, icon }: LoadingCardProps) => (
-  <Card>
-    <CardContent className="pt-6">
-      <div className="flex items-center justify-center flex-col space-y-4">
-        {icon || <Loader2 className="h-8 w-8 animate-spin text-blue-600" />}
-        <div className="text-center">
-          <h3 className="font-medium text-slate-900">{title}</h3>
-          {description && <p className="text-sm text-muted-foreground mt-1">{description}</p>}
-        </div>
-      </div>
-    </CardContent>
-  </Card>
-);
+export const LoadingState = ({ 
+  message = "Loading data...", 
+  showSpinner = true 
+}: LoadingStateProps) => {
+  return (
+    <div className="flex flex-col items-center justify-center py-12 space-y-4">
+      {showSpinner && <LoadingSpinner size="lg" />}
+      <p className="text-slate-600 text-center">{message}</p>
+    </div>
+  );
+};
 
-export const TableSkeleton = ({ rows = 5, columns = 4 }: { rows?: number; columns?: number }) => (
-  <div className="space-y-3">
-    {Array.from({ length: rows }).map((_, i) => (
-      <div key={i} className="flex space-x-4">
-        {Array.from({ length: columns }).map((_, j) => (
-          <Skeleton key={j} className="h-4 flex-1" />
+export const TableLoadingState = () => {
+  return (
+    <div className="w-full py-8">
+      <div className="space-y-3">
+        {[...Array(5)].map((_, i) => (
+          <div key={i} className="flex space-x-4 animate-pulse">
+            <div className="h-4 bg-slate-200 rounded w-1/4"></div>
+            <div className="h-4 bg-slate-200 rounded w-1/3"></div>
+            <div className="h-4 bg-slate-200 rounded w-1/5"></div>
+            <div className="h-4 bg-slate-200 rounded w-1/6"></div>
+          </div>
         ))}
       </div>
-    ))}
-  </div>
-);
-
-export const ChartSkeleton = () => (
-  <div className="space-y-4">
-    <div className="flex space-x-4">
-      <Skeleton className="h-4 w-24" />
-      <Skeleton className="h-4 w-32" />
     </div>
-    <Skeleton className="h-64 w-full" />
-  </div>
-);
+  );
+};
 
-export const ReturnsLoadingState = () => (
-  <LoadingCard 
-    title="Loading Returns"
-    description="Fetching your return requests..."
-    icon={<Package className="h-8 w-8 animate-pulse text-blue-600" />}
-  />
-);
-
-export const AILoadingState = () => (
-  <LoadingCard 
-    title="AI Processing"
-    description="Generating intelligent recommendations..."
-    icon={<Brain className="h-8 w-8 animate-pulse text-purple-600" />}
-  />
-);
-
-export const BulkProcessingLoadingState = () => (
-  <LoadingCard 
-    title="Bulk Processing"
-    description="Processing multiple returns with AI..."
-    icon={<Zap className="h-8 w-8 animate-pulse text-green-600" />}
-  />
-);
-
-export const AnalyticsLoadingState = () => (
-  <LoadingCard 
-    title="Loading Analytics"
-    description="Calculating performance metrics..."
-    icon={<BarChart3 className="h-8 w-8 animate-pulse text-orange-600" />}
-  />
-);
-
-export const CustomerLoadingState = () => (
-  <LoadingCard 
-    title="Loading Customer Data"
-    description="Fetching customer information..."
-    icon={<Users className="h-8 w-8 animate-pulse text-teal-600" />}
-  />
-);
-
-export const PageLoadingState = ({ message = 'Loading page...' }: { message?: string }) => (
-  <div className="min-h-screen bg-slate-50 flex items-center justify-center">
-    <div className="text-center space-y-4">
-      <Loader2 className="h-12 w-12 animate-spin text-blue-600 mx-auto" />
-      <div>
-        <h2 className="text-xl font-semibold text-slate-900">Please wait</h2>
-        <p className="text-muted-foreground">{message}</p>
+export const CardLoadingState = () => {
+  return (
+    <div className="animate-pulse space-y-4">
+      <div className="h-4 bg-slate-200 rounded w-3/4"></div>
+      <div className="space-y-2">
+        <div className="h-4 bg-slate-200 rounded"></div>
+        <div className="h-4 bg-slate-200 rounded w-5/6"></div>
       </div>
     </div>
-  </div>
-);
+  );
+};

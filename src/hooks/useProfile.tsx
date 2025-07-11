@@ -19,17 +19,18 @@ export const useProfile = () => {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [fetchAttempted, setFetchAttempted] = useState(false);
 
   const fetchProfile = async () => {
-    console.log('👤 Fetching profile for user:', user?.id);
-    
-    if (!user) {
-      console.log('❌ No user found');
-      setProfile(null);
+    if (!user?.id || fetchAttempted) {
+      console.log('⏭️ Skipping profile fetch - no user or already attempted');
       setLoading(false);
       return;
     }
 
+    console.log('👤 Fetching profile for user:', user.id);
+    setFetchAttempted(true);
+    
     try {
       setLoading(true);
       const { data, error } = await supabase
@@ -40,37 +41,28 @@ export const useProfile = () => {
 
       console.log('📋 Profile query result:', { data, error });
 
-      if (error) throw error;
-      
-      console.log('✅ Profile loaded:', data);
-      setProfile(data);
-      setError(null);
+      if (error) {
+        if (error.code === 'PGRST116') {
+          console.log('ℹ️ No profile found - user needs to create one');
+          setProfile(null);
+          setError(null);
+        } else {
+          throw error;
+        }
+      } else {
+        console.log('✅ Profile loaded:', data);
+        setProfile(data);
+        setError(null);
+      }
     } catch (err) {
       console.error('💥 Error fetching profile:', err);
-      setError(err instanceof Error ? err.message : 'Unknown error');
+      const errorMessage = err instanceof Error ? err.message : 'Unknown error';
+      setError(errorMessage);
       setProfile(null);
     } finally {
       setLoading(false);
     }
   };
-
-  useEffect(() => {
-    fetchProfile();
-    
-    // Listen for profile updates triggered by other components
-    const handleProfileUpdate = () => {
-      console.log('🔄 Profile update event received, refetching...');
-      fetchProfile();
-    };
-    
-    window.addEventListener('profileUpdated', handleProfileUpdate);
-    window.addEventListener('sampleDataCreated', handleProfileUpdate);
-    
-    return () => {
-      window.removeEventListener('profileUpdated', handleProfileUpdate);
-      window.removeEventListener('sampleDataCreated', handleProfileUpdate);
-    };
-  }, [user?.id]);
 
   const updateProfile = async (updates: Partial<Profile>) => {
     console.log('✏️ Updating profile with:', updates);
@@ -98,11 +90,50 @@ export const useProfile = () => {
     }
   };
 
+  // Reset fetch state when user changes
+  useEffect(() => {
+    setFetchAttempted(false);
+    setProfile(null);
+    setLoading(true);
+    setError(null);
+  }, [user?.id]);
+
+  // Fetch profile when user is available and not yet attempted
+  useEffect(() => {
+    if (user?.id && !fetchAttempted) {
+      fetchProfile();
+    } else if (!user?.id) {
+      setLoading(false);
+      setProfile(null);
+    }
+  }, [user?.id, fetchAttempted]);
+
+  // Listen for profile updates with controlled refetch
+  useEffect(() => {
+    const handleProfileUpdate = () => {
+      console.log('🔄 Profile update event received, refetching...');
+      setFetchAttempted(false); // Allow refetch
+    };
+    
+    window.addEventListener('profileUpdated', handleProfileUpdate);
+    window.addEventListener('sampleDataCreated', handleProfileUpdate);
+    
+    return () => {
+      window.removeEventListener('profileUpdated', handleProfileUpdate);
+      window.removeEventListener('sampleDataCreated', handleProfileUpdate);
+    };
+  }, []);
+
+  const refetch = () => {
+    setFetchAttempted(false);
+    setError(null);
+  };
+
   return {
     profile,
     loading,
     error,
     updateProfile,
-    refetch: fetchProfile
+    refetch
   };
 };
