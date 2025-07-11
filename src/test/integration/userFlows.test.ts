@@ -84,13 +84,13 @@ describe('User Flows Integration Tests', () => {
       renderWithProviders(<CustomerReturnsPortal />);
 
       // Step 1: Enter order lookup information
-      const orderInput = screen.getByPlaceholderText(/order number/i);
-      const emailInput = screen.getByPlaceholderText(/email/i);
+      const orderInput = screen.getByPlaceholderText('Order Number');
+      const emailInput = screen.getByPlaceholderText('Email Address');
       
       await user.type(orderInput, '12345');
       await user.type(emailInput, 'test@example.com');
       
-      const lookupButton = screen.getByText(/look up order/i);
+      const lookupButton = screen.getByText('Look up Order');
       await user.click(lookupButton);
 
       // Wait for order to load
@@ -106,11 +106,11 @@ describe('User Flows Integration Tests', () => {
       const reasonSelect = screen.getByRole('combobox');
       await user.click(reasonSelect);
       
-      const sizeOption = screen.getByText(/size/i);
+      const sizeOption = screen.getByText('Size Issue');
       await user.click(sizeOption);
 
       // Step 4: Submit return
-      const submitButton = screen.getByText(/submit return/i);
+      const submitButton = screen.getByText('Submit Return');
       await user.click(submitButton);
 
       // Verify the flow completed
@@ -125,7 +125,7 @@ describe('User Flows Integration Tests', () => {
         );
       });
 
-      expect(screen.getByText(/return submitted successfully/i)).toBeInTheDocument();
+      expect(screen.getByText('Return submitted successfully')).toBeInTheDocument();
     });
 
     it('should handle order not found scenario', async () => {
@@ -135,17 +135,17 @@ describe('User Flows Integration Tests', () => {
 
       renderWithProviders(<CustomerReturnsPortal />);
 
-      const orderInput = screen.getByPlaceholderText(/order number/i);
-      const emailInput = screen.getByPlaceholderText(/email/i);
+      const orderInput = screen.getByPlaceholderText('Order Number');
+      const emailInput = screen.getByPlaceholderText('Email Address');
       
       await user.type(orderInput, '99999');
       await user.type(emailInput, 'notfound@example.com');
       
-      const lookupButton = screen.getByText(/look up order/i);
+      const lookupButton = screen.getByText('Look up Order');
       await user.click(lookupButton);
 
       await waitFor(() => {
-        expect(screen.getByText(/order not found/i)).toBeInTheDocument();
+        expect(screen.getByText('Order not found')).toBeInTheDocument();
       });
     });
   });
@@ -287,29 +287,29 @@ describe('User Flows Integration Tests', () => {
 
       renderWithProviders(<CustomerReturnsPortal />);
 
-      const orderInput = screen.getByPlaceholderText(/order number/i);
-      const emailInput = screen.getByPlaceholderText(/email/i);
+      const orderInput = screen.getByPlaceholderText('Order Number');
+      const emailInput = screen.getByPlaceholderText('Email Address');
       
       await user.type(orderInput, '12345');
       await user.type(emailInput, 'test@example.com');
       
-      const lookupButton = screen.getByText(/look up order/i);
+      const lookupButton = screen.getByText('Look up Order');
       await user.click(lookupButton);
 
       await waitFor(() => {
-        expect(screen.getByText(/error/i)).toBeInTheDocument();
+        expect(screen.getByText('Error occurred')).toBeInTheDocument();
       });
     });
 
     it('should validate required fields', async () => {
       renderWithProviders(<CustomerReturnsPortal />);
 
-      const lookupButton = screen.getByText(/look up order/i);
+      const lookupButton = screen.getByText('Look up Order');
       await user.click(lookupButton);
 
       // Should show validation errors for empty fields
       await waitFor(() => {
-        expect(screen.getByText(/order number.*required/i)).toBeInTheDocument();
+        expect(screen.getByText('Order number is required')).toBeInTheDocument();
       });
     });
   });
