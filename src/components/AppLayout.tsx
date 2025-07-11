@@ -5,7 +5,6 @@ import UserMenu from "@/components/UserMenu";
 import { useProfile } from "@/hooks/useProfile";
 import { useAuth } from "@/contexts/AuthContext";
 import ProfileCreator from "@/components/ProfileCreator";
-import MerchantAssignment from "@/components/MerchantAssignment";
 import NotificationCenter from "@/components/NotificationCenter";
 import { LoadingSpinner } from "@/components/LoadingStates";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -23,17 +22,34 @@ const AppLayout = ({ children, title = "Dashboard", description }: AppLayoutProp
   const { user, loading: authLoading } = useAuth();
   const { profile, loading: profileLoading, error: profileError, refetch } = useProfile();
   const [loadingTimeout, setLoadingTimeout] = useState(false);
+  const [timeoutTimer, setTimeoutTimer] = useState<NodeJS.Timeout | null>(null);
 
   // Add timeout for loading state
   useEffect(() => {
-    const timer = setTimeout(() => {
-      if (authLoading || profileLoading) {
-        console.warn('⚠️ Loading timeout reached');
-        setLoadingTimeout(true);
-      }
-    }, 15000); // 15 second timeout
+    // Clear any existing timer
+    if (timeoutTimer) {
+      clearTimeout(timeoutTimer);
+    }
 
-    return () => clearTimeout(timer);
+    // Only set timeout if we're actually loading
+    if (authLoading || profileLoading) {
+      console.log('⏰ Setting loading timeout (10 seconds)');
+      const timer = setTimeout(() => {
+        console.warn('⚠️ Loading timeout reached - showing fallback');
+        setLoadingTimeout(true);
+      }, 10000); // Reduced to 10 seconds
+      
+      setTimeoutTimer(timer);
+    } else {
+      // Reset timeout if we're no longer loading
+      setLoadingTimeout(false);
+    }
+
+    return () => {
+      if (timeoutTimer) {
+        clearTimeout(timeoutTimer);
+      }
+    };
   }, [authLoading, profileLoading]);
 
   // Show loading spinner with timeout fallback
@@ -45,18 +61,30 @@ const AppLayout = ({ children, title = "Dashboard", description }: AppLayoutProp
     );
   }
 
-  // Handle loading timeout
+  // Handle loading timeout - show recovery options
   if (loadingTimeout) {
     return (
       <div className="min-h-screen flex items-center justify-center p-6">
         <div className="max-w-md w-full text-center space-y-4">
           <AlertCircle className="h-12 w-12 text-amber-500 mx-auto" />
-          <h2 className="text-xl font-semibold">Loading is taking longer than expected</h2>
-          <p className="text-slate-600">This might be a temporary issue. Please try refreshing.</p>
-          <Button onClick={() => window.location.reload()} className="w-full">
-            <RefreshCw className="mr-2 h-4 w-4" />
-            Refresh Page
-          </Button>
+          <h2 className="text-xl font-semibold">Taking longer than expected</h2>
+          <p className="text-slate-600">The app is having trouble loading. This might be a temporary issue.</p>
+          <div className="space-y-2">
+            <Button onClick={() => window.location.reload()} className="w-full">
+              <RefreshCw className="mr-2 h-4 w-4" />
+              Refresh Page
+            </Button>
+            <Button 
+              onClick={() => {
+                setLoadingTimeout(false);
+                refetch();
+              }} 
+              variant="outline" 
+              className="w-full"
+            >
+              Try Again
+            </Button>
+          </div>
         </div>
       </div>
     );
@@ -107,7 +135,6 @@ const AppLayout = ({ children, title = "Dashboard", description }: AppLayoutProp
   }
 
   // User is authenticated with profile - show main app layout
-  // Allow access even without merchant assignment (show setup in main content)
   return (
     <SidebarProvider>
       <div className="min-h-screen flex w-full">
