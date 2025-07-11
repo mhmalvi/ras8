@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 
 interface QueryOptimizationConfig {
@@ -31,65 +30,77 @@ export class OptimizedQueryService {
     const cached = this.getCachedData(cacheKey);
     if (cached) return cached;
 
-    let query = supabase
-      .from('returns')
-      .select(`
-        id,
-        shopify_order_id,
-        customer_email,
-        status,
-        reason,
-        total_amount,
-        created_at,
-        updated_at,
-        return_items!inner (
+    console.log('🔍 Fetching optimized returns for merchant:', merchantId);
+
+    try {
+      let query = supabase
+        .from('returns')
+        .select(`
           id,
-          product_name,
-          quantity,
-          price,
-          action
-        ),
-        ai_suggestions (
-          id,
-          suggested_product_name,
-          confidence_score,
-          reasoning,
-          accepted
-        )
-      `)
-      .eq('merchant_id', merchantId)
-      .order('created_at', { ascending: false });
+          shopify_order_id,
+          customer_email,
+          status,
+          reason,
+          total_amount,
+          created_at,
+          updated_at,
+          return_items (
+            id,
+            product_name,
+            quantity,
+            price,
+            action
+          ),
+          ai_suggestions (
+            id,
+            suggested_product_name,
+            confidence_score,
+            reasoning,
+            accepted
+          )
+        `)
+        .eq('merchant_id', merchantId)
+        .order('created_at', { ascending: false });
 
-    // Apply filters efficiently
-    if (options.status) {
-      query = query.eq('status', options.status);
-    }
-    
-    if (options.dateFrom) {
-      query = query.gte('created_at', options.dateFrom);
-    }
-    
-    if (options.dateTo) {
-      query = query.lte('created_at', options.dateTo);
-    }
+      // Apply filters efficiently
+      if (options.status && options.status !== 'all') {
+        query = query.eq('status', options.status);
+      }
+      
+      if (options.dateFrom) {
+        query = query.gte('created_at', options.dateFrom);
+      }
+      
+      if (options.dateTo) {
+        query = query.lte('created_at', options.dateTo);
+      }
 
-    // Apply pagination
-    if (options.limit) {
-      query = query.limit(options.limit);
+      // Apply pagination
+      if (options.limit) {
+        query = query.limit(options.limit);
+      }
+      
+      if (options.offset) {
+        query = query.range(options.offset, options.offset + (options.limit || 50) - 1);
+      }
+
+      const { data, error } = await query;
+
+      if (error) {
+        console.error('❌ Error fetching optimized returns:', error);
+        throw error;
+      }
+
+      console.log('✅ Fetched optimized returns:', data?.length || 0, 'records');
+
+      // Cache the result
+      this.setCachedData(cacheKey, data || [], this.config.cacheTimeout);
+      
+      return data || [];
+    } catch (error) {
+      console.error('💥 Failed to fetch optimized returns:', error);
+      throw error;
     }
-    
-    if (options.offset) {
-      query = query.range(options.offset, options.offset + (options.limit || 50) - 1);
-    }
-
-    const { data, error } = await query;
-
-    if (error) throw error;
-
-    // Cache the result
-    this.setCachedData(cacheKey, data, this.config.cacheTimeout);
-    
-    return data;
   }
 
   // Optimized analytics query with aggregation
@@ -98,63 +109,81 @@ export class OptimizedQueryService {
     const cached = this.getCachedData(cacheKey);
     if (cached) return cached;
 
-    // Calculate date range
-    const now = new Date();
-    const ranges = {
-      week: new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000),
-      month: new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000),
-      quarter: new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000)
-    };
+    console.log('📊 Fetching optimized analytics for merchant:', merchantId);
 
-    const fromDate = ranges[timeRange].toISOString();
+    try {
+      // Calculate date range
+      const now = new Date();
+      const ranges = {
+        week: new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000),
+        month: new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000),
+        quarter: new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000)
+      };
 
-    // Batch multiple queries for better performance
-    const [returnsData, itemsData, aiData] = await Promise.all([
-      supabase
-        .from('returns')
-        .select('id, status, total_amount, created_at')
-        .eq('merchant_id', merchantId)
-        .gte('created_at', fromDate),
-      
-      supabase
-        .from('return_items')
-        .select(`
-          action,
-          price,
-          quantity,
-          returns!inner (merchant_id, created_at)
-        `)
-        .eq('returns.merchant_id', merchantId)
-        .gte('returns.created_at', fromDate),
-      
-      supabase
-        .from('ai_suggestions')
-        .select(`
-          accepted,
-          confidence_score,
-          returns!inner (merchant_id, created_at)
-        `)
-        .eq('returns.merchant_id', merchantId)
-        .gte('returns.created_at', fromDate)
-    ]);
+      const fromDate = ranges[timeRange].toISOString();
 
-    if (returnsData.error) throw returnsData.error;
-    if (itemsData.error) throw itemsData.error;
-    if (aiData.error) throw aiData.error;
+      // Batch multiple queries for better performance
+      const [returnsData, itemsData, aiData] = await Promise.all([
+        supabase
+          .from('returns')
+          .select('id, status, total_amount, created_at')
+          .eq('merchant_id', merchantId)
+          .gte('created_at', fromDate),
+        
+        supabase
+          .from('return_items')
+          .select(`
+            action,
+            price,
+            quantity,
+            returns!inner (merchant_id, created_at)
+          `)
+          .eq('returns.merchant_id', merchantId)
+          .gte('returns.created_at', fromDate),
+        
+        supabase
+          .from('ai_suggestions')
+          .select(`
+            accepted,
+            confidence_score,
+            returns!inner (merchant_id, created_at)
+          `)
+          .eq('returns.merchant_id', merchantId)
+          .gte('returns.created_at', fromDate)
+      ]);
 
-    // Process data efficiently
-    const analytics = {
-      totalReturns: returnsData.data?.length || 0,
-      totalRefunds: itemsData.data?.filter(item => item.action === 'refund').length || 0,
-      totalExchanges: itemsData.data?.filter(item => item.action === 'exchange').length || 0,
-      aiAcceptanceRate: this.calculateAIAcceptanceRate(aiData.data || []),
-      revenueImpact: this.calculateRevenueImpact(itemsData.data || []),
-      statusBreakdown: this.calculateStatusBreakdown(returnsData.data || []),
-      monthlyTrends: this.calculateMonthlyTrends(returnsData.data || [], itemsData.data || [])
-    };
+      if (returnsData.error) {
+        console.error('❌ Returns data error:', returnsData.error);
+        throw returnsData.error;
+      }
+      if (itemsData.error) {
+        console.error('❌ Items data error:', itemsData.error);
+        throw itemsData.error;
+      }
+      if (aiData.error) {
+        console.error('❌ AI data error:', aiData.error);
+        throw aiData.error;
+      }
 
-    this.setCachedData(cacheKey, analytics, this.config.cacheTimeout);
-    return analytics;
+      // Process data efficiently
+      const analytics = {
+        totalReturns: returnsData.data?.length || 0,
+        totalRefunds: itemsData.data?.filter(item => item.action === 'refund').length || 0,
+        totalExchanges: itemsData.data?.filter(item => item.action === 'exchange').length || 0,
+        aiAcceptanceRate: this.calculateAIAcceptanceRate(aiData.data || []),
+        revenueImpact: this.calculateRevenueImpact(itemsData.data || []),
+        statusBreakdown: this.calculateStatusBreakdown(returnsData.data || []),
+        monthlyTrends: this.calculateMonthlyTrends(returnsData.data || [], itemsData.data || [])
+      };
+
+      console.log('✅ Processed analytics:', analytics);
+
+      this.setCachedData(cacheKey, analytics, this.config.cacheTimeout);
+      return analytics;
+    } catch (error) {
+      console.error('💥 Failed to fetch optimized analytics:', error);
+      throw error;
+    }
   }
 
   // Optimized product analysis

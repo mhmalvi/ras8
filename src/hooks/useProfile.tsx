@@ -42,7 +42,6 @@ export const useProfile = () => {
       }
 
       try {
-        // Simple query without complex timeout handling
         const { data, error: fetchError } = await supabase
           .from('profiles')
           .select('*')
@@ -109,14 +108,13 @@ export const useProfile = () => {
     }
   };
 
-  const refetch = () => {
+  const refetch = async () => {
     if (user?.id) {
       setError(null);
       setLoading(true);
-      // Force re-run of effect by updating a state that triggers useEffect
-      setTimeout(() => {
-        window.location.reload();
-      }, 100);
+      // Trigger re-fetch by updating the dependency
+      const event = new CustomEvent('refetchProfile');
+      window.dispatchEvent(event);
     }
   };
 

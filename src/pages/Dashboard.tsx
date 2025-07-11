@@ -15,13 +15,15 @@ import { Info } from "lucide-react";
 
 const Dashboard: React.FC = () => {
   const { user, loading } = useAuth();
-  const { profile } = useProfile();
+  const { profile, loading: profileLoading, error: profileError } = useProfile();
 
-  if (loading) {
+  console.log('🏠 Dashboard render:', { user: !!user, profile, loading, profileLoading, profileError });
+
+  if (loading || profileLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-        <span className="ml-2">Loading...</span>
+        <span className="ml-2">Loading dashboard...</span>
       </div>
     );
   }
