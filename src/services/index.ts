@@ -1,21 +1,43 @@
 
-export { aiService, AIService } from './aiService';
-export { n8nService, N8nService } from './n8nService';
-export { stripeService, StripeService } from './stripeService';
-export { apiService, ApiService } from './apiService';
+// Core utilities
+export { invokeEdgeFunction, invokeEdgeFunctionsBatch } from '@/utils/edgeFunctionHelper';
 
-// Import the service instances after they're exported
-import { aiService } from './aiService';
-import { n8nService } from './n8nService';
-import { stripeService } from './stripeService';
-import { apiService } from './apiService';
+// Domain Services (Class-based)
+export { AuthService } from './authService';
+export { MerchantService } from './merchantService';
+export { AnalyticsService } from './analyticsService';
+export { AIService, aiService } from './aiService';
+export { StripeService, stripeService } from './stripeService';
+export { N8nService, n8nService } from './n8nService';
+export { ReturnService } from './returnService';
+export { MerchantReturnsService } from './merchantReturnsService';
+export { NotificationService } from './notificationService';
+export { OrderService } from './orderService';
 
-// Service registry for dependency injection and testing
+// Gateway Service
+export { ApiService, apiService } from './apiService';
+
+// Service Registry for dependency injection and testing
 export const services = {
+  // Core gateway
+  api: apiService,
+  
+  // Domain services
+  auth: AuthService,
+  merchant: MerchantService,
+  analytics: AnalyticsService,
   ai: aiService,
-  n8n: n8nService,
   stripe: stripeService,
-  api: apiService
+  n8n: n8nService,
+  returns: ReturnService,
+  merchantReturns: MerchantReturnsService,
+  notifications: NotificationService,
+  orders: OrderService
 };
 
 export type ServiceRegistry = typeof services;
+
+// Re-export types for convenience
+export type { 
+  EdgeFunctionResponse 
+} from '@/utils/edgeFunctionHelper';

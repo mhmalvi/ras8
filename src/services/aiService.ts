@@ -1,4 +1,6 @@
 
+import { invokeEdgeFunction } from '@/utils/edgeFunctionHelper';
+
 interface AIRecommendationRequest {
   returnReason: string;
   productName: string;
@@ -14,50 +16,136 @@ interface AIRecommendationResponse {
   alternativeProducts?: string[];
 }
 
+interface AdvancedRecommendationResponse {
+  type: string;
+  suggestedProduct: string;
+  confidence: number;
+  reasoning: string;
+  expectedOutcome: string;
+  alternativeOptions: string[];
+  customerRetentionScore: number;
+}
+
+interface RiskAnalysisResponse {
+  riskLevel: 'low' | 'medium' | 'high';
+  fraudProbability: number;
+  customerSatisfactionScore: number;
+  recommendedAction: 'approve' | 'investigate' | 'reject';
+  reasoning: string;
+}
+
 export class AIService {
-  private apiKey: string;
-  private baseUrl = 'https://api.openai.com/v1';
+  /**
+   * Generate basic exchange recommendation
+   */
+  async generateExchangeRecommendation(request: AIRecommendationRequest): Promise<AIRecommendationResponse> {
+    console.log('🤖 Generating AI recommendation for:', request.productName);
+    
+    const response = await invokeEdgeFunction<AIRecommendationResponse>('generate-exchange-recommendation', {
+      returnReason: request.returnReason,
+      productName: request.productName,
+      customerEmail: request.customerEmail,
+      orderValue: request.orderValue,
+      merchantSettings: request.merchantSettings
+    });
 
-  constructor(apiKey?: string) {
-    this.apiKey = apiKey || process.env.OPENAI_API_KEY || '';
-  }
-
-  async generateExchangeRecommendation(
-    request: AIRecommendationRequest
-  ): Promise<AIRecommendationResponse> {
-    try {
-      console.log('🤖 Generating AI recommendation for:', request.productName);
-      
-      // Try Supabase edge function first
-      const { supabase } = await import('@/integrations/supabase/client');
-      
-      const { data, error } = await supabase.functions.invoke('generate-exchange-recommendation', {
-        body: {
-          returnReason: request.returnReason,
-          productName: request.productName,
-          customerEmail: request.customerEmail,
-          orderValue: request.orderValue
-        }
-      });
-
-      if (error) {
-        console.warn('⚠️ Edge function error, using fallback:', error.message);
-        return this.getFallbackRecommendation(request);
-      }
-
-      console.log('✅ AI recommendation generated successfully');
-      
-      return {
-        suggestedProduct: data.suggestedProduct || data.suggestion,
-        confidence: Math.max(70, Math.min(99, data.confidence || 85)),
-        reasoning: data.reasoning || 'AI-generated recommendation based on return analysis'
-      };
-    } catch (error) {
-      console.error('💥 AI Service Error:', error);
+    if (!response.success) {
+      console.warn('⚠️ Edge function error, using fallback:', response.error);
       return this.getFallbackRecommendation(request);
     }
+
+    return {
+      suggestedProduct: response.data?.suggestedProduct || response.data?.suggestion,
+      confidence: Math.max(70, Math.min(99, response.data?.confidence || 85)),
+      reasoning: response.data?.reasoning || 'AI-generated recommendation based on return analysis',
+      alternativeProducts: response.data?.alternativeProducts
+    };
   }
 
+  /**
+   * Generate advanced AI recommendation with business insights
+   */
+  async generateAdvancedRecommendation(params: {
+    returnId: string;
+    productName: string;
+    returnReason: string;
+    customerEmail: string;
+    orderValue: number;
+    customerHistory?: any;
+    merchantSettings?: any;
+  }): Promise<AdvancedRecommendationResponse> {
+    const response = await invokeEdgeFunction<AdvancedRecommendationResponse>('generate-advanced-recommendation', params);
+
+    if (!response.success) {
+      // Fallback response
+      return {
+        type: 'exchange',
+        suggestedProduct: `Enhanced ${params.productName}`,
+        confidence: 75,
+        reasoning: 'Fallback recommendation due to processing error',
+        expectedOutcome: 'Standard processing',
+        alternativeOptions: ['Refund', 'Store credit'],
+        customerRetentionScore: 70
+      };
+    }
+
+    return response.data!;
+  }
+
+  /**
+   * Analyze return risk for fraud detection
+   */
+  async analyzeReturnRisk(params: {
+    returnId: string;
+    productName: string;
+    returnReason: string;
+    customerEmail: string;
+    orderValue: number;
+    customerHistory?: any;
+  }): Promise<RiskAnalysisResponse> {
+    const response = await invokeEdgeFunction<RiskAnalysisResponse>('analyze-return-risk', params);
+
+    if (!response.success) {
+      // Fallback low-risk response
+      return {
+        riskLevel: 'low',
+        fraudProbability: 0.05,
+        customerSatisfactionScore: 70,
+        recommendedAction: 'approve',
+        reasoning: 'Fallback risk analysis due to processing error'
+      };
+    }
+
+    return response.data!;
+  }
+
+  /**
+   * Generate customer-facing messages
+   */
+  async generateCustomerMessage(params: {
+    returnId: string;
+    customerEmail: string;
+    returnReason: string;
+    returnStatus: string;
+    messageType?: 'update' | 'followup' | 'apology' | 'custom';
+    customPrompt?: string;
+    productName?: string;
+  }) {
+    const response = await invokeEdgeFunction('generate-customer-message', params);
+
+    if (!response.success) {
+      return {
+        message: 'Thank you for your return request. We are processing it and will update you soon.',
+        messageType: params.messageType || 'update'
+      };
+    }
+
+    return response.data;
+  }
+
+  /**
+   * Fallback recommendation logic (private method)
+   */
   private getFallbackRecommendation(request: AIRecommendationRequest): AIRecommendationResponse {
     console.log('🔄 Using fallback AI recommendation logic');
     
