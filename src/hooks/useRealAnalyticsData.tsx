@@ -24,7 +24,7 @@ interface AnalyticsData {
 }
 
 export const useRealAnalyticsData = () => {
-  const { profile } = useProfile();
+  const { profile, loading: profileLoading } = useProfile();
   const [analytics, setAnalytics] = useState<AnalyticsData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -156,8 +156,13 @@ export const useRealAnalyticsData = () => {
   };
 
   useEffect(() => {
-    console.log('🔍 useRealAnalyticsData: Profile changed:', profile?.merchant_id);
-    
+    // Don't proceed if profile is still loading
+    if (profileLoading) {
+      console.log('⏳ Profile still loading, waiting...');
+      return;
+    }
+
+    // Don't proceed if no merchant_id
     if (!profile?.merchant_id) {
       console.log('❌ No merchant_id in profile');
       setAnalytics(null);
@@ -165,6 +170,8 @@ export const useRealAnalyticsData = () => {
       setError('No merchant profile found');
       return;
     }
+
+    console.log('🔍 useRealAnalyticsData: Profile loaded with merchant_id:', profile.merchant_id);
 
     let channel: any;
 
@@ -268,7 +275,7 @@ export const useRealAnalyticsData = () => {
       window.removeEventListener('dataSync', handleDataSync);
       window.removeEventListener('profileUpdated', handleDataSync);
     };
-  }, [profile?.merchant_id]);
+  }, [profile?.merchant_id, profileLoading]); // Added profileLoading to dependencies
 
   return {
     analytics,
