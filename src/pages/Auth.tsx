@@ -33,7 +33,7 @@ const Auth = () => {
     lastName: ''
   });
 
-  const from = location.state?.from?.pathname || '/';
+  const from = location.state?.from?.pathname || '/dashboard';
 
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -91,7 +91,8 @@ const Auth = () => {
           title: "Account created!",
           description: "Please check your email to verify your account.",
         });
-        // Don't navigate immediately - wait for email verification
+        // Navigate to dashboard after successful signup
+        navigate('/dashboard', { replace: true });
       }
     } catch (err) {
       setError('An unexpected error occurred. Please try again.');
