@@ -127,7 +127,7 @@ export class ApiService {
 
   async createCheckoutSession(merchantId: string, planId: string) {
     try {
-      const session = await stripeService.createCheckoutSession(planId);
+      const session = await stripeService.createCheckoutSession(merchantId, planId);
       return { data: session, success: true };
     } catch (error) {
       return { error: error instanceof Error ? error.message : 'Failed to create checkout session', success: false };
