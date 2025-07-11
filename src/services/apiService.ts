@@ -110,7 +110,7 @@ export class ApiService {
 
   async getAnalytics(merchantId: string, timeRange?: string) {
     try {
-      const analytics = await AnalyticsService.getAnalytics(timeRange);
+      const analytics = await AnalyticsService.getAnalytics(timeRange || '30days');
       return { data: analytics, success: true };
     } catch (error) {
       return { error: error instanceof Error ? error.message : 'Failed to get analytics', success: false };
