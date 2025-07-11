@@ -14,6 +14,10 @@ interface Profile {
   updated_at: string;
 }
 
+// Global state to prevent duplicate fetches
+let isProfileFetching = false;
+let currentFetchUserId: string | null = null;
+
 export const useProfile = () => {
   const { user } = useAuth();
   const [profile, setProfile] = useState<Profile | null>(null);
@@ -22,7 +26,15 @@ export const useProfile = () => {
   const [fetchAttempted, setFetchAttempted] = useState(false);
 
   const fetchProfile = async (userId: string) => {
+    // Prevent duplicate fetches for the same user
+    if (isProfileFetching && currentFetchUserId === userId) {
+      console.log('⏭️ Profile fetch already in progress for user:', userId);
+      return;
+    }
+
     console.log('👤 Starting profile fetch for user:', userId);
+    isProfileFetching = true;
+    currentFetchUserId = userId;
     
     try {
       setLoading(true);
@@ -69,6 +81,8 @@ export const useProfile = () => {
       }
       setProfile(null);
     } finally {
+      isProfileFetching = false;
+      currentFetchUserId = null;
       setLoading(false);
       setFetchAttempted(true);
       console.log('🏁 Profile fetch completed, loading set to false');
