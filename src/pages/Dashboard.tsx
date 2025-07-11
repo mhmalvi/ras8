@@ -9,7 +9,6 @@ import AppLayout from "@/components/AppLayout";
 import { useAuth } from "@/contexts/AuthContext";
 import { useProfile } from "@/hooks/useProfile";
 import MerchantAssignment from "@/components/MerchantAssignment";
-import SampleDataManager from "@/components/SampleDataManager";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Info } from "lucide-react";
 
@@ -54,9 +53,8 @@ const Dashboard: React.FC = () => {
             </AlertDescription>
           </Alert>
           
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 gap-6">
             <MerchantAssignment />
-            <SampleDataManager />
           </div>
         </div>
       </AppLayout>

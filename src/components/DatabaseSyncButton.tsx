@@ -3,44 +3,36 @@ import { useState } from 'react';
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { Database, Loader2 } from "lucide-react";
-import { syncSampleData } from "@/utils/databaseSync";
-
 const DatabaseSyncButton = () => {
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
 
-  const handleSync = async () => {
+  const handleRefresh = async () => {
     setIsLoading(true);
     
     try {
-      const result = await syncSampleData();
+      // Refresh page to reload all data from database
+      setTimeout(() => {
+        window.location.reload();
+      }, 500);
       
-      if (result.success) {
-        toast({
-          title: "Sync Successful",
-          description: "Database has been synced with sample returns data.",
-        });
-      } else {
-        toast({
-          title: "Sync Failed",
-          description: result.error || "Failed to sync database",
-          variant: "destructive",
-        });
-      }
+      toast({
+        title: "Refreshing Data",
+        description: "Reloading all data from database...",
+      });
     } catch (error) {
       toast({
-        title: "Sync Error",
-        description: "An unexpected error occurred during sync",
-        variant: "destructive",
+        title: "Refresh Error",
+        description: "An error occurred while refreshing data.",
+        variant: "destructive"
       });
-    } finally {
       setIsLoading(false);
     }
   };
 
   return (
     <Button 
-      onClick={handleSync} 
+      onClick={handleRefresh} 
       disabled={isLoading}
       variant="outline"
       className="flex items-center gap-2"
@@ -50,7 +42,7 @@ const DatabaseSyncButton = () => {
       ) : (
         <Database className="h-4 w-4" />
       )}
-      {isLoading ? 'Syncing...' : 'Sync Database'}
+      {isLoading ? 'Refreshing...' : 'Refresh Data'}
     </Button>
   );
 };

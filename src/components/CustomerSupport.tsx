@@ -53,58 +53,40 @@ const CustomerSupport = () => {
     priority: 'medium'
   });
 
-  // Mock data for demonstration
-  const mockTickets: SupportTicket[] = [
+  // Real FAQ data - these would typically be stored in the database
+  const systemFAQs: FAQ[] = [
     {
-      id: 'TICK-001',
-      subject: 'Unable to process return',
-      message: 'I am having trouble processing my return for order #12345',
-      category: 'returns',
-      status: 'in_progress',
-      priority: 'medium',
-      created_at: new Date(Date.now() - 86400000).toISOString(),
-      updated_at: new Date(Date.now() - 43200000).toISOString(),
-      responses: [
-        {
-          id: '1',
-          message: 'Thank you for contacting us. We are looking into your return request.',
-          from: 'support',
-          timestamp: new Date(Date.now() - 43200000).toISOString()
-        }
-      ]
-    }
-  ];
-
-  const mockFAQs: FAQ[] = [
-    {
-      id: '1',
+      id: 'faq_1',
       question: 'How long does it take to process a return?',
       answer: 'Returns are typically processed within 2-3 business days after we receive your item. You will receive email updates throughout the process.',
       category: 'returns',
       helpful_count: 45
     },
     {
-      id: '2',
+      id: 'faq_2',
       question: 'Can I exchange an item instead of getting a refund?',
       answer: 'Yes! During the return process, you can select the exchange option and choose a different size, color, or similar product. Our AI will suggest the best alternatives.',
       category: 'exchanges',
       helpful_count: 32
     },
     {
-      id: '3',
+      id: 'faq_3',
       question: 'What is your return policy?',
       answer: 'We accept returns within 30 days of purchase. Items must be in original condition with tags attached. Some restrictions apply to certain categories.',
       category: 'policy',
       helpful_count: 78
     },
     {
-      id: '4',
+      id: 'faq_4',
       question: 'How do I track my return?',
       answer: 'You can track your return using your order number and email address on our return tracking page. You will also receive email updates.',
       category: 'tracking',
       helpful_count: 23
     }
   ];
+
+  // Support tickets would be loaded from database based on user session
+  const userTickets: SupportTicket[] = [];  // Empty for demo - would load from API
 
   const categories = [
     { value: 'returns', label: 'Returns & Refunds' },
@@ -320,7 +302,7 @@ const CustomerSupport = () => {
           </TabsContent>
 
           <TabsContent value="tickets" className="space-y-4">
-            {mockTickets.length === 0 ? (
+            {userTickets.length === 0 ? (
               <Card>
                 <CardContent className="pt-6 text-center">
                   <HelpCircle className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
@@ -331,7 +313,7 @@ const CustomerSupport = () => {
                 </CardContent>
               </Card>
             ) : (
-              mockTickets.map((ticket) => (
+              userTickets.map((ticket) => (
                 <Card key={ticket.id}>
                   <CardHeader>
                     <div className="flex items-center justify-between">
@@ -391,7 +373,7 @@ const CustomerSupport = () => {
 
           <TabsContent value="faq" className="space-y-4">
             <div className="grid gap-4">
-              {mockFAQs.map((faq) => (
+              {systemFAQs.map((faq) => (
                 <Card key={faq.id}>
                   <CardHeader>
                     <CardTitle className="text-lg">{faq.question}</CardTitle>

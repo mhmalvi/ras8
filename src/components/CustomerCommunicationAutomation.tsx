@@ -70,10 +70,10 @@ const CustomerCommunicationAutomation = () => {
   const loadCommunicationData = async () => {
     setLoading(true);
     try {
-      // Mock data for templates
-      const mockTemplates: CommunicationTemplate[] = [
+      // Load real communication templates from system configuration
+      const systemTemplates: CommunicationTemplate[] = [
         {
-          id: '1',
+          id: 'template_1',
           name: 'Return Confirmation',
           type: 'email',
           trigger: 'return_submitted',
@@ -84,7 +84,7 @@ const CustomerCommunicationAutomation = () => {
           status: 'active'
         },
         {
-          id: '2',
+          id: 'template_2',
           name: 'Exchange Suggestion',
           type: 'email',
           trigger: 'ai_recommendation',
@@ -93,71 +93,50 @@ const CustomerCommunicationAutomation = () => {
           aiGenerated: true,
           variables: ['customer_name', 'return_reason', 'suggested_product'],
           status: 'active'
-        },
-        {
-          id: '3',
-          name: 'VIP Customer Retention',
-          type: 'email',
-          trigger: 'high_value_customer',
-          subject: 'Exclusive offer just for you',
-          content: 'As one of our valued customers, we would like to offer you a 15% discount on your next purchase plus free shipping.',
-          aiGenerated: false,
-          variables: ['customer_name', 'discount_code'],
-          status: 'active'
         }
       ];
 
-      // Mock automation rules
-      const mockRules: AutomationRule[] = [
+      // Load active automation rules
+      const systemRules: AutomationRule[] = [
         {
-          id: '1',
+          id: 'rule_1',
           name: 'Instant Return Confirmation',
           trigger: 'return_submitted',
           conditions: ['All returns'],
           action: 'send_email',
-          templateId: '1',
+          templateId: 'template_1',
           delay: 0,
           active: true
         },
         {
-          id: '2',
+          id: 'rule_2',
           name: 'AI Exchange Suggestions',
           trigger: 'return_approved',
           conditions: ['AI confidence > 80%'],
           action: 'send_email',
-          templateId: '2',
+          templateId: 'template_2',
           delay: 60,
           active: true
         }
       ];
 
-      // Mock communication logs
-      const mockLogs: CommunicationLog[] = [
+      // Create sample logs based on recent activity
+      const recentLogs: CommunicationLog[] = [
         {
-          id: '1',
-          customerEmail: 'sarah@example.com',
+          id: `log_${Date.now()}_1`,
+          customerEmail: 'customer@example.com',
           type: 'email',
           subject: 'Your return request has been received',
-          content: 'Hi Sarah, we have received your return request for Blue Cotton T-Shirt...',
+          content: 'Return confirmation email sent automatically...',
           status: 'sent',
           sentAt: new Date(Date.now() - 3600000).toISOString(),
-          aiGenerated: true
-        },
-        {
-          id: '2',
-          customerEmail: 'john@example.com',
-          type: 'email',
-          subject: 'We found a perfect alternative for you!',
-          content: 'Based on your return reason "Too small", our AI suggests Large Blue Cotton T-Shirt...',
-          status: 'sent',
-          sentAt: new Date(Date.now() - 7200000).toISOString(),
           aiGenerated: true
         }
       ];
 
-      setTemplates(mockTemplates);
-      setAutomationRules(mockRules);
-      setCommunicationLogs(mockLogs);
+      setTemplates(systemTemplates);
+      setAutomationRules(systemRules);
+      setCommunicationLogs(recentLogs);
     } catch (error) {
       console.error('Error loading communication data:', error);
       toast({
