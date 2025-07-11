@@ -24,7 +24,11 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   }
 
   if (requireAuth && !user) {
-    // Redirect to auth page with return url
+    // For root path, redirect to landing page first, then auth
+    if (location.pathname === '/') {
+      return <Navigate to="/landing" replace />;
+    }
+    // For other protected routes, redirect to auth page with return url
     return <Navigate to="/auth" state={{ from: location }} replace />;
   }
 

@@ -7,9 +7,15 @@ import RealReturnsTable from "@/components/RealReturnsTable";
 import AIInsightsCard from "@/components/AIInsightsCard";
 import AppLayout from "@/components/AppLayout";
 import { useAuth } from "@/contexts/AuthContext";
+import { useProfile } from "@/hooks/useProfile";
+import MerchantAssignment from "@/components/MerchantAssignment";
+import SampleDataManager from "@/components/SampleDataManager";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Info } from "lucide-react";
 
 const Index: React.FC = () => {
   const { user, loading } = useAuth();
+  const { profile } = useProfile();
 
   if (loading) {
     return (
@@ -28,6 +34,30 @@ const Index: React.FC = () => {
           <p className="text-gray-600">Please sign in to access the dashboard.</p>
         </div>
       </div>
+    );
+  }
+
+  // If user doesn't have a merchant assigned, show setup screen
+  if (!profile?.merchant_id) {
+    return (
+      <AppLayout 
+        title="Welcome to Returns Automation" 
+        description="Let's get your account set up"
+      >
+        <div className="max-w-4xl mx-auto space-y-6">
+          <Alert>
+            <Info className="h-4 w-4" />
+            <AlertDescription>
+              Welcome! To get started, you can either assign yourself to an existing merchant or create sample data to explore the platform.
+            </AlertDescription>
+          </Alert>
+          
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <MerchantAssignment />
+            <SampleDataManager />
+          </div>
+        </div>
+      </AppLayout>
     );
   }
 

@@ -45,7 +45,7 @@ function App(): JSX.Element {
         <AuthProvider>
           <BrowserRouter>
             <Routes>
-              {/* Default landing page */}
+              {/* Default route - redirect to landing for unauthenticated users */}
               <Route path="/landing" element={<Landing />} />
               
               {/* Public routes */}

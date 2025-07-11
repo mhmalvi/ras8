@@ -49,18 +49,8 @@ const AppLayout = ({ children, title = "Dashboard", description }: AppLayoutProp
     );
   }
 
-  // If profile exists but no merchant assigned, show merchant assignment
-  if (!profile.merchant_id) {
-    return (
-      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
-        <div className="max-w-2xl w-full mx-auto p-6">
-          <MerchantAssignment />
-        </div>
-      </div>
-    );
-  }
-
-  // User is authenticated and has complete setup - show main app layout
+  // User is authenticated - show main app layout
+  // Note: We'll handle merchant assignment within the dashboard rather than blocking access
   return (
     <SidebarProvider>
       <div className="min-h-screen flex w-full">
