@@ -22,6 +22,7 @@ import Notifications from "./pages/Notifications";
 import TestData from "./pages/TestData";
 import Landing from "./pages/Landing";
 import NotFound from "./pages/NotFound";
+import DebugPanel from "./pages/DebugPanel";
 import "./App.css";
 
 // Create QueryClient with better error handling
@@ -156,6 +157,14 @@ function App(): JSX.Element {
                 element={
                   <ProtectedRoute>
                     <TestData />
+                  </ProtectedRoute>
+                } 
+              />
+              <Route 
+                path="/debug" 
+                element={
+                  <ProtectedRoute>
+                    <DebugPanel />
                   </ProtectedRoute>
                 } 
               />

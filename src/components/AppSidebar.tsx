@@ -11,7 +11,8 @@ import {
   TrendingUp,
   Brain,
   Zap,
-  Shield
+  Shield,
+  Bug
 } from "lucide-react";
 import { NavLink, useLocation } from "react-router-dom";
 
@@ -47,6 +48,7 @@ const systemItems = [
   { title: "Notifications", url: "/notifications", icon: Bell },
   { title: "Automations", url: "/automations", icon: Zap },
   { title: "Security", url: "/security", icon: Shield },
+  { title: "Debug Panel", url: "/debug", icon: Bug },
 ];
 
 export function AppSidebar() {

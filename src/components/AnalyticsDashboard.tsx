@@ -1,8 +1,8 @@
 
 import React from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { useRealAnalyticsData } from '@/hooks/useRealAnalyticsData';
-import { TrendingUp, TrendingDown, Users, ShoppingCart, RefreshCw, DollarSign } from 'lucide-react';
+import { TrendingUp, TrendingDown, Users, ShoppingCart, RefreshCw, DollarSign, Loader2, Brain } from 'lucide-react';
+import { useLiveData } from '@/hooks/useLiveData';
 
 interface MetricCardProps {
   title: string;
@@ -32,13 +32,13 @@ const MetricCard = ({ title, value, description, trend, icon }: MetricCardProps)
 );
 
 const AnalyticsDashboard = () => {
-  const { analytics, loading, error } = useRealAnalyticsData();
+  const { loading, error, dashboardKPIs, analyticsData } = useLiveData();
 
   if (loading) {
     return (
       <div className="flex items-center justify-center p-8">
-        <RefreshCw className="h-6 w-6 animate-spin" />
-        <span className="ml-2">Loading analytics...</span>
+        <Loader2 className="h-6 w-6 animate-spin" />
+        <span className="ml-2">Loading live analytics...</span>
       </div>
     );
   }
@@ -50,11 +50,6 @@ const AnalyticsDashboard = () => {
       </div>
     );
   }
-
-  // Calculate exchange rate from available data
-  const exchangeRate = analytics?.totalReturns > 0 
-    ? Math.round(((analytics.totalExchanges || 0) / analytics.totalReturns) * 100)
-    : 0;
 
   return (
     <div className="space-y-6">
@@ -68,32 +63,32 @@ const AnalyticsDashboard = () => {
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <MetricCard
           title="Total Returns"
-          value={analytics?.totalReturns || 0}
-          description="This month"
+          value={dashboardKPIs.totalReturns}
+          description="Live database count"
           trend="up"
           icon={<ShoppingCart className="h-4 w-4 text-muted-foreground" />}
         />
         
         <MetricCard
-          title="Exchange Rate"
-          value={`${exchangeRate}%`}
-          description="vs refund rate"
-          trend="up"
+          title="Pending Returns"
+          value={dashboardKPIs.pendingReturns}
+          description="Awaiting processing"
+          trend="neutral"
           icon={<RefreshCw className="h-4 w-4 text-muted-foreground" />}
         />
         
         <MetricCard
           title="AI Acceptance"
-          value={`${analytics?.aiAcceptanceRate || 0}%`}
-          description="Suggestions accepted"
+          value={`${Math.round(dashboardKPIs.aiAcceptanceRate)}%`}
+          description="Live AI suggestions"
           trend="up"
-          icon={<TrendingUp className="h-4 w-4 text-muted-foreground" />}
+          icon={<Brain className="h-4 w-4 text-muted-foreground" />}
         />
         
         <MetricCard
-          title="Revenue Retained"
-          value={`$${analytics?.revenueImpact || 0}`}
-          description="Through exchanges"
+          title="Total Revenue"
+          value={`$${dashboardKPIs.totalRevenue.toLocaleString()}`}
+          description="From all returns"
           trend="up"
           icon={<DollarSign className="h-4 w-4 text-muted-foreground" />}
         />
@@ -103,19 +98,19 @@ const AnalyticsDashboard = () => {
         <Card>
           <CardHeader>
             <CardTitle>Return Status Breakdown</CardTitle>
-            <CardDescription>Current status of all returns</CardDescription>
+            <CardDescription>Current status of all returns (Live Data)</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="space-y-2">
-              {analytics?.returnsByStatus ? (
-                Object.entries(analytics.returnsByStatus).map(([status, count]) => (
-                  <div key={status} className="flex justify-between">
-                    <span className="text-sm capitalize">{status.replace('_', ' ')}</span>
-                    <span className="text-sm font-semibold">{count}</span>
+              {analyticsData.statusBreakdown.length > 0 ? (
+                analyticsData.statusBreakdown.map((item, index) => (
+                  <div key={index} className="flex justify-between">
+                    <span className="text-sm capitalize">{item.status}</span>
+                    <span className="text-sm font-semibold">{item.count} ({item.percentage.toFixed(1)}%)</span>
                   </div>
                 ))
               ) : (
-                <p className="text-sm text-muted-foreground">No data available</p>
+                <p className="text-sm text-muted-foreground">No status data available</p>
               )}
             </div>
           </CardContent>
@@ -124,19 +119,19 @@ const AnalyticsDashboard = () => {
         <Card>
           <CardHeader>
             <CardTitle>Monthly Trends</CardTitle>
-            <CardDescription>Returns activity over time</CardDescription>
+            <CardDescription>Returns activity over time (Live Data)</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="space-y-2">
-              {analytics?.monthlyTrends?.slice(-3).map((trend, index) => (
-                <div key={index} className="flex items-center space-x-2 text-sm">
-                  <Users className="h-3 w-3 text-muted-foreground" />
-                  <span>{trend.month}: {trend.returns} returns</span>
-                  {trend.exchanges > 0 && (
-                    <span className="text-green-600">({trend.exchanges} exchanges)</span>
-                  )}
-                </div>
-              )) || (
+              {analyticsData.monthlyTrends.length > 0 ? (
+                analyticsData.monthlyTrends.slice(-3).map((trend, index) => (
+                  <div key={index} className="flex items-center space-x-2 text-sm">
+                    <Users className="h-3 w-3 text-muted-foreground" />
+                    <span>{trend.month}: {trend.returns} returns</span>
+                    <span className="text-green-600">(${trend.revenue.toLocaleString()} revenue)</span>
+                  </div>
+                ))
+              ) : (
                 <p className="text-sm text-muted-foreground">No trend data available</p>
               )}
             </div>
