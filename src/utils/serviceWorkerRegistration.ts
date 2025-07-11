@@ -14,13 +14,10 @@ interface ServiceWorkerConfig {
 
 export function registerSW(config?: ServiceWorkerConfig) {
   if ('serviceWorker' in navigator) {
-    const publicUrl = new URL(process.env.PUBLIC_URL || '', window.location.href);
-    if (publicUrl.origin !== window.location.origin) {
-      return;
-    }
-
+    // For Vite projects, we don't need to check PUBLIC_URL origin
+    // as the service worker will be served from the same origin
     window.addEventListener('load', () => {
-      const swUrl = `${process.env.PUBLIC_URL}/sw.js`;
+      const swUrl = '/sw.js'; // Service worker is in public folder
 
       if (isLocalhost) {
         checkValidServiceWorker(swUrl, config);
