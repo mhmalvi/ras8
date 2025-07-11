@@ -40,12 +40,12 @@ export const useProfile = () => {
       setLoading(true);
       setError(null);
       
-      // Add timeout to the query
+      // Shorter timeout for faster feedback
       const controller = new AbortController();
       const timeoutId = setTimeout(() => {
         controller.abort();
-        console.error('⏰ Profile fetch timed out after 8 seconds');
-      }, 8000);
+        console.error('⏰ Profile fetch timed out after 3 seconds');
+      }, 3000);
 
       console.log('🔍 Executing Supabase query...');
       const { data, error: fetchError } = await supabase
@@ -74,12 +74,14 @@ export const useProfile = () => {
     } catch (err) {
       console.error('💥 Unexpected error in profile fetch:', err);
       if (err instanceof Error && err.name === 'AbortError') {
-        setError('Profile fetch timed out. Please try again.');
+        console.log('🚫 Query was aborted due to timeout');
+        setError('Database connection timeout. Please refresh the page.');
+        setProfile(null);
       } else {
         const errorMessage = err instanceof Error ? err.message : 'Unknown error occurred';
         setError(errorMessage);
+        setProfile(null);
       }
-      setProfile(null);
     } finally {
       isProfileFetching = false;
       currentFetchUserId = null;
