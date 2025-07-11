@@ -28,13 +28,23 @@ export const useProfile = () => {
       setLoading(true);
       setError(null);
       
+      // Add timeout to the query
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => {
+        controller.abort();
+        console.error('⏰ Profile fetch timed out after 8 seconds');
+      }, 8000);
+
+      console.log('🔍 Executing Supabase query...');
       const { data, error: fetchError } = await supabase
         .from('profiles')
         .select('*')
         .eq('id', userId)
-        .maybeSingle(); // Use maybeSingle to avoid errors when no profile exists
+        .abortSignal(controller.signal)
+        .maybeSingle();
 
-      console.log('📋 Profile query result:', { data, error: fetchError });
+      clearTimeout(timeoutId);
+      console.log('📋 Profile query completed:', { data, error: fetchError, hasData: !!data });
 
       if (fetchError) {
         console.error('💥 Profile fetch error:', fetchError);
@@ -51,12 +61,17 @@ export const useProfile = () => {
       }
     } catch (err) {
       console.error('💥 Unexpected error in profile fetch:', err);
-      const errorMessage = err instanceof Error ? err.message : 'Unknown error occurred';
-      setError(errorMessage);
+      if (err instanceof Error && err.name === 'AbortError') {
+        setError('Profile fetch timed out. Please try again.');
+      } else {
+        const errorMessage = err instanceof Error ? err.message : 'Unknown error occurred';
+        setError(errorMessage);
+      }
       setProfile(null);
     } finally {
       setLoading(false);
       setFetchAttempted(true);
+      console.log('🏁 Profile fetch completed, loading set to false');
     }
   };
 
