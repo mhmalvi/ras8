@@ -45,9 +45,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         // Check subscription status after auth change if user is logged in
         if (session?.user && (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED')) {
           try {
-            await supabase.functions.invoke('check-subscription');
+            // Only check subscription if the function exists
+            const { data, error } = await supabase.functions.invoke('check-subscription');
+            if (error) {
+              console.warn('Subscription check function not available:', error);
+            }
           } catch (error) {
-            console.error('Error checking subscription:', error);
+            console.warn('Error checking subscription - function may not exist:', error);
           }
         }
       }

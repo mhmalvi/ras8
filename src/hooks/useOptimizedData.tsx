@@ -1,5 +1,5 @@
 
-import { useState, useMemo, useCallback } from 'react';
+import { useState, useMemo, useCallback, useEffect } from 'react';
 import { OptimizedQueryService } from '@/utils/optimizedQueryService';
 import { EdgeFunctionOptimizer } from '@/utils/edgeFunctionOptimizer';
 import { useProfile } from './useProfile';
@@ -42,14 +42,14 @@ export const useOptimizedReturns = (options: {
   const memoizedFetch = useMemo(() => fetchData, [fetchData]);
 
   // Auto-refresh functionality
-  useState(() => {
+  useEffect(() => {
     memoizedFetch();
     
     if (options.autoRefresh) {
       const interval = setInterval(memoizedFetch, 30000); // Refresh every 30 seconds
       return () => clearInterval(interval);
     }
-  });
+  }, [memoizedFetch, options.autoRefresh]);
 
   return {
     data,
@@ -86,9 +86,9 @@ export const useOptimizedAnalytics = (timeRange: 'week' | 'month' | 'quarter' = 
     }
   }, [profile?.merchant_id, timeRange]);
 
-  useState(() => {
+  useEffect(() => {
     fetchAnalytics();
-  });
+  }, [fetchAnalytics]);
 
   return {
     data,
