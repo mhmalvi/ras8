@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 
@@ -20,60 +20,68 @@ export const useProfile = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  const fetchProfile = useCallback(async (userId: string) => {
+    console.log('👤 Fetching profile for user:', userId);
+    
+    try {
+      const { data, error: fetchError } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', userId)
+        .maybeSingle();
+
+      if (fetchError) {
+        console.error('💥 Profile fetch failed:', fetchError);
+        throw fetchError;
+      }
+
+      console.log('✅ Profile loaded:', data);
+      setProfile(data);
+      setError(null);
+      return data;
+      
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Unknown error';
+      console.error('💥 Profile fetch error:', err);
+      setError(errorMessage);
+      setProfile(null);
+      throw err;
+    }
+  }, []);
+
   useEffect(() => {
     let isMounted = true;
 
-    const fetchProfile = async () => {
+    const loadProfile = async () => {
       if (!user?.id) {
-        setProfile(null);
-        setLoading(false);
-        setError(null);
+        if (isMounted) {
+          setProfile(null);
+          setLoading(false);
+          setError(null);
+        }
         return;
       }
 
-      console.log('👤 Fetching profile for user:', user.id);
       setLoading(true);
       setError(null);
 
       try {
-        const { data, error: fetchError } = await supabase
-          .from('profiles')
-          .select('*')
-          .eq('id', user.id)
-          .maybeSingle();
-
-        if (!isMounted) return;
-
-        if (fetchError) {
-          console.error('💥 Profile fetch failed:', fetchError);
-          setError(fetchError.message);
-          setProfile(null);
-        } else {
-          console.log('✅ Profile loaded successfully:', data);
-          setProfile(data);
-          setError(null);
-        }
+        await fetchProfile(user.id);
       } catch (err) {
-        if (!isMounted) return;
-        
-        console.error('💥 Profile fetch error:', err);
-        const errorMessage = err instanceof Error ? err.message : 'Unknown error';
-        setError(errorMessage);
-        setProfile(null);
+        // Error already handled in fetchProfile
       } finally {
         if (isMounted) {
           setLoading(false);
-          console.log('🏁 Profile fetch completed');
         }
       }
     };
 
-    fetchProfile();
+    loadProfile();
 
     return () => {
       isMounted = false;
     };
-  }, [user?.id]);
+  }, [user?.id, fetchProfile]);
 
   const updateProfile = async (updates: Partial<Profile>) => {
     if (!user?.id) {
@@ -95,6 +103,7 @@ export const useProfile = () => {
       
       if (data) {
         setProfile(data);
+        console.log('✅ Profile updated:', data);
       }
       
       setError(null);
@@ -106,13 +115,19 @@ export const useProfile = () => {
     }
   };
 
-  const refetch = async () => {
+  const refetch = useCallback(async () => {
     if (user?.id) {
       setLoading(true);
       setError(null);
-      // The useEffect will handle the refetch when loading state changes
+      try {
+        await fetchProfile(user.id);
+      } catch (err) {
+        // Error already handled in fetchProfile
+      } finally {
+        setLoading(false);
+      }
     }
-  };
+  }, [user?.id, fetchProfile]);
 
   return {
     profile,

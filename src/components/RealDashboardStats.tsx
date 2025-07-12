@@ -1,59 +1,80 @@
 
-import { TrendingUp, TrendingDown, DollarSign, RefreshCw, Sparkles, Users } from "lucide-react";
+import { TrendingUp, TrendingDown, DollarSign, RefreshCw, Sparkles } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { useRealAnalyticsData } from "@/hooks/useRealAnalyticsData";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useMemo } from "react";
+import { useState, useEffect } from "react";
+import { useProfile } from "@/hooks/useProfile";
+import { RealTimeAnalyticsService, type RealTimeAnalytics } from "@/services/realTimeAnalyticsService";
 
 const RealDashboardStats = () => {
-  const { analytics, loading, error } = useRealAnalyticsData();
+  const { profile } = useProfile();
+  const [analytics, setAnalytics] = useState<RealTimeAnalytics | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  // Memoize the stats calculation to prevent unnecessary re-renders
-  const stats = useMemo(() => {
-    if (!analytics) return [];
+  useEffect(() => {
+    if (!profile?.merchant_id) {
+      setAnalytics(null);
+      setLoading(false);
+      return;
+    }
 
-    const formatCurrency = (amount: number) => {
-      return new Intl.NumberFormat('en-US', {
-        style: 'currency',
-        currency: 'USD'
-      }).format(amount);
+    let channel: any;
+
+    const loadAnalytics = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        
+        const data = await RealTimeAnalyticsService.getAnalytics(profile.merchant_id);
+        setAnalytics(data);
+        
+        // Set up real-time subscription
+        channel = await RealTimeAnalyticsService.subscribeToUpdates(
+          profile.merchant_id,
+          (updatedAnalytics) => {
+            console.log('📊 Real-time analytics update received');
+            setAnalytics(updatedAnalytics);
+          }
+        );
+        
+      } catch (err) {
+        console.error('Failed to load analytics:', err);
+        setError(err instanceof Error ? err.message : 'Failed to load analytics');
+      } finally {
+        setLoading(false);
+      }
     };
 
-    return [
-      {
-        title: "Total Returns",
-        value: analytics.totalReturns.toString(),
-        description: `${analytics.returnsByStatus?.requested || 0} pending approval`,
-        icon: RefreshCw,
-        trend: analytics.totalReturns > 0 ? "up" : "neutral",
-        trendValue: analytics.totalReturns > 0 ? "+12%" : "No data"
-      },
-      {
-        title: "Exchanges",
-        value: analytics.totalExchanges.toString(),
-        description: `${((analytics.totalExchanges / Math.max(analytics.totalReturns, 1)) * 100).toFixed(1)}% exchange rate`,
-        icon: TrendingUp,
-        trend: analytics.totalExchanges > analytics.totalRefunds ? "up" : "down",
-        trendValue: analytics.totalExchanges > analytics.totalRefunds ? "+8%" : "-3%"
-      },
-      {
-        title: "AI Acceptance",
-        value: `${analytics.aiAcceptanceRate.toFixed(1)}%`,
-        description: "AI suggestions accepted",
-        icon: Sparkles,
-        trend: analytics.aiAcceptanceRate > 75 ? "up" : "down",
-        trendValue: analytics.aiAcceptanceRate > 75 ? "+15%" : "-5%"
-      },
-      {
-        title: "Revenue Retained",
-        value: formatCurrency(analytics.revenueImpact),
-        description: "Through exchanges",
-        icon: DollarSign,
-        trend: analytics.revenueImpact > 0 ? "up" : "neutral",
-        trendValue: analytics.revenueImpact > 0 ? "+22%" : "No impact"
+    loadAnalytics();
+
+    return () => {
+      if (channel) {
+        channel.unsubscribe();
       }
-    ];
-  }, [analytics]);
+    };
+  }, [profile?.merchant_id]);
+
+  const calculateTrend = (current: number, previous: number): { trend: 'up' | 'down' | 'neutral'; value: string } => {
+    if (previous === 0) return { trend: 'neutral', value: 'No data' };
+    
+    const change = ((current - previous) / previous) * 100;
+    const absChange = Math.abs(change);
+    
+    if (absChange < 1) return { trend: 'neutral', value: '0%' };
+    
+    return {
+      trend: change > 0 ? 'up' : 'down',
+      value: `${change > 0 ? '+' : ''}${change.toFixed(1)}%`
+    };
+  };
+
+  const formatCurrency = (amount: number) => {
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: 'USD'
+    }).format(amount);
+  };
 
   if (loading) {
     return (
@@ -85,6 +106,66 @@ const RealDashboardStats = () => {
       </div>
     );
   }
+
+  // Calculate trends from monthly data (compare current month to previous month)
+  const currentMonth = analytics.monthlyTrends[analytics.monthlyTrends.length - 1];
+  const previousMonth = analytics.monthlyTrends[analytics.monthlyTrends.length - 2];
+
+  const returnsTrend = calculateTrend(
+    currentMonth?.returns || 0,
+    previousMonth?.returns || 0
+  );
+
+  const exchangesTrend = calculateTrend(
+    currentMonth?.exchanges || 0,
+    previousMonth?.exchanges || 0
+  );
+
+  const revenueTrend = calculateTrend(
+    currentMonth?.revenue || 0,
+    previousMonth?.revenue || 0
+  );
+
+  // Calculate AI trend based on acceptance rate vs target
+  const aiTrend = analytics.aiAcceptanceRate >= 80 ? 
+    { trend: 'up' as const, value: 'Above target' } : 
+    { trend: 'down' as const, value: 'Below target' };
+
+  const stats = [
+    {
+      title: "Total Returns",
+      value: analytics.totalReturns.toString(),
+      description: `${analytics.returnsByStatus.requested} pending approval`,
+      icon: RefreshCw,
+      trend: returnsTrend.trend,
+      trendValue: returnsTrend.value
+    },
+    {
+      title: "Exchanges",
+      value: analytics.totalExchanges.toString(),
+      description: `${analytics.totalReturns > 0 ? 
+        ((analytics.totalExchanges / analytics.totalReturns) * 100).toFixed(1) : 0}% exchange rate`,
+      icon: TrendingUp,
+      trend: exchangesTrend.trend,
+      trendValue: exchangesTrend.value
+    },
+    {
+      title: "AI Acceptance",
+      value: `${analytics.aiAcceptanceRate}%`,
+      description: "AI suggestions accepted",
+      icon: Sparkles,
+      trend: aiTrend.trend,
+      trendValue: aiTrend.value
+    },
+    {
+      title: "Revenue Retained",
+      value: formatCurrency(analytics.revenueImpact),
+      description: "Through exchanges",
+      icon: DollarSign,
+      trend: revenueTrend.trend,
+      trendValue: revenueTrend.value
+    }
+  ];
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
