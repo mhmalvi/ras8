@@ -1,6 +1,8 @@
 
 import React from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
+import { useAtomicAuth } from '@/contexts/AtomicAuthContext';
+import { useMerchantProfile } from '@/hooks/useMerchantProfile';
 import {
   BarChart3,
   Activity,
@@ -17,9 +19,12 @@ import {
   MessageSquare,
   ChevronLeft,
   ChevronRight,
+  Shield,
+  AlertTriangle,
 } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 
 interface MasterAdminSidebarProps {
   collapsed: boolean;
@@ -29,7 +34,33 @@ interface MasterAdminSidebarProps {
 const MasterAdminSidebar = ({ collapsed, onToggle }: MasterAdminSidebarProps) => {
   const location = useLocation();
   const navigate = useNavigate();
+  const { user } = useAtomicAuth();
+  const { profile } = useMerchantProfile();
   const currentPath = location.pathname;
+
+  // Security check - only master admins can use this sidebar
+  const isMasterAdmin = user?.email === 'aalvi.hm@gmail.com' || 
+                        profile?.role === 'master_admin' ||
+                        user?.email?.endsWith('@admin.returnsauto.com');
+
+  // If not master admin, show access denied
+  if (!isMasterAdmin) {
+    return (
+      <Card className="w-72 h-full border-r-2 border-red-200 bg-red-50">
+        <div className="p-4">
+          <Alert variant="destructive">
+            <Shield className="h-4 w-4" />
+            <AlertDescription>
+              <div className="space-y-2">
+                <div className="font-medium">Access Restricted</div>
+                <div className="text-sm">Master admin access required</div>
+              </div>
+            </AlertDescription>
+          </Alert>
+        </div>
+      </Card>
+    );
+  }
 
   const developmentItems = [
     { id: 'debug', label: 'Debug Panel', icon: Bug, path: '/debug' },
