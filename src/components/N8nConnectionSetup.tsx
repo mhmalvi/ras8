@@ -24,14 +24,15 @@ const N8nConnectionSetup = () => {
   }, []);
 
   const loadConfiguration = async () => {
+    setLoading(true);
     try {
       const { data: config, error } = await supabase
         .from('analytics_events')
         .select('*')
         .eq('event_type', 'n8n_configuration')
-        .single();
+        .maybeSingle();
 
-      if (error && error.code !== 'PGRST116') {
+      if (error) {
         console.error('Error loading n8n config:', error);
         return;
       }
@@ -39,10 +40,15 @@ const N8nConnectionSetup = () => {
       if (config?.event_data) {
         const configData = config.event_data as any;
         setN8nUrl(configData.n8n_url || '');
-        setConnectionStatus(configData.has_api_key ? 'connected' : 'disconnected');
+        setApiKey(''); // Don't load API key for security
+        setWebhookSecret(''); // Don't load webhook secret for security
+        setConnectionStatus(configData.connection_verified ? 'connected' : 
+                          configData.has_api_key ? 'disconnected' : 'unknown');
       }
     } catch (error) {
       console.error('Error loading n8n configuration:', error);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -66,18 +72,39 @@ const N8nConnectionSetup = () => {
         setConnectionStatus('connected');
         
         // Save successful configuration
-        await supabase
+        const { data: existingConfig } = await supabase
           .from('analytics_events')
-          .upsert({
-            event_type: 'n8n_configuration',
-            event_data: {
-              n8n_url: n8nUrl,
-              has_api_key: !!apiKey,
-              webhook_secret: webhookSecret,
-              connection_verified: true,
-              verified_at: new Date().toISOString()
-            }
-          });
+          .select('id')
+          .eq('event_type', 'n8n_configuration')
+          .maybeSingle();
+
+        if (existingConfig) {
+          await supabase
+            .from('analytics_events')
+            .update({
+              event_data: {
+                n8n_url: n8nUrl,
+                has_api_key: !!apiKey,
+                webhook_secret: webhookSecret,
+                connection_verified: true,
+                verified_at: new Date().toISOString()
+              }
+            })
+            .eq('id', existingConfig.id);
+        } else {
+          await supabase
+            .from('analytics_events')
+            .insert({
+              event_type: 'n8n_configuration',
+              event_data: {
+                n8n_url: n8nUrl,
+                has_api_key: !!apiKey,
+                webhook_secret: webhookSecret,
+                connection_verified: true,
+                verified_at: new Date().toISOString()
+              }
+            });
+        }
 
         toast({
           title: "Connection successful",
@@ -115,19 +142,39 @@ const N8nConnectionSetup = () => {
 
     setLoading(true);
     try {
-      const { error } = await supabase
+      const { data: existingConfig } = await supabase
         .from('analytics_events')
-        .upsert({
-          event_type: 'n8n_configuration',
-          event_data: {
-            n8n_url: n8nUrl,
-            has_api_key: !!apiKey,
-            webhook_secret: webhookSecret,
-            configured_at: new Date().toISOString()
-          }
-        });
+        .select('id')
+        .eq('event_type', 'n8n_configuration')
+        .maybeSingle();
 
-      if (error) throw error;
+      if (existingConfig) {
+        const { error } = await supabase
+          .from('analytics_events')
+          .update({
+            event_data: {
+              n8n_url: n8nUrl,
+              has_api_key: !!apiKey,
+              webhook_secret: webhookSecret,
+              configured_at: new Date().toISOString()
+            }
+          })
+          .eq('id', existingConfig.id);
+        if (error) throw error;
+      } else {
+        const { error } = await supabase
+          .from('analytics_events')
+          .insert({
+            event_type: 'n8n_configuration',
+            event_data: {
+              n8n_url: n8nUrl,
+              has_api_key: !!apiKey,
+              webhook_secret: webhookSecret,
+              configured_at: new Date().toISOString()
+            }
+          });
+        if (error) throw error;
+      }
 
       toast({
         title: "Configuration saved",

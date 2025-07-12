@@ -34,46 +34,39 @@ interface AutomationRuleData {
   updatedAt?: string;
 }
 
+// Helper function to format rules data
+const formatRules = (rulesData: any[]): AutomationRule[] => {
+  const iconMap = {
+    'Zap': Zap,
+    'Bot': Bot,
+    'Mail': Mail,
+    'Clock': Clock
+  };
+
+  return rulesData?.map(item => {
+    const eventData = item.event_data as AutomationRuleData;
+    
+    return {
+      id: item.id,
+      name: eventData?.name || 'Unnamed Rule',
+      description: eventData?.description || '',
+      icon: iconMap[eventData?.icon as keyof typeof iconMap] || Zap,
+      active: eventData?.active || false,
+      type: eventData?.trigger || 'Rule-based',
+      webhookUrl: eventData?.webhookUrl,
+      triggers: eventData?.triggers || 0,
+      lastRun: eventData?.lastRun,
+      conditions: eventData?.conditions,
+      actions: eventData?.actions
+    };
+  }) || [];
+};
+
 export const useAutomationRules = () => {
   const [rules, setRules] = useState<AutomationRule[]>([]);
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
 
-  // Initialize default automation rules
-  const initializeRules = async () => {
-    try {
-      const { data: existingRules, error } = await supabase
-        .from('analytics_events')
-        .select('*')
-        .eq('event_type', 'automation_rule');
-
-      if (error) throw error;
-
-      // If no rules exist, create default ones
-      if (!existingRules || existingRules.length === 0) {
-        const defaultRules = await n8nService.getAutomationRules();
-        
-        for (const rule of defaultRules) {
-          await supabase
-            .from('analytics_events')
-            .insert({
-              event_type: 'automation_rule',
-              event_data: {
-                ...rule,
-                icon: rule.name.includes('approve') ? 'Zap' : 
-                      rule.name.includes('AI') ? 'Bot' :
-                      rule.name.includes('email') ? 'Mail' : 'Clock',
-                createdAt: new Date().toISOString()
-              }
-            });
-        }
-      }
-
-      await loadRules();
-    } catch (error) {
-      console.error('Error initializing rules:', error);
-    }
-  };
 
   // Load automation rules from database
   const loadRules = async () => {
@@ -86,31 +79,66 @@ export const useAutomationRules = () => {
 
       if (error) throw error;
 
-      const iconMap = {
-        'Zap': Zap,
-        'Bot': Bot,
-        'Mail': Mail,
-        'Clock': Clock
-      };
-
-      const formattedRules: AutomationRule[] = rulesData?.map(item => {
-        const eventData = item.event_data as AutomationRuleData;
+      // If no rules exist, create default ones
+      if (!rulesData || rulesData.length === 0) {
+        const defaultRules = [
+          {
+            name: 'Auto-approve low-risk returns',
+            description: 'Automatically approve returns under $50 from verified customers',
+            active: false,
+            trigger: 'rule-based',
+            icon: 'Zap'
+          },
+          {
+            name: 'AI exchange suggestions',
+            description: 'Generate AI-powered exchange recommendations for returns',
+            active: true,
+            trigger: 'ai-powered',
+            icon: 'Bot'
+          },
+          {
+            name: 'Email notifications',
+            description: 'Send automated email updates to customers about return status',
+            active: true,
+            trigger: 'event-driven',
+            icon: 'Mail'
+          },
+          {
+            name: 'Retention campaigns',
+            description: 'Trigger retention campaigns for customers who return frequently',
+            active: false,
+            trigger: 'scheduled',
+            icon: 'Clock'
+          }
+        ];
         
-        return {
-          id: item.id,
-          name: eventData?.name || 'Unnamed Rule',
-          description: eventData?.description || '',
-          icon: iconMap[eventData?.icon as keyof typeof iconMap] || Zap,
-          active: eventData?.active || false,
-          type: eventData?.trigger || 'Rule-based',
-          webhookUrl: eventData?.webhookUrl,
-          triggers: eventData?.triggers || 0,
-          lastRun: eventData?.lastRun,
-          conditions: eventData?.conditions,
-          actions: eventData?.actions
-        };
-      }) || [];
+        for (const rule of defaultRules) {
+          await supabase
+            .from('analytics_events')
+            .insert({
+              event_type: 'automation_rule',
+              event_data: {
+                ...rule,
+                createdAt: new Date().toISOString()
+              }
+            });
+        }
 
+        // Reload rules after creating defaults
+        const { data: newRulesData } = await supabase
+          .from('analytics_events')
+          .select('*')
+          .eq('event_type', 'automation_rule')
+          .order('created_at', { ascending: false });
+        
+        if (newRulesData) {
+          const formattedRules = formatRules(newRulesData);
+          setRules(formattedRules);
+        }
+        return;
+      }
+
+      const formattedRules = formatRules(rulesData);
       setRules(formattedRules);
     } catch (error) {
       console.error('Error loading automation rules:', error);
@@ -229,7 +257,8 @@ export const useAutomationRules = () => {
   };
 
   useEffect(() => {
-    initializeRules();
+    setLoading(true);
+    loadRules().finally(() => setLoading(false));
   }, []);
 
   return {
