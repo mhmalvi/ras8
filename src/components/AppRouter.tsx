@@ -12,6 +12,7 @@ import Settings from '@/pages/Settings';
 import Auth from '@/pages/Auth';
 import CustomerPortal from '@/pages/CustomerPortal';
 import Automations from '@/pages/Automations';
+import MasterAdmin from '@/pages/MasterAdmin';
 
 const AppRouter = () => {
   return (
@@ -32,7 +33,25 @@ const AppRouter = () => {
             } 
           />
           
+          {/* Master Admin Route */}
+          <Route 
+            path="/master-admin" 
+            element={
+              <ProtectedRoute>
+                <MasterAdmin />
+              </ProtectedRoute>
+            } 
+          />
+          
           {/* Protected Routes - Dashboard is at root "/" */}
+          <Route 
+            path="/dashboard" 
+            element={
+              <ProtectedRoute>
+                <Dashboard />
+              </ProtectedRoute>
+            } 
+          />
           <Route 
             path="/" 
             element={
