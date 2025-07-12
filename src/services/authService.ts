@@ -52,10 +52,24 @@ export class AuthService {
         const signUpResult = await this.signUp(email, password, 'Master', 'Admin');
         
         if (signUpResult.user) {
-          // The user was created but might need email confirmation
-          // For now, return the signup result
           console.log('✅ Master admin account created successfully');
-          return signUpResult;
+          
+          // For master admin, try to sign in immediately after creation
+          // Wait a moment to ensure the account is fully created
+          await new Promise(resolve => setTimeout(resolve, 1000));
+          
+          const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
+            email,
+            password
+          });
+          
+          if (signInError) {
+            console.error('Error signing in after master admin creation:', signInError);
+            // Return the signup result if sign-in fails
+            return signUpResult;
+          }
+          
+          return signInData;
         }
       } catch (signUpError) {
         console.error('Error creating master admin account:', signUpError);

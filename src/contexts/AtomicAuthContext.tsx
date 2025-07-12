@@ -118,11 +118,20 @@ export const AtomicAuthProvider = ({ children }: AtomicAuthProviderProps) => {
   const signIn = async (email: string, password: string) => {
     try {
       setError(null);
+      setLoading(true);
       const data = await AuthService.signIn(email, password);
+      
+      // If we got a user back (either from sign-in or account creation), the auth state listener will handle the rest
+      if (data.user) {
+        console.log('✅ Authentication successful');
+      }
+      
+      setLoading(false);
       return { error: null };
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Sign in failed';
       setError(errorMessage);
+      setLoading(false);
       return { error: error as Error };
     }
   };
