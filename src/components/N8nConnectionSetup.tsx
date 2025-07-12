@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -41,16 +40,10 @@ const N8nConnectionSetup = () => {
       if (configs && configs.length > 0 && configs[0].event_data) {
         const configData = configs[0].event_data as any;
         setN8nUrl(configData.n8n_url || '');
-        // Load API key and webhook secret if they exist (for editing)
         setApiKey(configData.api_key || '');
         setWebhookSecret(configData.webhook_secret || '');
-        setConnectionStatus(configData.connection_verified ? 'connected' : 
-                          configData.has_api_key ? 'disconnected' : 'unknown');
-        console.log('✅ n8n configuration loaded:', { 
-          baseUrl: configData.n8n_url, 
-          hasApiKey: !!configData.api_key, 
-          hasWebhookSecret: !!configData.webhook_secret 
-        });
+        setConnectionStatus(configData.connection_verified ? 'connected' : 'disconnected');
+        console.log('✅ n8n configuration loaded');
       }
     } catch (error) {
       console.error('Error loading n8n configuration:', error);
@@ -71,17 +64,20 @@ const N8nConnectionSetup = () => {
 
     setLoading(true);
     try {
-      // Import n8nService dynamically to avoid circular dependency
       const { n8nService } = await import('@/services/n8nService');
       const result = await n8nService.testConnection(n8nUrl, apiKey);
       
       if (result.success) {
         setConnectionStatus('connected');
         
-        // Test webhook endpoints with sample data
-        const webhookEndpoints = ['webhook-test', 'webhook/order-sync', 'webhook/return-created'];
-        let webhookTestsPassed = 0;
+        // Test specific webhook endpoints
+        const webhookEndpoints = [
+          'webhook/test-connection',
+          'webhook/return-processing',
+          'webhook/retention-campaign'
+        ];
         
+        let webhookTestsPassed = 0;
         for (const endpoint of webhookEndpoints) {
           const webhookUrl = `${n8nUrl.replace(/\/$/, '')}/${endpoint}`;
           try {
@@ -93,45 +89,11 @@ const N8nConnectionSetup = () => {
         }
 
         // Save successful configuration
-        const { data: existingConfig } = await supabase
-          .from('analytics_events')
-          .select('id')
-          .eq('event_type', 'n8n_configuration')
-          .maybeSingle();
-
-        if (existingConfig) {
-          await supabase
-            .from('analytics_events')
-            .update({
-              event_data: {
-                n8n_url: n8nUrl,
-                api_key: apiKey,
-                webhook_secret: webhookSecret,
-                has_api_key: !!apiKey,
-                connection_verified: true,
-                verified_at: new Date().toISOString()
-              }
-            })
-            .eq('id', existingConfig.id);
-        } else {
-          await supabase
-            .from('analytics_events')
-            .insert({
-              event_type: 'n8n_configuration',
-              event_data: {
-                n8n_url: n8nUrl,
-                api_key: apiKey,
-                webhook_secret: webhookSecret,
-                has_api_key: !!apiKey,
-                connection_verified: true,
-                verified_at: new Date().toISOString()
-              }
-            });
-        }
+        await saveConfigurationToDatabase(true);
 
         toast({
           title: "Connection successful",
-          description: `Successfully connected to n8n server. ${webhookTestsPassed}/${webhookEndpoints.length} webhook endpoints tested with sample data.`,
+          description: `Successfully connected to n8n server. Test data sent to ${webhookTestsPassed} webhook endpoints.`,
         });
       } else {
         setConnectionStatus('disconnected');
@@ -165,42 +127,7 @@ const N8nConnectionSetup = () => {
 
     setLoading(true);
     try {
-      const { data: existingConfig } = await supabase
-        .from('analytics_events')
-        .select('id')
-        .eq('event_type', 'n8n_configuration')
-        .maybeSingle();
-
-      if (existingConfig) {
-        const { error } = await supabase
-          .from('analytics_events')
-          .update({
-            event_data: {
-              n8n_url: n8nUrl,
-              api_key: apiKey,
-              webhook_secret: webhookSecret,
-              has_api_key: !!apiKey,
-              configured_at: new Date().toISOString()
-            }
-          })
-          .eq('id', existingConfig.id);
-        if (error) throw error;
-      } else {
-        const { error } = await supabase
-          .from('analytics_events')
-          .insert({
-            event_type: 'n8n_configuration',
-            event_data: {
-              n8n_url: n8nUrl,
-              api_key: apiKey,
-              webhook_secret: webhookSecret,
-              has_api_key: !!apiKey,
-              configured_at: new Date().toISOString()
-            }
-          });
-        if (error) throw error;
-      }
-
+      await saveConfigurationToDatabase(false);
       toast({
         title: "Configuration saved",
         description: "n8n configuration has been saved successfully.",
@@ -214,6 +141,41 @@ const N8nConnectionSetup = () => {
       });
     } finally {
       setLoading(false);
+    }
+  };
+
+  const saveConfigurationToDatabase = async (verified: boolean = false) => {
+    const configData = {
+      n8n_url: n8nUrl,
+      api_key: apiKey,
+      webhook_secret: webhookSecret,
+      has_api_key: !!apiKey,
+      connection_verified: verified,
+      [verified ? 'verified_at' : 'configured_at']: new Date().toISOString()
+    };
+
+    const { data: existingConfig } = await supabase
+      .from('analytics_events')
+      .select('id')
+      .eq('event_type', 'n8n_configuration')
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (existingConfig) {
+      const { error } = await supabase
+        .from('analytics_events')
+        .update({ event_data: configData })
+        .eq('id', existingConfig.id);
+      if (error) throw error;
+    } else {
+      const { error } = await supabase
+        .from('analytics_events')
+        .insert({
+          event_type: 'n8n_configuration',
+          event_data: configData
+        });
+      if (error) throw error;
     }
   };
 

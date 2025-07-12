@@ -14,9 +14,9 @@ interface Profile {
   updated_at: string;
 }
 
-// Create a simple cache to prevent multiple fetches
-let profileCache: { [key: string]: Profile } = {};
-let profilePromises: { [key: string]: Promise<Profile | null> } = {};
+// Simple cache to prevent multiple fetches
+const profileCache = new Map<string, Profile>();
+const activeRequests = new Map<string, Promise<Profile | null>>();
 
 export const useProfile = () => {
   const { user } = useAuth();
@@ -25,128 +25,87 @@ export const useProfile = () => {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    let mounted = true;
-    let timeoutId: NodeJS.Timeout;
+    if (!user?.id) {
+      setProfile(null);
+      setLoading(false);
+      setError(null);
+      return;
+    }
 
-    const fetchProfile = async () => {
-      if (!user?.id) {
-        console.log('⏭️ No user ID available');
-        if (mounted) {
-          setLoading(false);
-          setProfile(null);
-          setError(null);
-        }
-        return;
-      }
+    // Check cache first
+    const cachedProfile = profileCache.get(user.id);
+    if (cachedProfile) {
+      console.log('✨ Using cached profile for user:', user.id);
+      setProfile(cachedProfile);
+      setLoading(false);
+      setError(null);
+      return;
+    }
 
-      // Check cache first
-      if (profileCache[user.id]) {
-        console.log('✨ Using cached profile for user:', user.id, Object.keys(profileCache).length);
-        if (mounted) {
-          setProfile(profileCache[user.id]);
-          setLoading(false);
-          setError(null);
-        }
-        return;
-      }
-
-      // Check if there's already a pending request
-      if (profilePromises[user.id]) {
-        console.log('⏳ Profile still loading, waiting...');
-        try {
-          const cachedProfile = await profilePromises[user.id];
-          if (mounted) {
-            setProfile(cachedProfile);
-            setLoading(false);
-            setError(null);
-          }
-        } catch (err) {
-          if (mounted) {
-            setError(err instanceof Error ? err.message : 'Unknown error');
-            setProfile(null);
-            setLoading(false);
-          }
-        }
-        return;
-      }
-
-      console.log('👤 Fetching profile for user:', user.id);
-      
-      if (mounted) {
-        setLoading(true);
+    // Check if request is already in progress
+    const existingRequest = activeRequests.get(user.id);
+    if (existingRequest) {
+      console.log('⏳ Profile request already in progress');
+      existingRequest.then(result => {
+        setProfile(result);
+        setLoading(false);
         setError(null);
-      }
+      }).catch(err => {
+        setError(err.message);
+        setLoading(false);
+      });
+      return;
+    }
 
-      // Set a timeout to prevent infinite loading
-      timeoutId = setTimeout(() => {
-        if (mounted) {
-          console.warn('⚠️ Profile fetch timeout, forcing completion');
-          setLoading(false);
-          setError('Profile fetch timed out');
-          delete profilePromises[user.id];
-        }
-      }, 10000); // 10 second timeout
+    console.log('👤 Fetching profile for user:', user.id);
+    setLoading(true);
+    setError(null);
 
-      // Create a promise for this fetch to prevent duplicates
-      profilePromises[user.id] = (async () => {
-        try {
-          const { data, error: fetchError } = await supabase
-            .from('profiles')
-            .select('*')
-            .eq('id', user.id)
-            .maybeSingle();
-
-          if (fetchError) {
-            console.error('💥 Profile fetch error:', fetchError);
-            throw new Error(fetchError.message);
-          }
-
-          console.log('✅ Profile loaded successfully:', data);
-          
-          // Cache the result
-          if (data) {
-            profileCache[user.id] = data;
-          }
-          
-          return data;
-        } catch (err) {
-          console.error('💥 Profile fetch failed:', err);
-          throw err;
-        } finally {
-          // Clean up the promise
-          delete profilePromises[user.id];
-        }
-      })();
-
+    // Create new request
+    const fetchRequest = async (): Promise<Profile | null> => {
       try {
-        const fetchedProfile = await profilePromises[user.id];
-        if (mounted) {
-          clearTimeout(timeoutId);
-          setProfile(fetchedProfile);
-          setError(null);
+        const { data, error: fetchError } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', user.id)
+          .maybeSingle();
+
+        if (fetchError) {
+          throw new Error(fetchError.message);
         }
+
+        if (data) {
+          profileCache.set(user.id, data);
+          console.log('✅ Profile loaded successfully:', data);
+        }
+
+        return data;
       } catch (err) {
-        if (mounted) {
-          clearTimeout(timeoutId);
-          setError(err instanceof Error ? err.message : 'Unknown error');
-          setProfile(null);
-        }
+        console.error('💥 Profile fetch failed:', err);
+        throw err;
       } finally {
-        if (mounted) {
-          setLoading(false);
-          console.log('🏁 Profile fetch completed');
-        }
+        activeRequests.delete(user.id);
       }
     };
 
-    fetchProfile();
+    // Store and execute request
+    const request = fetchRequest();
+    activeRequests.set(user.id, request);
 
-    return () => {
-      mounted = false;
-      if (timeoutId) {
-        clearTimeout(timeoutId);
-      }
-    };
+    request
+      .then(result => {
+        setProfile(result);
+        setError(null);
+      })
+      .catch(err => {
+        setError(err instanceof Error ? err.message : 'Unknown error');
+        setProfile(null);
+      })
+      .finally(() => {
+        setLoading(false);
+        console.log('🏁 Profile fetch completed');
+      });
+
   }, [user?.id]);
 
   const updateProfile = async (updates: Partial<Profile>) => {
@@ -167,12 +126,11 @@ export const useProfile = () => {
         return { error: updateError.message };
       }
       
-      // Update cache
       if (data) {
-        profileCache[user.id] = data;
+        profileCache.set(user.id, data);
+        setProfile(data);
       }
       
-      setProfile(data);
       setError(null);
       return { data, error: null };
     } catch (err) {
@@ -184,16 +142,10 @@ export const useProfile = () => {
 
   const refetch = async () => {
     if (user?.id) {
-      // Clear cache for this user
-      delete profileCache[user.id];
-      delete profilePromises[user.id];
-      
-      setError(null);
+      profileCache.delete(user.id);
+      activeRequests.delete(user.id);
       setLoading(true);
-      
-      // Trigger re-fetch by clearing cache and re-running effect
-      const event = new CustomEvent('refetchProfile');
-      window.dispatchEvent(event);
+      setError(null);
     }
   };
 
