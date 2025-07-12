@@ -2,16 +2,40 @@
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Switch } from "@/components/ui/switch";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
+import { Badge } from "@/components/ui/badge";
+import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
-import { Webhook, Activity, CheckCircle, XCircle, AlertCircle, Copy, Trash2, Settings, Globe } from "lucide-react";
-import { useMerchantWebhookManager } from '@/hooks/useMerchantWebhookManager';
-import { Separator } from "@/components/ui/separator";
-import { Alert, AlertDescription } from "@/components/ui/alert";
+import { 
+  Webhook, 
+  Plus, 
+  TestTube, 
+  Activity, 
+  Shield, 
+  Trash2, 
+  Clock,
+  CheckCircle,
+  XCircle,
+  AlertTriangle
+} from "lucide-react";
+import { useMerchantWebhookManager } from "@/hooks/useMerchantWebhookManager";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import WebhookTestDialog from './WebhookTestDialog';
 
 const EnhancedWebhookManager = () => {
   const {
@@ -25,304 +49,267 @@ const EnhancedWebhookManager = () => {
     merchantId
   } = useMerchantWebhookManager();
 
-  const [newWebhookUrl, setNewWebhookUrl] = useState('');
-  const [newWebhookName, setNewWebhookName] = useState('');
-  const [newWebhookDescription, setNewWebhookDescription] = useState('');
-  const [selectedEvents, setSelectedEvents] = useState<string[]>(['orders/create']);
-  const [isCreateFormOpen, setIsCreateFormOpen] = useState(false);
+  const [showCreateDialog, setShowCreateDialog] = useState(false);
+  const [newWebhook, setNewWebhook] = useState({
+    name: '',
+    url: '',
+    events: ['orders/create', 'orders/updated'],
+    method: 'POST' as 'POST' | 'GET',
+    active: true
+  });
+
   const { toast } = useToast();
 
-  const eventCategories = {
-    'Orders': ['orders/create', 'orders/updated', 'orders/cancelled'],
-    'Returns': ['returns/created', 'returns/approved', 'returns/completed'],
-    'System': ['app/uninstalled']
-  };
-
-  const getStatusIcon = (status: 'active' | 'inactive' | 'error') => {
-    switch (status) {
-      case 'active':
-        return <CheckCircle className="h-4 w-4 text-green-500" />;
-      case 'error':
-        return <XCircle className="h-4 w-4 text-red-500" />;
-      default:
-        return <AlertCircle className="h-4 w-4 text-gray-400" />;
-    }
-  };
-
   const handleCreateWebhook = async () => {
-    if (!newWebhookUrl || !newWebhookName) {
+    if (!newWebhook.name || !newWebhook.url) {
       toast({
         title: "Validation Error",
-        description: "Please provide both webhook name and URL.",
+        description: "Please fill in all required fields",
         variant: "destructive",
       });
       return;
     }
 
-    if (!selectedEvents.length) {
-      toast({
-        title: "Validation Error", 
-        description: "Please select at least one event type.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    // Generate merchant-specific webhook name
-    const merchantSpecificName = `${newWebhookName}-${merchantId?.slice(0, 8)}`;
-
-    const success = await createWebhook({
-      name: merchantSpecificName,
-      url: newWebhookUrl,
-      events: [...selectedEvents],
-      active: true,
-      method: 'POST',
-      headers: { 
-        'Content-Type': 'application/json',
-        'X-Merchant-ID': merchantId || '',
-        'X-Webhook-Source': 'returns-automation-saas'
-      }
-    });
-
+    const success = await createWebhook(newWebhook);
     if (success) {
-      setNewWebhookUrl('');
-      setNewWebhookName('');
-      setNewWebhookDescription('');
-      setSelectedEvents(['orders/create']);
-      setIsCreateFormOpen(false);
-      toast({
-        title: "Success",
-        description: "Webhook endpoint created successfully with merchant isolation.",
+      setShowCreateDialog(false);
+      setNewWebhook({
+        name: '',
+        url: '',
+        events: ['orders/create', 'orders/updated'],
+        method: 'POST',
+        active: true
       });
     }
   };
 
-  const copyWebhookUrl = (url: string) => {
-    navigator.clipboard.writeText(url);
-    toast({
-      title: "Copied",
-      description: "Webhook URL copied to clipboard",
-    });
+  const getActivityStatusIcon = (status: string) => {
+    switch (status) {
+      case 'success':
+        return <CheckCircle className="h-4 w-4 text-green-600" />;
+      case 'error':
+        return <XCircle className="h-4 w-4 text-red-600" />;
+      default:
+        return <Clock className="h-4 w-4 text-yellow-600" />;
+    }
   };
 
-  const formatLastTriggered = (timestamp?: string) => {
-    if (!timestamp) return 'Never';
+  const formatTimestamp = (timestamp: string) => {
     return new Date(timestamp).toLocaleString();
   };
 
+  if (!merchantId) {
+    return (
+      <Card>
+        <CardContent className="p-6">
+          <p className="text-muted-foreground">Loading merchant configuration...</p>
+        </CardContent>
+      </Card>
+    );
+  }
+
   return (
     <div className="space-y-6">
-      {/* Merchant Context Alert */}
-      <Alert>
-        <Globe className="h-4 w-4" />
-        <AlertDescription>
-          <strong>Tenant Isolation Active:</strong> All webhooks are scoped to your merchant ID: 
-          <code className="bg-muted px-1 rounded text-xs ml-1">{merchantId?.slice(0, 8)}...</code>
-        </AlertDescription>
-      </Alert>
-
-      {/* Active Webhooks */}
+      {/* Header with isolation info */}
       <Card>
         <CardHeader>
           <div className="flex items-center justify-between">
             <div>
               <CardTitle className="flex items-center gap-2">
                 <Webhook className="h-5 w-5" />
-                Active Webhook Endpoints
-                <Badge variant="outline">{webhooks.length}</Badge>
+                <Shield className="h-4 w-4 text-green-600" />
+                Merchant Webhook Manager
               </CardTitle>
               <CardDescription>
-                Manage your merchant-specific n8n workflow triggers
+                Manage your merchant-specific webhook endpoints with full tenant isolation
               </CardDescription>
             </div>
-            <Button 
-              onClick={() => setIsCreateFormOpen(!isCreateFormOpen)}
-              variant={isCreateFormOpen ? "outline" : "default"}
-            >
-              {isCreateFormOpen ? "Cancel" : "Add Webhook"}
-            </Button>
-          </div>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {webhooks.map((webhook) => (
-            <div key={webhook.id} className="border rounded-lg p-4 space-y-3">
-              <div className="flex items-start justify-between">
-                <div className="space-y-2 flex-1">
-                  <div className="flex items-center gap-2">
-                    {getStatusIcon(webhook.status)}
-                    <h4 className="font-semibold">{webhook.name}</h4>
-                    <Badge variant={webhook.active ? 'default' : 'secondary'}>
-                      {webhook.active ? 'Active' : 'Inactive'}
-                    </Badge>
-                    <Badge variant="outline" className="text-xs">
-                      {webhook.method}
-                    </Badge>
+            <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
+              <DialogTrigger asChild>
+                <Button>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Add Webhook
+                </Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Create New Webhook</DialogTitle>
+                  <DialogDescription>
+                    Add a new webhook endpoint for your merchant workflows
+                  </DialogDescription>
+                </DialogHeader>
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="webhook-name">Webhook Name *</Label>
+                    <Input
+                      id="webhook-name"
+                      placeholder="e.g., Order Processing Webhook"
+                      value={newWebhook.name}
+                      onChange={(e) => setNewWebhook({ ...newWebhook, name: e.target.value })}
+                    />
                   </div>
                   
-                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <Globe className="h-3 w-3" />
-                    <code className="bg-muted px-2 py-1 rounded text-xs font-mono break-all">
-                      {webhook.url}
-                    </code>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => copyWebhookUrl(webhook.url)}
-                      className="h-6 w-6 p-0"
+                  <div className="space-y-2">
+                    <Label htmlFor="webhook-url">Webhook URL *</Label>
+                    <Input
+                      id="webhook-url"
+                      type="url"
+                      placeholder="https://your-n8n.com/webhook/endpoint"
+                      value={newWebhook.url}
+                      onChange={(e) => setNewWebhook({ ...newWebhook, url: e.target.value })}
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="webhook-method">HTTP Method</Label>
+                    <Select
+                      value={newWebhook.method}
+                      onValueChange={(value: 'POST' | 'GET') => 
+                        setNewWebhook({ ...newWebhook, method: value })
+                      }
                     >
-                      <Copy className="h-3 w-3" />
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="POST">POST (Recommended)</SelectItem>
+                        <SelectItem value="GET">GET</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <p className="text-xs text-muted-foreground">
+                      POST is recommended for receiving JSON payloads
+                    </p>
+                  </div>
+
+                  <div className="flex items-center space-x-2">
+                    <Switch
+                      id="webhook-active"
+                      checked={newWebhook.active}
+                      onCheckedChange={(checked) => setNewWebhook({ ...newWebhook, active: checked })}
+                    />
+                    <Label htmlFor="webhook-active">Active</Label>
+                  </div>
+
+                  <div className="flex justify-end gap-2 pt-4">
+                    <Button variant="outline" onClick={() => setShowCreateDialog(false)}>
+                      Cancel
+                    </Button>
+                    <Button onClick={handleCreateWebhook} disabled={loading}>
+                      {loading ? 'Creating...' : 'Create Webhook'}
                     </Button>
                   </div>
-
-                  <div className="flex flex-wrap gap-1">
-                    {webhook.events.map(event => (
-                      <Badge key={event} variant="outline" className="text-xs">
-                        {event}
-                      </Badge>
-                    ))}
-                  </div>
-
-                  <div className="text-xs text-muted-foreground">
-                    Last triggered: {formatLastTriggered(webhook.lastTriggered)}
-                  </div>
                 </div>
-
-                <div className="flex items-center gap-2">
-                  <Switch
-                    checked={webhook.active}
-                    onCheckedChange={(checked) => toggleWebhook(webhook.id, checked)}
-                    disabled={loading}
-                  />
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => testWebhook(webhook)}
-                    disabled={loading || !webhook.active}
-                  >
-                    Test
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => deleteWebhook(webhook.id)}
-                    disabled={loading}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
+              </DialogContent>
+            </Dialog>
+          </div>
+        </CardHeader>
+        <CardContent>
+          {/* Tenant isolation info */}
+          <div className="p-4 bg-green-50 border border-green-200 rounded-lg mb-4">
+            <div className="flex items-start gap-2">
+              <Shield className="text-green-600 mt-1 h-4 w-4" />
+              <div className="text-sm">
+                <p className="font-medium text-green-800 mb-2">✅ Tenant Isolation Active</p>
+                <div className="space-y-1 text-green-700">
+                  <p><strong>Your Merchant ID:</strong> <code className="bg-green-100 px-1 rounded text-xs">{merchantId}</code></p>
+                  <p><strong>Data Scope:</strong> All webhooks are scoped to your merchant ID: {merchantId}</p>
+                  <p><strong>Security:</strong> Your webhook configurations are completely isolated from other merchants</p>
                 </div>
               </div>
             </div>
-          ))}
+          </div>
+        </CardContent>
+      </Card>
 
-          {webhooks.length === 0 && (
-            <div className="text-center py-12 text-muted-foreground">
-              <Webhook className="h-16 w-16 mx-auto mb-4 opacity-50" />
-              <h3 className="text-lg font-medium mb-2">No Webhooks Configured</h3>
-              <p className="text-sm mb-4">Create your first merchant-specific webhook to start automating workflows</p>
-              <Button onClick={() => setIsCreateFormOpen(true)}>
-                Create First Webhook
+      {/* Active Webhooks */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Activity className="h-5 w-5" />
+            Active Webhook Endpoints
+            <Badge variant="outline">{webhooks.length}</Badge>
+          </CardTitle>
+          <CardDescription>
+            Manage your merchant-specific webhook endpoints and test configurations
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {loading ? (
+            <div className="space-y-4">
+              {[1, 2, 3].map(i => (
+                <div key={i} className="animate-pulse">
+                  <div className="h-20 bg-muted rounded-lg"></div>
+                </div>
+              ))}
+            </div>
+          ) : webhooks.length === 0 ? (
+            <div className="text-center py-8">
+              <Webhook className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+              <h3 className="text-lg font-medium mb-2">No webhooks configured</h3>
+              <p className="text-muted-foreground mb-4">
+                Create your first webhook endpoint to start receiving automation events
+              </p>
+              <Button onClick={() => setShowCreateDialog(true)}>
+                <Plus className="h-4 w-4 mr-2" />
+                Add Your First Webhook
               </Button>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {webhooks.map((webhook) => (
+                <div key={webhook.id} className="border rounded-lg p-4">
+                  <div className="flex items-center justify-between">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 mb-2">
+                        <h3 className="font-medium">{webhook.name}</h3>
+                        <Badge variant={webhook.active ? 'default' : 'secondary'}>
+                          {webhook.active ? 'Active' : 'Inactive'}
+                        </Badge>
+                        <Badge variant="outline" className="text-xs">
+                          {webhook.method}
+                        </Badge>
+                      </div>
+                      
+                      <div className="text-sm text-muted-foreground space-y-1">
+                        <p className="font-mono text-xs bg-muted px-2 py-1 rounded">
+                          {webhook.url}
+                        </p>
+                        <p>Events: {webhook.events.join(', ')}</p>
+                        {webhook.lastTriggered && (
+                          <p>Last triggered: {formatTimestamp(webhook.lastTriggered)}</p>
+                        )}
+                      </div>
+                    </div>
+                    
+                    <div className="flex items-center gap-2">
+                      <WebhookTestDialog
+                        webhook={webhook}
+                        onTest={testWebhook}
+                        isLoading={loading}
+                      />
+                      <Switch
+                        checked={webhook.active}
+                        onCheckedChange={(checked) => toggleWebhook(webhook.id, checked)}
+                        disabled={loading}
+                      />
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => deleteWebhook(webhook.id)}
+                        disabled={loading}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              ))}
             </div>
           )}
         </CardContent>
       </Card>
 
-      {/* Create Webhook Form */}
-      {isCreateFormOpen && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Create New Webhook Endpoint</CardTitle>
-            <CardDescription>
-              Configure a new merchant-specific webhook for n8n workflow automation
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="webhook-name">Webhook Name *</Label>
-                <Input
-                  id="webhook-name"
-                  type="text"
-                  placeholder="e.g., Order Processing Flow"
-                  value={newWebhookName}
-                  onChange={(e) => setNewWebhookName(e.target.value)}
-                />
-                <p className="text-xs text-muted-foreground">
-                  Will be prefixed with your merchant ID for isolation
-                </p>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="webhook-url">N8n Webhook URL *</Label>
-                <Input
-                  id="webhook-url"
-                  type="url"
-                  placeholder="https://your-n8n.com/webhook/endpoint-name"
-                  value={newWebhookUrl}
-                  onChange={(e) => setNewWebhookUrl(e.target.value)}
-                />
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="webhook-description">Description (Optional)</Label>
-              <Textarea
-                id="webhook-description"
-                placeholder="Describe what this webhook does..."
-                value={newWebhookDescription}
-                onChange={(e) => setNewWebhookDescription(e.target.value)}
-                rows={2}
-              />
-            </div>
-            
-            <div className="space-y-4">
-              <Label>Event Types *</Label>
-              {Object.entries(eventCategories).map(([category, events]) => (
-                <div key={category} className="space-y-2">
-                  <h4 className="text-sm font-medium text-muted-foreground">{category}</h4>
-                  <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
-                    {events.map(event => (
-                      <label key={event} className="flex items-center space-x-2 cursor-pointer p-2 border rounded hover:bg-muted/50">
-                        <input
-                          type="checkbox"
-                          checked={selectedEvents.includes(event)}
-                          onChange={(e) => {
-                            if (e.target.checked) {
-                              setSelectedEvents(prev => [...prev, event]);
-                            } else {
-                              setSelectedEvents(prev => prev.filter(ev => ev !== event));
-                            }
-                          }}
-                          className="rounded"
-                        />
-                        <span className="text-sm">{event}</span>
-                      </label>
-                    ))}
-                  </div>
-                </div>
-              ))}
-            </div>
-
-            <Separator />
-
-            <div className="flex justify-end gap-2">
-              <Button 
-                variant="outline" 
-                onClick={() => setIsCreateFormOpen(false)}
-              >
-                Cancel
-              </Button>
-              <Button 
-                onClick={handleCreateWebhook} 
-                disabled={loading}
-              >
-                {loading ? 'Creating...' : 'Create Webhook'}
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Activity Log */}
+      {/* Webhook Activity Log */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
@@ -335,58 +322,74 @@ const EnhancedWebhookManager = () => {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="space-y-3 max-h-96 overflow-y-auto">
-            {activities.length === 0 ? (
-              <div className="text-center py-8 text-muted-foreground">
-                <Activity className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                <p>No webhook activity yet</p>
-                <p className="text-sm">Webhook executions will appear here</p>
-              </div>
-            ) : (
-              activities.map((activity) => {
-                const webhook = webhooks.find(w => w.id === activity.webhookId);
-                return (
-                  <div key={activity.id} className="flex items-start gap-3 p-4 bg-muted/30 rounded-lg">
-                    <div className={`w-3 h-3 rounded-full mt-2 ${
-                      activity.status === 'success' ? 'bg-green-500' : 
-                      activity.status === 'error' ? 'bg-red-500' : 'bg-yellow-500'
-                    }`}></div>
-                    <div className="flex-1 space-y-2">
-                      <div className="flex items-center justify-between">
-                        <span className="font-medium">
-                          {webhook?.name || 'Unknown Webhook'}
-                        </span>
-                        <span className="text-xs text-muted-foreground">
-                          {new Date(activity.timestamp).toLocaleString()}
-                        </span>
-                      </div>
-                      
-                      <div className="flex items-center gap-2 text-sm">
-                        <Badge variant="outline" className="text-xs">
-                          {activity.payload.event || 'unknown'}
-                        </Badge>
-                        {activity.status === 'success' && (
-                          <Badge variant="default" className="text-xs bg-green-100 text-green-800">
-                            Success
-                          </Badge>
-                        )}
-                        {activity.status === 'error' && (
-                          <Badge variant="destructive" className="text-xs">
-                            Failed
-                          </Badge>
-                        )}
-                      </div>
-
+          {activities.length === 0 ? (
+            <div className="text-center py-8">
+              <Activity className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+              <h3 className="text-lg font-medium mb-2">No webhook activity yet</h3>
+              <p className="text-muted-foreground">
+                Webhook executions and tests will appear here
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {activities.map((activity) => (
+                <div key={activity.id} className="flex items-center justify-between p-3 border rounded-lg">
+                  <div className="flex items-center gap-3">
+                    {getActivityStatusIcon(activity.status)}
+                    <div>
+                      <p className="font-medium text-sm">
+                        Webhook {activity.status === 'success' ? 'executed successfully' : 
+                                activity.status === 'error' ? 'execution failed' : 'pending'}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        {formatTimestamp(activity.timestamp)}
+                      </p>
                       {activity.error && (
-                        <div className="text-sm text-red-600 bg-red-50 p-2 rounded">
-                          <strong>Error:</strong> {activity.error}
-                        </div>
+                        <p className="text-xs text-red-600 mt-1">
+                          Error: {activity.error}
+                        </p>
                       )}
                     </div>
                   </div>
-                );
-              })
-            )}
+                  <div className="text-right">
+                    <Badge variant="outline" className="text-xs">
+                      ID: {activity.webhookId}
+                    </Badge>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Configuration Help */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Configuration Tips</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
+            <h4 className="font-medium text-blue-800 mb-2">🔧 n8n Webhook Setup</h4>
+            <div className="text-sm text-blue-700 space-y-1">
+              <p>• Set your n8n webhook node to <strong>POST</strong> method to receive JSON payloads</p>
+              <p>• Use the webhook URLs provided in the n8n Setup tab</p>
+              <p>• Include your merchant ID parameter: <code>?merchant={merchantId}</code></p>
+              <p>• Test webhooks send comprehensive payload data for validation</p>
+            </div>
+          </div>
+
+          <div className="p-4 bg-amber-50 border border-amber-200 rounded-lg">
+            <div className="flex items-start gap-2">
+              <AlertTriangle className="h-4 w-4 text-amber-600 mt-0.5" />
+              <div className="text-sm">
+                <p className="font-medium text-amber-800">CORS & Browser Limitations</p>
+                <p className="text-amber-700">
+                  Due to browser security, we cannot verify webhook responses. 
+                  Check your n8n execution history to confirm webhook receipt.
+                </p>
+              </div>
+            </div>
           </div>
         </CardContent>
       </Card>
