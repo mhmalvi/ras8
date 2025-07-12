@@ -5,6 +5,7 @@ import ProtectedRoute from './ProtectedRoute';
 import Landing from '@/pages/Landing';
 import Auth from '@/pages/Auth';
 import Dashboard from '@/pages/Dashboard';
+import Index from '@/pages/Index';
 import { useAuth } from '@/contexts/AuthContext';
 
 // Import other pages that exist in the read-only files
@@ -36,8 +37,8 @@ const AppRouter: React.FC = () => {
 
   return (
     <Routes>
-      {/* Default route redirects to landing */}
-      <Route path="/" element={<Navigate to="/landing" replace />} />
+      {/* Root route - redirect based on authentication */}
+      <Route path="/" element={<Index />} />
       
       {/* Public routes - only accessible when not authenticated */}
       <Route 

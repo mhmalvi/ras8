@@ -1,6 +1,7 @@
 
 import { supabase } from '@/integrations/supabase/client';
 import { EnhancedShopifyService } from './enhancedShopifyService';
+import { EnhancedN8nService } from './enhancedN8nService';
 
 interface EnhancedOrder {
   id: string;

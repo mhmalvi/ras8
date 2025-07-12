@@ -159,9 +159,9 @@ export class MonitoringService {
         for (const entry of list.getEntries()) {
           if (entry.entryType === 'navigation') {
             const navEntry = entry as PerformanceNavigationTiming;
-            this.recordMetric('page_load_time', navEntry.loadEventEnd - navEntry.navigationStart);
-            this.recordMetric('dom_content_loaded', navEntry.domContentLoadedEventEnd - navEntry.navigationStart);
-            this.recordMetric('first_paint', navEntry.loadEventStart - navEntry.navigationStart);
+            this.recordMetric('page_load_time', navEntry.loadEventEnd - navEntry.fetchStart);
+            this.recordMetric('dom_content_loaded', navEntry.domContentLoadedEventEnd - navEntry.fetchStart);
+            this.recordMetric('first_paint', navEntry.loadEventStart - navEntry.fetchStart);
           }
         }
       });
