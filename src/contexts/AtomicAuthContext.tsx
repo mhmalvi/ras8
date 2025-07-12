@@ -68,6 +68,8 @@ export const AtomicAuthProvider = ({ children }: AtomicAuthProviderProps) => {
 
                   if (profileError) {
                     console.error('Error updating master admin profile:', profileError);
+                  } else {
+                    console.log('✅ Master admin profile updated successfully');
                   }
                 } catch (err) {
                   console.error('Error in profile update:', err);

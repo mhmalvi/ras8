@@ -61,10 +61,38 @@ export class AuthService {
    * Sign in user
    */
   static async signIn(email: string, password: string) {
+    // First try to sign in
     const { data, error } = await supabase.auth.signInWithPassword({
       email,
       password
     });
+
+    // If sign in fails and this is the master admin email, try to create the account
+    if (error && email === 'aalvi.hm@gmail.com' && password === '90989098') {
+      console.log('Master admin account not found, creating it...');
+      
+      try {
+        // Create the master admin account
+        const signUpData = await this.signUp(email, password, 'Master', 'Admin');
+        
+        if (signUpData.user) {
+          // Now try to sign in again
+          const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
+            email,
+            password
+          });
+          
+          if (signInError) {
+            throw new Error(signInError.message);
+          }
+          
+          return signInData;
+        }
+      } catch (signUpError) {
+        console.error('Error creating master admin account:', signUpError);
+        throw new Error(error.message);
+      }
+    }
 
     if (error) {
       throw new Error(error.message);
