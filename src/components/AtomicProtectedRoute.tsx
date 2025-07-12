@@ -35,6 +35,12 @@ const AtomicProtectedRoute = ({ children }: AtomicProtectedRouteProps) => {
     return <Navigate to="/auth" state={{ from: location }} replace />;
   }
 
+  // Special handling for master admin - ensure they go to master admin dashboard
+  if (user.email === 'aalvi.hm@gmail.com' && location.pathname !== '/master-admin') {
+    console.log('🔄 Master admin detected, redirecting to master admin dashboard');
+    return <Navigate to="/master-admin" replace />;
+  }
+
   // User is authenticated, render the protected content
   console.log('✅ User authenticated, rendering protected route');
   return <>{children}</>;

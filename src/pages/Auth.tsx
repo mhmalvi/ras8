@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAtomicAuth } from '@/contexts/AtomicAuthContext';
 import { Button } from '@/components/ui/button';
@@ -12,7 +12,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Loader2, ArrowRight, Shield, Users, Zap } from 'lucide-react';
 
 const Auth = () => {
-  const { signIn, signUp } = useAtomicAuth();
+  const { signIn, signUp, user } = useAtomicAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
   const location = useLocation();
@@ -35,6 +35,20 @@ const Auth = () => {
 
   const from = location.state?.from?.pathname || '/';
 
+  // Handle redirect when user is authenticated
+  useEffect(() => {
+    if (user) {
+      console.log('🔄 User authenticated, checking redirect...');
+      // Special redirect logic for master admin
+      if (user.email === 'aalvi.hm@gmail.com') {
+        console.log('🔄 Master admin detected, redirecting to master admin dashboard');
+        navigate('/master-admin', { replace: true });
+      } else {
+        navigate(from, { replace: true });
+      }
+    }
+  }, [user, navigate, from]);
+
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
@@ -50,7 +64,7 @@ const Auth = () => {
           title: "Welcome back!",
           description: "You've successfully signed in.",
         });
-        navigate(from, { replace: true });
+        // Navigation will be handled by useEffect above
       }
     } catch (err) {
       setError('An unexpected error occurred. Please try again.');
