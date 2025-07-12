@@ -1,5 +1,7 @@
 
 import { supabase } from '@/integrations/supabase/client';
+import { PerformanceOptimizer } from '@/utils/performanceOptimizer';
+import { MonitoringService } from '@/utils/monitoringService';
 
 export interface RealTimeAnalytics {
   totalReturns: number;
@@ -29,70 +31,36 @@ export interface RealTimeAnalytics {
 
 export class RealTimeAnalyticsService {
   static async getAnalytics(merchantId: string): Promise<RealTimeAnalytics> {
-    console.log('🔄 Fetching real-time analytics for merchant:', merchantId);
+    return MonitoringService.monitorApiCall(
+      'analytics_fetch',
+      async () => {
+        console.log('🔄 Fetching optimized analytics for merchant:', merchantId);
 
-    try {
-      // Fetch all data in parallel for better performance
-      const [returnsData, returnItemsData, aiSuggestionsData] = await Promise.all([
-        this.getReturnsData(merchantId),
-        this.getReturnItemsData(merchantId),
-        this.getAISuggestionsData(merchantId)
-      ]);
+        try {
+          // Use optimized analytics query with caching
+          const analyticsData = await PerformanceOptimizer.getOptimizedAnalytics(merchantId);
+          
+          const analytics = this.calculateAnalytics(
+            analyticsData.returns,
+            analyticsData.returnItems,
+            analyticsData.aiSuggestions
+          );
+          
+          MonitoringService.info('Analytics calculation completed', {
+            merchantId,
+            totalReturns: analytics.totalReturns,
+            calculationTime: Date.now()
+          });
+          
+          return analytics;
 
-      // Calculate analytics from real data
-      const analytics = this.calculateAnalytics(returnsData, returnItemsData, aiSuggestionsData);
-      
-      console.log('✅ Analytics calculated from real data:', analytics);
-      return analytics;
-
-    } catch (error) {
-      console.error('💥 Error fetching real-time analytics:', error);
-      throw error;
-    }
-  }
-
-  private static async getReturnsData(merchantId: string) {
-    const { data, error } = await supabase
-      .from('returns')
-      .select('*')
-      .eq('merchant_id', merchantId)
-      .order('created_at', { ascending: false });
-
-    if (error) throw error;
-    return data || [];
-  }
-
-  private static async getReturnItemsData(merchantId: string) {
-    const { data, error } = await supabase
-      .from('return_items')
-      .select(`
-        *,
-        returns!inner (
-          merchant_id,
-          created_at,
-          status
-        )
-      `)
-      .eq('returns.merchant_id', merchantId);
-
-    if (error) throw error;
-    return data || [];
-  }
-
-  private static async getAISuggestionsData(merchantId: string) {
-    const { data, error } = await supabase
-      .from('ai_suggestions')
-      .select(`
-        *,
-        returns!inner (
-          merchant_id,
-          created_at
-        )
-      `)
-      .eq('returns.merchant_id', merchantId);
-
-    if (error) throw error;
-    return data || [];
+        } catch (error) {
+          MonitoringService.error('Analytics calculation failed', { merchantId, error });
+          throw error;
+        }
+      },
+      { merchantId }
+    );
   }
 
   private static calculateAnalytics(
@@ -108,7 +76,7 @@ export class RealTimeAnalyticsService {
     // Calculate AI acceptance rate from real data
     const acceptedSuggestions = aiSuggestionsData.filter(s => s.accepted === true).length;
     const totalSuggestions = aiSuggestionsData.filter(s => s.accepted !== null).length;
-    const aiAcceptanceRate = totalSuggestions > 0 ? (acceptedSuggestions / totalSuggestions) * 100 : 0;
+    const aiAcceptanceRate = totalSuggestions > 0 ? Math.round((acceptedSuggestions / totalSuggestions) * 100) : 0;
 
     // Calculate revenue impact from actual exchanges
     const revenueImpact = returnItemsData
@@ -133,7 +101,7 @@ export class RealTimeAnalyticsService {
       totalReturns,
       totalRefunds,
       totalExchanges,
-      aiAcceptanceRate: Math.round(aiAcceptanceRate),
+      aiAcceptanceRate,
       revenueImpact,
       returnsByStatus,
       monthlyTrends,
@@ -208,7 +176,7 @@ export class RealTimeAnalyticsService {
 
   static async subscribeToUpdates(merchantId: string, callback: (analytics: RealTimeAnalytics) => void) {
     const channel = supabase
-      .channel(`real-time-analytics-${merchantId}`)
+      .channel(`enhanced-analytics-${merchantId}`)
       .on(
         'postgres_changes',
         {
@@ -217,7 +185,10 @@ export class RealTimeAnalyticsService {
           table: 'returns',
           filter: `merchant_id=eq.${merchantId}`
         },
-        () => this.handleDataUpdate(merchantId, callback)
+        () => {
+          MonitoringService.info('Real-time analytics update triggered', { merchantId });
+          this.handleDataUpdate(merchantId, callback);
+        }
       )
       .on(
         'postgres_changes',
@@ -244,10 +215,13 @@ export class RealTimeAnalyticsService {
 
   private static async handleDataUpdate(merchantId: string, callback: (analytics: RealTimeAnalytics) => void) {
     try {
+      // Invalidate cache to force fresh data
+      PerformanceOptimizer.invalidateCache(`analytics_${merchantId}`);
+      
       const analytics = await this.getAnalytics(merchantId);
       callback(analytics);
     } catch (error) {
-      console.error('Error updating analytics:', error);
+      MonitoringService.error('Real-time analytics update failed', { merchantId, error });
     }
   }
 }
