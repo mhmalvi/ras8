@@ -31,30 +31,61 @@ export class AuthService {
       throw new Error(error.message);
     }
 
-    // If this is the master admin email, ensure they get the proper role
-    if (email === 'aalvi.hm@gmail.com' && data.user) {
-      try {
-        // Update or create profile with master_admin role
-        const { error: profileError } = await supabase
-          .from('profiles')
-          .upsert({
-            id: data.user.id,
-            email: data.user.email!,
-            role: 'master_admin',
-            first_name: firstName || 'Master',
-            last_name: lastName || 'Admin',
-            updated_at: new Date().toISOString()
-          });
-
-        if (profileError) {
-          console.error('Error setting master admin role:', profileError);
-        }
-      } catch (err) {
-        console.error('Error updating profile for master admin:', err);
-      }
-    }
-
     return data;
+  }
+
+  /**
+   * Create master admin account with special handling
+   */
+  static async createMasterAdmin() {
+    try {
+      // First, try to sign up the master admin with email confirmation disabled for this specific case
+      const { data, error } = await supabase.auth.admin.createUser({
+        email: 'aalvi.hm@gmail.com',
+        password: '90989098',
+        user_metadata: {
+          first_name: 'Master',
+          last_name: 'Admin'
+        },
+        email_confirm: true // Auto-confirm the email
+      });
+
+      if (error) {
+        console.error('Error creating master admin user:', error);
+        // If admin.createUser fails, try regular signup
+        return await this.signUp('aalvi.hm@gmail.com', '90989098', 'Master', 'Admin');
+      }
+
+      // Now create the profile using the service role (bypassing RLS)
+      if (data.user) {
+        try {
+          const { error: profileError } = await supabase
+            .from('profiles')
+            .insert({
+              id: data.user.id,
+              email: data.user.email!,
+              role: 'master_admin',
+              first_name: 'Master',
+              last_name: 'Admin',
+              updated_at: new Date().toISOString()
+            });
+
+          if (profileError) {
+            console.error('Error creating master admin profile:', profileError);
+          } else {
+            console.log('✅ Master admin profile created successfully');
+          }
+        } catch (err) {
+          console.error('Error in profile creation:', err);
+        }
+      }
+
+      return data;
+    } catch (error) {
+      console.error('Error in createMasterAdmin:', error);
+      // Fallback to regular signup
+      return await this.signUp('aalvi.hm@gmail.com', '90989098', 'Master', 'Admin');
+    }
   }
 
   /**
@@ -72,22 +103,23 @@ export class AuthService {
       console.log('Master admin account not found, creating it...');
       
       try {
-        // Create the master admin account
-        const signUpData = await this.signUp(email, password, 'Master', 'Admin');
+        // Create the master admin account with special handling
+        await this.createMasterAdmin();
         
-        if (signUpData.user) {
-          // Now try to sign in again
-          const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
-            email,
-            password
-          });
-          
-          if (signInError) {
-            throw new Error(signInError.message);
-          }
-          
-          return signInData;
+        // Wait a moment for the account to be fully created
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        
+        // Now try to sign in again
+        const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
+          email,
+          password
+        });
+        
+        if (signInError) {
+          throw new Error(signInError.message);
         }
+        
+        return signInData;
       } catch (signUpError) {
         console.error('Error creating master admin account:', signUpError);
         throw new Error(error.message);
