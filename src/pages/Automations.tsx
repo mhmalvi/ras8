@@ -3,6 +3,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import AutomationSettings from "@/components/AutomationSettings";
 import N8nConnectionSetup from "@/components/N8nConnectionSetup";
+import WebhookManager from "@/components/WebhookManager";
 import { useAutomationRules } from "@/hooks/useAutomationRules";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -19,8 +20,9 @@ const Automations = () => {
       description="Configure automated workflows and rules for returns processing"
     >
       <Tabs defaultValue="rules" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-2">
+        <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="rules">Automation Rules</TabsTrigger>
+          <TabsTrigger value="webhooks">Webhook Manager</TabsTrigger>
           <TabsTrigger value="setup">n8n Setup</TabsTrigger>
         </TabsList>
 
@@ -90,6 +92,10 @@ const Automations = () => {
               )}
             </CardContent>
           </Card>
+        </TabsContent>
+
+        <TabsContent value="webhooks">
+          <WebhookManager />
         </TabsContent>
 
         <TabsContent value="setup">
