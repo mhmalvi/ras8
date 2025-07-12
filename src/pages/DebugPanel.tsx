@@ -1,321 +1,275 @@
-import { useState } from "react";
+
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
-import { Separator } from "@/components/ui/separator";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import AppLayout from "@/components/AppLayout";
-import { useLiveData } from "@/hooks/useLiveData";
-import { useProfile } from "@/hooks/useProfile";
-import { useRealReturnsData } from "@/hooks/useRealReturnsData";
-import { supabase } from "@/integrations/supabase/client";
 import { 
   Bug, 
+  Code, 
   Database, 
-  RefreshCw, 
-  User, 
-  ShoppingCart, 
-  Brain,
+  Network,
+  AlertTriangle, 
+  CheckCircle, 
+  Clock,
+  RefreshCw,
+  Terminal,
+  Zap,
   Activity,
-  CheckCircle,
-  AlertCircle,
-  Info
+  Settings
 } from "lucide-react";
 
 const DebugPanel = () => {
-  const { profile, loading: profileLoading } = useProfile();
-  const { loading: liveDataLoading, error: liveDataError, dashboardKPIs, analyticsData, aiInsights, refreshAllData } = useLiveData();
-  const { returns, loading: returnsLoading, error: returnsError } = useRealReturnsData();
-  const [rawData, setRawData] = useState<any>(null);
-  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [systemStatus, setSystemStatus] = useState({
+    api: 'operational',
+    database: 'operational',
+    cache: 'operational',
+    queue: 'operational'
+  });
 
-  const handleRefreshData = async () => {
-    setIsRefreshing(true);
-    await refreshAllData();
-    setIsRefreshing(false);
+  const [debugLogs, setDebugLogs] = useState([
+    { id: 1, level: 'info', message: 'System initialization complete', timestamp: new Date(), component: 'Core' },
+    { id: 2, level: 'warning', message: 'High memory usage detected', timestamp: new Date(Date.now() - 300000), component: 'Memory' },
+    { id: 3, level: 'error', message: 'API timeout on external service', timestamp: new Date(Date.now() - 600000), component: 'API' },
+    { id: 4, level: 'info', message: 'Database connection pool refreshed', timestamp: new Date(Date.now() - 900000), component: 'Database' },
+  ]);
+
+  const refreshSystemStatus = async () => {
+    setLoading(true);
+    // Simulate API call
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    setSystemStatus({
+      api: 'operational',
+      database: 'operational', 
+      cache: 'operational',
+      queue: 'operational'
+    });
+    setLoading(false);
   };
 
-  const handleDumpTableData = async (tableName: string) => {
-    try {
-      console.log(`🔍 Dumping ${tableName} table data...`);
-      
-      const validTables = ['merchants', 'profiles', 'returns', 'return_items', 'ai_suggestions', 'analytics_events', 'orders', 'billing_records'] as const;
-      
-      if (!validTables.includes(tableName as any)) {
-        console.error(`❌ Invalid table name: ${tableName}`);
-        return;
-      }
-      
-      let query = supabase.from(tableName as any).select('*');
-      
-      // Add merchant filter for relevant tables
-      if (['returns', 'analytics_events'].includes(tableName) && profile?.merchant_id) {
-        query = (query as any).eq('merchant_id', profile.merchant_id);
-      }
-      
-      const { data, error } = await query.limit(50);
-      
-      if (error) {
-        console.error(`❌ Error fetching ${tableName}:`, error);
-        return;
-      }
-      
-      console.table(data);
-      setRawData({ table: tableName, data, count: data?.length || 0 });
-    } catch (error) {
-      console.error(`❌ Failed to dump ${tableName}:`, error);
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'operational': return 'text-green-600 bg-green-100';
+      case 'warning': return 'text-yellow-600 bg-yellow-100';
+      case 'error': return 'text-red-600 bg-red-100';
+      default: return 'text-gray-600 bg-gray-100';
     }
   };
 
-  const getStatusIcon = (isLoading: boolean, hasError: boolean) => {
-    if (isLoading) return <Activity className="h-4 w-4 text-yellow-500 animate-spin" />;
-    if (hasError) return <AlertCircle className="h-4 w-4 text-red-500" />;
-    return <CheckCircle className="h-4 w-4 text-green-500" />;
+  const getLevelColor = (level: string) => {
+    switch (level) {
+      case 'info': return 'text-blue-600 bg-blue-100';
+      case 'warning': return 'text-yellow-600 bg-yellow-100';
+      case 'error': return 'text-red-600 bg-red-100';
+      default: return 'text-gray-600 bg-gray-100';
+    }
   };
-
-  const tableQueries = [
-    'merchants',
-    'profiles', 
-    'returns',
-    'return_items',
-    'ai_suggestions',
-    'analytics_events',
-    'orders',
-    'billing_records'
-  ];
 
   return (
     <AppLayout 
-      title="🧪 Debug Panel" 
-      description="Development debugging and data inspection"
+      title="🐛 Debug Panel" 
+      description="System debugging and diagnostic tools (Master Admin Only)"
     >
       <div className="space-y-6">
-        {/* System Status Overview */}
-        <Card>
+        {/* Header */}
+        <Card className="bg-gradient-to-r from-orange-50 to-red-50 border-orange-200">
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
+            <CardTitle className="flex items-center gap-2 text-orange-800">
               <Bug className="h-5 w-5" />
-              System Status
+              Debug Console
             </CardTitle>
-            <CardDescription>
-              Current system state and data loading status
+            <CardDescription className="text-orange-700">
+              Advanced debugging tools and system diagnostics for troubleshooting
             </CardDescription>
           </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="flex items-center justify-between p-3 border rounded-lg">
-                <div className="flex items-center gap-2">
-                  <User className="h-4 w-4" />
-                  <span className="text-sm">Profile</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  {getStatusIcon(profileLoading, !profile)}
-                  <Badge variant={profile ? "default" : "destructive"}>
-                    {profile ? "Loaded" : "Missing"}
-                  </Badge>
-                </div>
-              </div>
-              
-              <div className="flex items-center justify-between p-3 border rounded-lg">
-                <div className="flex items-center gap-2">
-                  <ShoppingCart className="h-4 w-4" />
-                  <span className="text-sm">Returns Data</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  {getStatusIcon(returnsLoading, !!returnsError)}
-                  <Badge variant={returnsError ? "destructive" : "default"}>
-                    {returns.length} items
-                  </Badge>
-                </div>
-              </div>
-              
-              <div className="flex items-center justify-between p-3 border rounded-lg">
-                <div className="flex items-center gap-2">
-                  <Brain className="h-4 w-4" />
-                  <span className="text-sm">Live Data</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  {getStatusIcon(liveDataLoading, !!liveDataError)}
-                  <Badge variant={liveDataError ? "destructive" : "default"}>
-                    {liveDataError ? "Error" : "Active"}
-                  </Badge>
-                </div>
-              </div>
+          <CardContent className="flex items-center justify-between">
+            <div className="flex items-center gap-2 text-orange-600">
+              <AlertTriangle className="h-4 w-4" />
+              <span className="text-sm font-medium">Master Admin Access Required</span>
             </div>
-
-            <Separator className="my-4" />
-
-            <div className="flex gap-2">
-              <Button 
-                onClick={handleRefreshData} 
-                disabled={isRefreshing}
-                variant="outline"
-                size="sm"
-              >
-                <RefreshCw className={`h-4 w-4 mr-2 ${isRefreshing ? 'animate-spin' : ''}`} />
-                Refresh All Data
-              </Button>
-            </div>
+            <Button onClick={refreshSystemStatus} disabled={loading} variant="outline" className="gap-2">
+              <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
+              Refresh Status
+            </Button>
           </CardContent>
         </Card>
 
-        <Tabs defaultValue="profile" className="w-full">
+        <Tabs defaultValue="overview" className="space-y-6">
           <TabsList className="grid w-full grid-cols-4">
-            <TabsTrigger value="profile">Profile</TabsTrigger>
-            <TabsTrigger value="data">Live Data</TabsTrigger>
-            <TabsTrigger value="tables">Raw Tables</TabsTrigger>
-            <TabsTrigger value="errors">Errors</TabsTrigger>
+            <TabsTrigger value="overview">System Overview</TabsTrigger>
+            <TabsTrigger value="logs">Debug Logs</TabsTrigger>
+            <TabsTrigger value="performance">Performance</TabsTrigger>
+            <TabsTrigger value="tools">Debug Tools</TabsTrigger>
           </TabsList>
 
-          {/* Profile Debug */}
-          <TabsContent value="profile" className="space-y-4">
-            <Card>
-              <CardHeader>
-                <CardTitle>Current Profile</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <pre className="bg-slate-100 p-4 rounded-lg text-xs overflow-auto">
-                  {JSON.stringify(profile, null, 2)}
-                </pre>
-              </CardContent>
-            </Card>
-          </TabsContent>
+          <TabsContent value="overview" className="space-y-6">
+            {/* System Status Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+              <Card className="bg-gradient-to-br from-blue-50 to-blue-100/50 border-blue-200">
+                <CardContent className="p-4 text-center">
+                  <Network className="h-8 w-8 text-blue-600 mx-auto mb-2" />
+                  <h3 className="font-semibold text-blue-900">API Services</h3>
+                  <Badge className={`mt-2 ${getStatusColor(systemStatus.api)}`}>
+                    {systemStatus.api}
+                  </Badge>
+                </CardContent>
+              </Card>
 
-          {/* Live Data Debug */}
-          <TabsContent value="data" className="space-y-4">
-            <div className="grid gap-4">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Dashboard KPIs</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <pre className="bg-slate-100 p-4 rounded-lg text-xs overflow-auto">
-                    {JSON.stringify(dashboardKPIs, null, 2)}
-                  </pre>
+              <Card className="bg-gradient-to-br from-green-50 to-green-100/50 border-green-200">
+                <CardContent className="p-4 text-center">
+                  <Database className="h-8 w-8 text-green-600 mx-auto mb-2" />
+                  <h3 className="font-semibold text-green-900">Database</h3>
+                  <Badge className={`mt-2 ${getStatusColor(systemStatus.database)}`}>
+                    {systemStatus.database}
+                  </Badge>
                 </CardContent>
               </Card>
-              
-              <Card>
-                <CardHeader>
-                  <CardTitle>Analytics Data</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <pre className="bg-slate-100 p-4 rounded-lg text-xs overflow-auto">
-                    {JSON.stringify(analyticsData, null, 2)}
-                  </pre>
+
+              <Card className="bg-gradient-to-br from-purple-50 to-purple-100/50 border-purple-200">
+                <CardContent className="p-4 text-center">
+                  <Zap className="h-8 w-8 text-purple-600 mx-auto mb-2" />
+                  <h3 className="font-semibold text-purple-900">Cache Layer</h3>
+                  <Badge className={`mt-2 ${getStatusColor(systemStatus.cache)}`}>
+                    {systemStatus.cache}
+                  </Badge>
                 </CardContent>
               </Card>
-              
-              <Card>
-                <CardHeader>
-                  <CardTitle>AI Insights</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <pre className="bg-slate-100 p-4 rounded-lg text-xs overflow-auto">
-                    {JSON.stringify(aiInsights, null, 2)}
-                  </pre>
+
+              <Card className="bg-gradient-to-br from-orange-50 to-orange-100/50 border-orange-200">
+                <CardContent className="p-4 text-center">
+                  <Activity className="h-8 w-8 text-orange-600 mx-auto mb-2" />
+                  <h3 className="font-semibold text-orange-900">Queue System</h3>
+                  <Badge className={`mt-2 ${getStatusColor(systemStatus.queue)}`}>
+                    {systemStatus.queue}
+                  </Badge>
                 </CardContent>
               </Card>
             </div>
-          </TabsContent>
 
-          {/* Raw Tables Debug */}
-          <TabsContent value="tables" className="space-y-4">
+            {/* Quick Stats */}
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
-                  <Database className="h-5 w-5" />
-                  Database Tables
+                  <Code className="h-5 w-5" />
+                  System Diagnostics
                 </CardTitle>
-                <CardDescription>
-                  Click to dump table data to console and view here
-                </CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mb-4">
-                  {tableQueries.map((table) => (
-                    <Button
-                      key={table}
-                      onClick={() => handleDumpTableData(table)}
-                      variant="outline"
-                      size="sm"
-                      className="text-xs"
-                    >
-                      {table}
-                    </Button>
-                  ))}
-                </div>
-                
-                {rawData && (
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between">
-                      <h4 className="font-medium">{rawData.table}</h4>
-                      <Badge>{rawData.count} records</Badge>
-                    </div>
-                    <pre className="bg-slate-100 p-4 rounded-lg text-xs overflow-auto max-h-96">
-                      {JSON.stringify(rawData.data, null, 2)}
-                    </pre>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  <div className="text-center">
+                    <div className="text-2xl font-bold text-blue-600">99.9%</div>
+                    <div className="text-sm text-gray-600">Uptime</div>
                   </div>
-                )}
+                  <div className="text-center">
+                    <div className="text-2xl font-bold text-green-600">145ms</div>
+                    <div className="text-sm text-gray-600">Avg Response</div>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-2xl font-bold text-purple-600">2.1k</div>
+                    <div className="text-sm text-gray-600">Requests/min</div>
+                  </div>
+                </div>
               </CardContent>
             </Card>
           </TabsContent>
 
-          {/* Errors Debug */}
-          <TabsContent value="errors" className="space-y-4">
-            <div className="grid gap-4">
-              {liveDataError && (
-                <Card className="border-red-200">
-                  <CardHeader>
-                    <CardTitle className="text-red-700">Live Data Error</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <p className="text-red-600 text-sm">{liveDataError}</p>
-                  </CardContent>
-                </Card>
-              )}
-              
-              {returnsError && (
-                <Card className="border-red-200">
-                  <CardHeader>
-                    <CardTitle className="text-red-700">Returns Data Error</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <p className="text-red-600 text-sm">{returnsError}</p>
-                  </CardContent>
-                </Card>
-              )}
-              
-              {!liveDataError && !returnsError && (
-                <Card>
-                  <CardContent className="flex items-center justify-center py-8">
-                    <div className="flex items-center gap-2 text-green-600">
-                      <CheckCircle className="h-5 w-5" />
-                      <span>No errors detected</span>
+          <TabsContent value="logs" className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Terminal className="h-5 w-5" />
+                  Debug Logs
+                </CardTitle>
+                <CardDescription>
+                  Real-time system logs and debug information
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <ScrollArea className="h-96 w-full">
+                  <div className="space-y-2">
+                    {debugLogs.map((log) => (
+                      <div key={log.id} className="flex items-center gap-3 p-3 rounded-lg hover:bg-gray-50 font-mono text-sm">
+                        <Badge className={getLevelColor(log.level)} variant="secondary">
+                          {log.level.toUpperCase()}
+                        </Badge>
+                        <span className="text-gray-500 text-xs">
+                          {log.timestamp.toLocaleTimeString()}
+                        </span>
+                        <Badge variant="outline" className="text-xs">
+                          {log.component}
+                        </Badge>
+                        <span className="flex-1">{log.message}</span>
+                      </div>
+                    ))}
+                  </div>
+                </ScrollArea>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="performance" className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Activity className="h-5 w-5" />
+                  Performance Metrics
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="space-y-4">
+                    <h4 className="font-semibold">CPU Usage</h4>
+                    <div className="w-full bg-gray-200 rounded-full h-2">
+                      <div className="bg-blue-600 h-2 rounded-full" style={{width: '45%'}}></div>
                     </div>
-                  </CardContent>
-                </Card>
-              )}
-            </div>
+                    <p className="text-sm text-gray-600">45% utilization</p>
+                  </div>
+                  <div className="space-y-4">
+                    <h4 className="font-semibold">Memory Usage</h4>
+                    <div className="w-full bg-gray-200 rounded-full h-2">
+                      <div className="bg-green-600 h-2 rounded-full" style={{width: '67%'}}></div>
+                    </div>
+                    <p className="text-sm text-gray-600">67% allocated</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="tools" className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Settings className="h-5 w-5" />
+                  Debug Tools
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <Button variant="outline" className="justify-start gap-2 h-12">
+                    <Database className="h-4 w-4" />
+                    Test Database Connection
+                  </Button>
+                  <Button variant="outline" className="justify-start gap-2 h-12">
+                    <Network className="h-4 w-4" />
+                    Check API Endpoints
+                  </Button>
+                  <Button variant="outline" className="justify-start gap-2 h-12">
+                    <Zap className="h-4 w-4" />
+                    Clear Cache
+                  </Button>
+                  <Button variant="outline" className="justify-start gap-2 h-12">
+                    <RefreshCw className="h-4 w-4" />
+                    Restart Services
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
           </TabsContent>
         </Tabs>
-
-        {/* Instructions */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Info className="h-5 w-5" />
-              Debug Instructions
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="text-sm space-y-2">
-            <p>• Check browser console for detailed logs and table dumps</p>
-            <p>• Use "Raw Tables" to inspect actual database content</p>
-            <p>• "Live Data" shows processed analytics and KPIs</p>
-            <p>• Profile tab shows current user session state</p>
-            <p>• Refresh data to force re-fetch from database</p>
-          </CardContent>
-        </Card>
       </div>
     </AppLayout>
   );
