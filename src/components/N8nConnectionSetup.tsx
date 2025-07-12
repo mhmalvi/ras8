@@ -70,35 +70,24 @@ const N8nConnectionSetup = () => {
       if (result.success) {
         setConnectionStatus('connected');
         
-        // Test specific webhook endpoints
-        const webhookEndpoints = [
-          'webhook/test-connection',
-          'webhook/return-processing',
-          'webhook/retention-campaign'
-        ];
-        
-        let webhookTestsPassed = 0;
-        for (const endpoint of webhookEndpoints) {
-          const webhookUrl = `${n8nUrl.replace(/\/$/, '')}/${endpoint}`;
-          try {
-            const webhookResult = await n8nService.testWebhookConnection(webhookUrl);
-            if (webhookResult.success) webhookTestsPassed++;
-          } catch (error) {
-            console.warn(`Webhook test failed for ${endpoint}:`, error);
-          }
-        }
-
         // Save successful configuration
         await saveConfigurationToDatabase(true);
 
         toast({
-          title: "Connection successful",
-          description: `Successfully connected to n8n server. Test data sent to ${webhookTestsPassed} webhook endpoints.`,
+          title: "Connection test completed",
+          description: result.data?.message || "Test requests sent to n8n webhooks successfully.",
+        });
+
+        // Show additional info about CORS limitations
+        toast({
+          title: "Important Note",
+          description: "Due to browser security (CORS), we cannot verify if n8n received the requests. Please check your n8n workflow execution history to confirm.",
+          variant: "default",
         });
       } else {
         setConnectionStatus('disconnected');
         toast({
-          title: "Connection failed",
+          title: "Connection test failed",
           description: result.error || "Failed to connect to n8n server",
           variant: "destructive",
         });
@@ -106,7 +95,7 @@ const N8nConnectionSetup = () => {
     } catch (error) {
       setConnectionStatus('disconnected');
       toast({
-        title: "Connection failed",
+        title: "Connection test failed",
         description: "Unable to reach n8n server. Please check the URL and ensure n8n is running.",
         variant: "destructive",
       });
@@ -232,6 +221,20 @@ const N8nConnectionSetup = () => {
           </div>
         </CardHeader>
         <CardContent className="space-y-4">
+          {/* CORS Warning Notice */}
+          <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+            <div className="flex items-start gap-2">
+              <div className="text-yellow-600 mt-1">⚠️</div>
+              <div className="text-sm">
+                <p className="font-medium text-yellow-800 mb-1">CORS Limitations</p>
+                <p className="text-yellow-700">
+                  Due to browser security policies, webhook testing is limited. Test requests will be sent, 
+                  but we cannot verify responses. Check your n8n workflow execution history to confirm receipt.
+                </p>
+              </div>
+            </div>
+          </div>
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="n8n-url">n8n Server URL *</Label>
