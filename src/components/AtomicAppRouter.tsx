@@ -15,6 +15,13 @@ import Auth from '@/pages/Auth';
 import CustomerPortal from '@/pages/CustomerPortal';
 import Automations from '@/pages/Automations';
 import MasterAdmin from '@/pages/MasterAdmin';
+import DebugPanel from '@/pages/DebugPanel';
+import Database from '@/pages/Database';
+import Logs from '@/pages/Logs';
+import ApiMonitor from '@/pages/ApiMonitor';
+import UserManagement from '@/pages/UserManagement';
+import SystemReports from '@/pages/SystemReports';
+import SupportCenter from '@/pages/SupportCenter';
 
 const ErrorFallback = ({ error, resetErrorBoundary }: { error: Error; resetErrorBoundary: () => void }) => (
   <div className="min-h-screen flex items-center justify-center bg-background">
@@ -56,12 +63,68 @@ const AtomicAppRouter = () => {
               } 
             />
             
-            {/* Master Admin Route - highest security */}
+            {/* Master Admin Routes - highest security */}
             <Route 
               path="/master-admin" 
               element={
                 <AtomicProtectedRoute>
                   <MasterAdmin />
+                </AtomicProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/debug" 
+              element={
+                <AtomicProtectedRoute>
+                  <DebugPanel />
+                </AtomicProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/database" 
+              element={
+                <AtomicProtectedRoute>
+                  <Database />
+                </AtomicProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/logs" 
+              element={
+                <AtomicProtectedRoute>
+                  <Logs />
+                </AtomicProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/api-monitor" 
+              element={
+                <AtomicProtectedRoute>
+                  <ApiMonitor />
+                </AtomicProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/user-management" 
+              element={
+                <AtomicProtectedRoute>
+                  <UserManagement />
+                </AtomicProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/system-reports" 
+              element={
+                <AtomicProtectedRoute>
+                  <SystemReports />
+                </AtomicProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/support" 
+              element={
+                <AtomicProtectedRoute>
+                  <SupportCenter />
                 </AtomicProtectedRoute>
               } 
             />

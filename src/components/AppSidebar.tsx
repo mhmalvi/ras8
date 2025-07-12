@@ -64,6 +64,7 @@ const systemItems = [
   { title: "Webhooks", url: "/webhooks", icon: Webhook },
 ];
 
+// These items are only for master admin users
 const devItems = [
   { title: "Debug Panel", url: "/debug", icon: Bug },
   { title: "Database", url: "/database", icon: Database },
@@ -71,6 +72,7 @@ const devItems = [
   { title: "API Monitor", url: "/api-monitor", icon: Activity },
 ];
 
+// These items are only for master admin users
 const adminItems = [
   { title: "Master Admin", url: "/master-admin", icon: Crown },
   { title: "User Management", url: "/user-management", icon: UserCog },
@@ -92,10 +94,10 @@ export function AppSidebar() {
       ? "bg-blue-100 text-blue-700 font-medium" 
       : "text-slate-600 hover:bg-slate-100 hover:text-slate-900";
 
-  // Check if user has admin access
-  const isMasterAdmin = user?.email?.includes('admin') || 
+  // Check if user has master admin access - more restrictive than before
+  const isMasterAdmin = user?.email === 'aalvi.hm@gmail.com' || 
                         profile?.role === 'master_admin' ||
-                        user?.email === 'aalvi.hm@gmail.com';
+                        user?.email?.endsWith('@admin.returnsauto.com'); // Admin domain check
 
   return (
     <Sidebar className="border-r border-slate-200">
@@ -177,27 +179,36 @@ export function AppSidebar() {
           </SidebarGroupContent>
         </SidebarGroup>
 
-        <SidebarGroup>
-          <SidebarGroupLabel>Development</SidebarGroupLabel>
-          <SidebarGroupContent>
-            <SidebarMenu>
-              {devItems.map((item) => (
-                <SidebarMenuItem key={item.title}>
-                  <SidebarMenuButton asChild>
-                    <NavLink 
-                      to={item.url} 
-                      className={getNavClass(item.url)}
-                    >
-                      <item.icon className="h-4 w-4" />
-                      {!collapsed && <span>{item.title}</span>}
-                    </NavLink>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
+        {/* Development section - ONLY for master admin */}
+        {isMasterAdmin && (
+          <SidebarGroup>
+            <SidebarGroupLabel>
+              <div className="flex items-center gap-2">
+                <Bug className="h-3 w-3 text-amber-600" />
+                {!collapsed && <span className="text-amber-700 font-semibold">Development</span>}
+              </div>
+            </SidebarGroupLabel>
+            <SidebarGroupContent>
+              <SidebarMenu>
+                {devItems.map((item) => (
+                  <SidebarMenuItem key={item.title}>
+                    <SidebarMenuButton asChild>
+                      <NavLink 
+                        to={item.url} 
+                        className={`${getNavClass(item.url)} ${isActive(item.url) ? 'bg-amber-100 text-amber-700' : 'hover:bg-amber-50'}`}
+                      >
+                        <item.icon className="h-4 w-4" />
+                        {!collapsed && <span>{item.title}</span>}
+                      </NavLink>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                ))}
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+        )}
 
+        {/* Admin section - ONLY for master admin */}
         {isMasterAdmin && (
           <SidebarGroup>
             <SidebarGroupLabel>
