@@ -111,8 +111,7 @@ const N8nConnectionSetup = () => {
         testUrls,
         {
           preferServerSide: true,
-          fallbackToBrowser: true,
-          testType: 'both'
+          fallbackToBrowser: true
         }
       );
 
@@ -153,12 +152,21 @@ const N8nConnectionSetup = () => {
         });
       }
 
-      // Log detailed test results
+      // Log detailed test results - serialize properly for JSON
+      const serializedResults = results.map(result => ({
+        success: result.success,
+        status: result.status,
+        error: result.error,
+        testType: result.testType,
+        url: result.url,
+        timestamp: result.timestamp
+      }));
+
       await supabase.from('analytics_events').insert({
         event_type: 'n8n_connection_test',
         merchant_id: profile.merchant_id,
         event_data: {
-          test_results: results,
+          test_results: serializedResults,
           success_count: successCount,
           total_count: testCount,
           test_type: 'unified_service',

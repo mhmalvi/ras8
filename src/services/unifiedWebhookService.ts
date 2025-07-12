@@ -13,11 +13,13 @@ interface WebhookTestResult {
   timestamp?: string;
   testType?: 'server_side' | 'browser_based';
   payloadSize?: number;
+  [key: string]: any; // Add index signature for JSON compatibility
 }
 
 interface WebhookTestOptions {
   preferServerSide?: boolean;
   fallbackToBrowser?: boolean;
+  testType?: 'server_side' | 'browser_based' | 'both';
   testPayload?: any;
   headers?: Record<string, string>;
 }
@@ -53,12 +55,15 @@ export class UnifiedWebhookService {
           console.log(`✅ Server-side test successful for: ${webhookUrl}`);
           return {
             ...serverResult,
-            testType: 'server_side'
+            testType: 'server_side' as const
           };
         } else {
           console.log(`⚠️ Server-side test failed: ${serverResult.error}`);
           if (!fallbackToBrowser) {
-            return serverResult;
+            return {
+              ...serverResult,
+              testType: 'server_side' as const
+            };
           }
         }
       } catch (error) {
@@ -67,7 +72,7 @@ export class UnifiedWebhookService {
           return {
             success: false,
             error: error instanceof Error ? error.message : 'Server-side test failed',
-            testType: 'server_side',
+            testType: 'server_side' as const,
             timestamp: new Date().toISOString()
           };
         }
@@ -83,7 +88,7 @@ export class UnifiedWebhookService {
     return {
       success: false,
       error: 'All testing methods failed',
-      testType: 'server_side',
+      testType: 'server_side' as const,
       timestamp: new Date().toISOString()
     };
   }
@@ -162,7 +167,7 @@ export class UnifiedWebhookService {
         url: webhookUrl,
         merchantId: merchantId,
         timestamp: new Date().toISOString(),
-        testType: 'browser_based',
+        testType: 'browser_based' as const,
         payloadSize: JSON.stringify(finalPayload).length
       };
 
@@ -183,7 +188,7 @@ export class UnifiedWebhookService {
         return {
           success: false,
           error: 'CORS error - browser blocked the request. Try server-side testing instead.',
-          testType: 'browser_based',
+          testType: 'browser_based' as const,
           timestamp: new Date().toISOString(),
           url: webhookUrl,
           merchantId: merchantId
@@ -193,7 +198,7 @@ export class UnifiedWebhookService {
       return {
         success: false,
         error: error instanceof Error ? error.message : 'Browser-based test failed',
-        testType: 'browser_based',
+        testType: 'browser_based' as const,
         timestamp: new Date().toISOString(),
         url: webhookUrl,
         merchantId: merchantId
