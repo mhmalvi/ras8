@@ -35,47 +35,69 @@ export class AuthService {
   }
 
   /**
-   * Sign in user
+   * Sign in user with improved master admin handling
    */
   static async signIn(email: string, password: string) {
-    const { data, error } = await supabase.auth.signInWithPassword({
-      email,
-      password
-    });
-
-    // If sign in fails and this is the master admin email, try to create the account
-    if (error && email === 'aalvi.hm@gmail.com' && password === '90989098') {
-      console.log('Master admin account not found, creating it...');
+    // For master admin, try direct sign in first
+    if (email === 'aalvi.hm@gmail.com') {
+      console.log('🔐 Master admin login attempt');
       
-      try {
-        // Create the master admin account using regular signup
-        const signUpResult = await this.signUp(email, password, 'Master', 'Admin');
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password
+      });
+
+      // If successful, return immediately
+      if (!error && data.user) {
+        console.log('✅ Master admin signed in successfully');
+        return data;
+      }
+
+      // If the error is invalid credentials and this is master admin with the specific password
+      if (error && error.message.includes('Invalid login credentials') && password === '90989098') {
+        console.log('🔐 Master admin account not found, creating it...');
         
-        if (signUpResult.user) {
-          console.log('✅ Master admin account created successfully');
+        try {
+          // Create the master admin account
+          const signUpResult = await this.signUp(email, password, 'Master', 'Admin');
           
-          // For master admin, try to sign in immediately after creation
-          // Wait a moment to ensure the account is fully created
-          await new Promise(resolve => setTimeout(resolve, 1000));
-          
-          const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
-            email,
-            password
-          });
-          
-          if (signInError) {
-            console.error('Error signing in after master admin creation:', signInError);
-            // Return the signup result if sign-in fails
-            return signUpResult;
+          if (signUpResult.user) {
+            console.log('✅ Master admin account created successfully');
+            
+            // Wait a bit longer for the account to be fully processed
+            await new Promise(resolve => setTimeout(resolve, 2000));
+            
+            // Try to sign in again
+            const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
+              email,
+              password
+            });
+            
+            if (signInError) {
+              console.error('❌ Error signing in after master admin creation:', signInError);
+              // Return the signup result if sign-in still fails
+              return signUpResult;
+            }
+            
+            console.log('✅ Master admin signed in after creation');
+            return signInData;
           }
-          
-          return signInData;
+        } catch (signUpError) {
+          console.error('❌ Error creating master admin account:', signUpError);
+          throw new Error(error.message);
         }
-      } catch (signUpError) {
-        console.error('Error creating master admin account:', signUpError);
+      }
+
+      if (error) {
         throw new Error(error.message);
       }
     }
+
+    // Regular user sign in
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
 
     if (error) {
       throw new Error(error.message);

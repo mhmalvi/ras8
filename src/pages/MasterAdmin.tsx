@@ -16,7 +16,8 @@ const MasterAdmin = () => {
     console.log('🔐 Master Admin access attempt:', { 
       user: !!user, 
       profile,
-      userEmail: user?.email 
+      userEmail: user?.email,
+      profileRole: profile?.role
     });
   }, [user, profile]);
 
@@ -59,7 +60,7 @@ const MasterAdmin = () => {
     );
   }
 
-  // Strict master admin access control
+  // Enhanced master admin access control - check both email and profile role
   const isMasterAdmin = user?.email === 'aalvi.hm@gmail.com' || 
                         profile?.role === 'master_admin' ||
                         user?.email?.endsWith('@admin.returnsauto.com');
@@ -83,6 +84,11 @@ const MasterAdmin = () => {
                 {user?.email && (
                   <div className="text-sm opacity-90">
                     Current user: {user.email}
+                  </div>
+                )}
+                {profile?.role && (
+                  <div className="text-sm opacity-90">
+                    Current role: {profile.role}
                   </div>
                 )}
                 <div className="text-sm opacity-75">
