@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { Settings, CheckCircle, XCircle, Server } from "lucide-react";
 import { supabase } from '@/integrations/supabase/client';
+import { n8nService } from '@/services/n8nService';
 
 const AutomationSettings = () => {
   const [n8nUrl, setN8nUrl] = useState('');
@@ -55,27 +56,22 @@ const AutomationSettings = () => {
 
     setLoading(true);
     try {
-      // Test connection to n8n server
-      const testUrl = `${n8nUrl}/healthz`;
-      const response = await fetch(testUrl, {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(apiKey && { 'Authorization': `Bearer ${apiKey}` })
-        }
-      });
-
-      if (response.ok) {
+      const result = await n8nService.testConnection(n8nUrl, apiKey);
+      
+      if (result.success) {
         setConnectionStatus('connected');
         toast({
           title: "Connection successful",
           description: "Successfully connected to n8n server.",
         });
+        
+        // Auto-save successful configuration
+        await saveSettings();
       } else {
         setConnectionStatus('disconnected');
         toast({
           title: "Connection failed",
-          description: `Failed to connect: ${response.statusText}`,
+          description: result.error || "Failed to connect to n8n server",
           variant: "destructive",
         });
       }
@@ -83,7 +79,7 @@ const AutomationSettings = () => {
       setConnectionStatus('disconnected');
       toast({
         title: "Connection failed",
-        description: "Unable to reach n8n server. Please check the URL.",
+        description: "Unable to reach n8n server. Please check the URL and ensure n8n is running.",
         variant: "destructive",
       });
     } finally {

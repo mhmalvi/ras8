@@ -302,6 +302,40 @@ export class N8nService {
     }
   }
 
+  async testConnection(baseUrl: string, apiKey?: string): Promise<{ success: boolean; data?: any; error?: string }> {
+    try {
+      console.log('🧪 Testing n8n connection:', baseUrl);
+      
+      const testUrl = `${baseUrl.replace(/\/$/, '')}/healthz`;
+      const response = await fetch(testUrl, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(apiKey && { 'X-N8N-API-KEY': apiKey })
+        }
+      });
+
+      if (response.ok) {
+        console.log('✅ n8n connection test successful');
+        return {
+          success: true,
+          data: { message: 'Connection successful', status: response.status }
+        };
+      } else {
+        return {
+          success: false,
+          error: `Connection failed: ${response.statusText} (${response.status})`
+        };
+      }
+    } catch (error) {
+      console.error('💥 n8n connection test failed:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unable to connect to n8n server'
+      };
+    }
+  }
+
   async testWebhookConnection(webhookUrl: string): Promise<{ success: boolean; data?: any; error?: string }> {
     try {
       console.log('🧪 Testing webhook connection:', webhookUrl);
@@ -311,7 +345,7 @@ export class N8nService {
         headers: {
           'Content-Type': 'application/json'
         },
-        mode: 'no-cors', // Add this to handle CORS
+        mode: 'no-cors',
         body: JSON.stringify({
           test: true,
           timestamp: new Date().toISOString(),
@@ -319,13 +353,11 @@ export class N8nService {
         })
       });
 
-      // Since we're using no-cors, we won't get a proper response status
-      // Instead, we'll show a more informative message
-      console.log('✅ Webhook test successful');
+      console.log('✅ Webhook test request sent');
       
       return {
         success: true,
-        data: { message: 'Test request sent successfully' }
+        data: { message: 'Test request sent successfully - check your n8n workflow execution logs' }
       };
     } catch (error) {
       console.error('💥 Webhook test failed:', error);

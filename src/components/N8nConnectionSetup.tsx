@@ -58,18 +58,11 @@ const N8nConnectionSetup = () => {
 
     setLoading(true);
     try {
-      // Test connection to n8n server
-      const testUrl = `${n8nUrl.replace(/\/$/, '')}/healthz`;
+      // Import n8nService dynamically to avoid circular dependency
+      const { n8nService } = await import('@/services/n8nService');
+      const result = await n8nService.testConnection(n8nUrl, apiKey);
       
-      const response = await fetch(testUrl, {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(apiKey && { 'X-N8N-API-KEY': apiKey })
-        }
-      });
-
-      if (response.ok) {
+      if (result.success) {
         setConnectionStatus('connected');
         
         // Save successful configuration
@@ -94,7 +87,7 @@ const N8nConnectionSetup = () => {
         setConnectionStatus('disconnected');
         toast({
           title: "Connection failed",
-          description: `Failed to connect: ${response.statusText}`,
+          description: result.error || "Failed to connect to n8n server",
           variant: "destructive",
         });
       }
