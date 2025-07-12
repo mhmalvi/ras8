@@ -50,38 +50,6 @@ export const AtomicAuthProvider = ({ children }: AtomicAuthProviderProps) => {
               setSession(session);
               setUser(session?.user ?? null);
             }
-
-            // For master admin, ensure profile is set up correctly after successful sign in
-            if (session?.user?.email === 'aalvi.hm@gmail.com' && event === 'SIGNED_IN') {
-              console.log('🔐 Master admin signed in, setting up profile...');
-              setTimeout(async () => {
-                try {
-                  const { error: profileError } = await supabase
-                    .from('profiles')
-                    .upsert({
-                      id: session.user.id,
-                      email: session.user.email!,
-                      role: 'master_admin',
-                      first_name: session.user.user_metadata?.first_name || 'Master',
-                      last_name: session.user.user_metadata?.last_name || 'Admin',
-                      updated_at: new Date().toISOString()
-                    });
-
-                  if (profileError) {
-                    console.error('Error updating master admin profile:', profileError);
-                  } else {
-                    console.log('✅ Master admin profile updated successfully');
-                    // Force a redirect to master admin for master admin users
-                    if (window.location.pathname !== '/master-admin') {
-                      console.log('🔄 Redirecting to master admin dashboard...');
-                      window.location.href = '/master-admin';
-                    }
-                  }
-                } catch (err) {
-                  console.error('Error in profile update:', err);
-                }
-              }, 100);
-            }
           }
         );
 
@@ -127,13 +95,8 @@ export const AtomicAuthProvider = ({ children }: AtomicAuthProviderProps) => {
       setLoading(true);
       const data = await AuthService.signIn(email, password);
       
-      // If we got a user back (either from sign-in or account creation), the auth state listener will handle the rest
       if (data.user) {
         console.log('✅ Authentication successful');
-        // Special handling for master admin redirect
-        if (email === 'aalvi.hm@gmail.com') {
-          console.log('🔄 Master admin login detected, will redirect after profile setup');
-        }
       }
       
       setLoading(false);

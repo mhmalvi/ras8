@@ -35,74 +35,22 @@ export class AuthService {
   }
 
   /**
-   * Sign in user with improved master admin handling
+   * Sign in user
    */
   static async signIn(email: string, password: string) {
-    // For master admin, try direct sign in first
-    if (email === 'aalvi.hm@gmail.com') {
-      console.log('🔐 Master admin login attempt');
-      
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email,
-        password
-      });
-
-      // If successful, return immediately
-      if (!error && data.user) {
-        console.log('✅ Master admin signed in successfully');
-        return data;
-      }
-
-      // If the error is invalid credentials and this is master admin with the specific password
-      if (error && error.message.includes('Invalid login credentials') && password === '90989098') {
-        console.log('🔐 Master admin account not found, creating it...');
-        
-        try {
-          // Create the master admin account
-          const signUpResult = await this.signUp(email, password, 'Master', 'Admin');
-          
-          if (signUpResult.user) {
-            console.log('✅ Master admin account created successfully');
-            
-            // Wait a bit longer for the account to be fully processed
-            await new Promise(resolve => setTimeout(resolve, 2000));
-            
-            // Try to sign in again
-            const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
-              email,
-              password
-            });
-            
-            if (signInError) {
-              console.error('❌ Error signing in after master admin creation:', signInError);
-              // Return the signup result if sign-in still fails
-              return signUpResult;
-            }
-            
-            console.log('✅ Master admin signed in after creation');
-            return signInData;
-          }
-        } catch (signUpError) {
-          console.error('❌ Error creating master admin account:', signUpError);
-          throw new Error(error.message);
-        }
-      }
-
-      if (error) {
-        throw new Error(error.message);
-      }
-    }
-
-    // Regular user sign in
+    console.log('🔐 Sign in attempt for:', email);
+    
     const { data, error } = await supabase.auth.signInWithPassword({
       email,
       password,
     });
 
     if (error) {
+      console.error('❌ Sign in error:', error.message);
       throw new Error(error.message);
     }
 
+    console.log('✅ Sign in successful for:', email);
     return data;
   }
 
