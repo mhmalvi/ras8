@@ -17,6 +17,7 @@ interface EnhancedWebhookPayload extends WebhookPayload {
     returnDetails?: any;
     customerDetails?: any;
     itemDetails?: any[];
+    test?: boolean; // Added test property
     metadata?: {
       source: string;
       timestamp: string;
