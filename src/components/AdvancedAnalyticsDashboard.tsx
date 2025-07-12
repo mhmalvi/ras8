@@ -212,12 +212,12 @@ const AdvancedAnalyticsDashboard = () => {
 
     console.log('📈 Generating trend charts from real data');
     
-    // Use real monthly trends from analytics
+    // Use real monthly trends from analytics and calculate refunds from returns - exchanges
     const trendData = analytics.monthlyTrends.map(trend => ({
       month: trend.month,
       returns: trend.returns,
       exchanges: trend.exchanges,
-      refunds: trend.refunds,
+      refunds: trend.returns - trend.exchanges, // Calculate refunds as difference
       aiAccuracy: Math.min(95, Math.max(60, 75 + Math.random() * 20)), // Simulated AI accuracy trend
       satisfaction: Math.min(95, Math.max(70, 80 + Math.random() * 15)) // Simulated satisfaction trend
     }));

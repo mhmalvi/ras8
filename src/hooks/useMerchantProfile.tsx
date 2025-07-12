@@ -26,12 +26,7 @@ export const useMerchantProfile = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (authLoading) {
-      console.log('⏳ Auth still loading, waiting...');
-      return;
-    }
-
+  const fetchProfile = async () => {
     if (!user) {
       console.log('❌ No authenticated user');
       setProfile(null);
@@ -40,53 +35,58 @@ export const useMerchantProfile = () => {
       return;
     }
 
-    const fetchProfile = async () => {
-      try {
-        console.log('🔍 Fetching user profile for:', user.id);
-        setLoading(true);
-        setError(null);
+    try {
+      console.log('🔍 Fetching user profile for:', user.id);
+      setLoading(true);
+      setError(null);
 
-        // Get user profile
-        const { data: profileData, error: profileError } = await supabase
-          .from('profiles')
+      // Get user profile
+      const { data: profileData, error: profileError } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', user.id)
+        .single();
+
+      if (profileError) {
+        console.error('💥 Error fetching profile:', profileError);
+        throw profileError;
+      }
+
+      console.log('✅ Profile fetched:', profileData);
+      setProfile(profileData);
+
+      // If user has a merchant_id, fetch merchant details
+      if (profileData.merchant_id) {
+        console.log('🏪 Fetching merchant details for:', profileData.merchant_id);
+        
+        const { data: merchantData, error: merchantError } = await supabase
+          .from('merchants')
           .select('*')
-          .eq('id', user.id)
+          .eq('id', profileData.merchant_id)
           .single();
 
-        if (profileError) {
-          console.error('💥 Error fetching profile:', profileError);
-          throw profileError;
+        if (merchantError) {
+          console.error('💥 Error fetching merchant:', merchantError);
+          // Don't throw here, user might not have merchant assigned yet
+        } else {
+          console.log('✅ Merchant fetched:', merchantData);
+          setMerchant(merchantData);
         }
-
-        console.log('✅ Profile fetched:', profileData);
-        setProfile(profileData);
-
-        // If user has a merchant_id, fetch merchant details
-        if (profileData.merchant_id) {
-          console.log('🏪 Fetching merchant details for:', profileData.merchant_id);
-          
-          const { data: merchantData, error: merchantError } = await supabase
-            .from('merchants')
-            .select('*')
-            .eq('id', profileData.merchant_id)
-            .single();
-
-          if (merchantError) {
-            console.error('💥 Error fetching merchant:', merchantError);
-            // Don't throw here, user might not have merchant assigned yet
-          } else {
-            console.log('✅ Merchant fetched:', merchantData);
-            setMerchant(merchantData);
-          }
-        }
-
-      } catch (err) {
-        console.error('💥 Error in fetchProfile:', err);
-        setError(err instanceof Error ? err.message : 'Failed to fetch profile');
-      } finally {
-        setLoading(false);
       }
-    };
+
+    } catch (err) {
+      console.error('💥 Error in fetchProfile:', err);
+      setError(err instanceof Error ? err.message : 'Failed to fetch profile');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (authLoading) {
+      console.log('⏳ Auth still loading, waiting...');
+      return;
+    }
 
     fetchProfile();
   }, [user, authLoading]);
@@ -113,11 +113,16 @@ export const useMerchantProfile = () => {
     }
   };
 
+  const refetch = () => {
+    fetchProfile();
+  };
+
   return {
     profile,
     merchant,
     loading,
     error,
-    updateProfile
+    updateProfile,
+    refetch
   };
 };

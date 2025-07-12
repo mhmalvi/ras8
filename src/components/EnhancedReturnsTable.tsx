@@ -1,4 +1,3 @@
-
 import { useState, useMemo } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -105,7 +104,7 @@ const EnhancedReturnsTable = () => {
       amount: returnItem.total_amount,
       date: returnItem.created_at,
       items: returnItem.return_items?.length || 0,
-      aiSuggestion: returnItem.ai_suggestions?.[0]?.suggested_product_name || 'None'
+      aiSuggestion: returnItem.ai_suggestions?.[0]?.reasoning || 'None'
     }));
 
     // Simple CSV export
@@ -285,10 +284,10 @@ const EnhancedReturnsTable = () => {
                         <Sparkles className="h-4 w-4 text-purple-500" />
                         <div>
                           <div className="text-sm font-medium text-purple-700 truncate max-w-32">
-                            {returnItem.ai_suggestions[0].suggested_product_name}
+                            {returnItem.ai_suggestions[0].suggestion_type}
                           </div>
                           <div className="text-xs text-purple-500">
-                            {returnItem.ai_suggestions[0].confidence_score}% confidence
+                            {Math.round(returnItem.ai_suggestions[0].confidence_score * 100)}% confidence
                           </div>
                         </div>
                       </div>
@@ -339,15 +338,15 @@ const EnhancedReturnsTable = () => {
                                   <h4 className="font-medium text-purple-900">AI Recommendation</h4>
                                 </div>
                                 <div className="space-y-2">
-                                  <p className="text-sm">{selectedReturn.ai_suggestions[0].suggested_product_name}</p>
+                                  <p className="text-sm">{selectedReturn.ai_suggestions[0].suggestion_type}</p>
                                   <p className="text-xs text-slate-600">{selectedReturn.ai_suggestions[0].reasoning}</p>
                                   <div className="flex items-center justify-between">
                                     <span className="text-sm text-purple-600">
-                                      Confidence: {selectedReturn.ai_suggestions[0].confidence_score}%
+                                      Confidence: {Math.round(selectedReturn.ai_suggestions[0].confidence_score * 100)}%
                                     </span>
                                     <Badge variant="outline" className="bg-white">
-                                      {selectedReturn.ai_suggestions[0].confidence_score >= 90 ? 'High Match' : 
-                                       selectedReturn.ai_suggestions[0].confidence_score >= 70 ? 'Medium Match' : 'Low Match'}
+                                      {selectedReturn.ai_suggestions[0].confidence_score >= 0.9 ? 'High Match' : 
+                                       selectedReturn.ai_suggestions[0].confidence_score >= 0.7 ? 'Medium Match' : 'Low Match'}
                                     </Badge>
                                   </div>
                                 </div>
