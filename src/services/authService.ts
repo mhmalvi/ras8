@@ -12,7 +12,7 @@ export class AuthService {
   /**
    * Sign up new user
    */
-  static async signUp(email: string, password: string, metadata?: any) {
+  static async signUp(email: string, password: string, firstName?: string, lastName?: string) {
     const redirectUrl = `${window.location.origin}/`;
     
     const { data, error } = await supabase.auth.signUp({
@@ -20,12 +20,38 @@ export class AuthService {
       password,
       options: {
         emailRedirectTo: redirectUrl,
-        data: metadata
+        data: {
+          first_name: firstName || '',
+          last_name: lastName || ''
+        }
       }
     });
 
     if (error) {
       throw new Error(error.message);
+    }
+
+    // If this is the master admin email, ensure they get the proper role
+    if (email === 'aalvi.hm@gmail.com' && data.user) {
+      try {
+        // Update or create profile with master_admin role
+        const { error: profileError } = await supabase
+          .from('profiles')
+          .upsert({
+            id: data.user.id,
+            email: data.user.email!,
+            role: 'master_admin',
+            first_name: firstName || 'Master',
+            last_name: lastName || 'Admin',
+            updated_at: new Date().toISOString()
+          });
+
+        if (profileError) {
+          console.error('Error setting master admin role:', profileError);
+        }
+      } catch (err) {
+        console.error('Error updating profile for master admin:', err);
+      }
     }
 
     return data;
