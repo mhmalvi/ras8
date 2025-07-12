@@ -7,7 +7,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Loader2, UserCheck, AlertCircle, RefreshCw } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAtomicAuth } from '@/contexts/AtomicAuthContext';
 import { useProfile } from '@/hooks/useProfile';
 
 interface Merchant {
@@ -17,7 +17,7 @@ interface Merchant {
 }
 
 const MerchantAssignment = () => {
-  const { user } = useAuth();
+  const { user } = useAtomicAuth();
   const { profile, refetch: refetchProfile } = useProfile();
   const [merchants, setMerchants] = useState<Merchant[]>([]);
   const [selectedMerchant, setSelectedMerchant] = useState<string>('');
