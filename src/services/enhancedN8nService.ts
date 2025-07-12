@@ -17,6 +17,7 @@ interface EnhancedWebhookPayload extends WebhookPayload {
     returnDetails?: any;
     customerDetails?: any;
     itemDetails?: any[];
+    campaignData?: any; // Added this missing property
     test?: boolean;
     metadata?: {
       source: string;
@@ -209,7 +210,7 @@ export class EnhancedN8nService {
           id: campaignData.customerId,
           email: campaignData.customerEmail
         },
-        campaignData,
+        campaignData, // Now this property exists in the interface
         metadata: {
           source: 'returns_automation_saas',
           timestamp: new Date().toISOString(),

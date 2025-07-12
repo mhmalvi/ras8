@@ -232,8 +232,8 @@ export class EnhancedShopifyService {
           break;
       }
 
-      // Trigger n8n workflow
-      await EnhancedN8nService.sendWebhook('webhook/shopify-webhook', {
+      // Trigger n8n workflow with proper arguments
+      await EnhancedN8nService.sendWebhook(merchant.id, 'webhook/shopify-webhook', {
         event: `shopify_${event.replace('/', '_')}`,
         data: {
           shopDomain,
