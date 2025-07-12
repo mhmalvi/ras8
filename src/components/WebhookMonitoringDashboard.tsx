@@ -41,7 +41,7 @@ const WebhookMonitoringDashboard = () => {
         WebhookMonitoringService.getWebhookStats(profile.merchant_id, timeframe)
       ]);
       
-      setActivities(activitiesData);
+      setActivities(activitiesData as WebhookActivity[]);
       setStats(statsData);
     } catch (error) {
       console.error('Error loading webhook data:', error);

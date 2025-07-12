@@ -14,7 +14,8 @@ export class EnhancedShopifyWebhookService {
         webhook_type: 'order_created',
         source: 'shopify',
         status: 'received',
-        payload
+        payload,
+        response: null
       });
       activityId = activity.id;
 
@@ -107,7 +108,8 @@ export class EnhancedShopifyWebhookService {
         webhook_type: 'return_requested',
         source: 'shopify',
         status: 'received',
-        payload
+        payload,
+        response: null
       });
       activityId = activity.id;
 
@@ -208,6 +210,7 @@ export class EnhancedShopifyWebhookService {
         source: 'n8n',
         status: 'failed',
         payload: data,
+        response: null,
         error_message: error instanceof Error ? error.message : 'Unknown error'
       });
 

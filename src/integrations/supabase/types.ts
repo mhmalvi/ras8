@@ -399,6 +399,56 @@ export type Database = {
           },
         ]
       }
+      webhook_activity: {
+        Row: {
+          created_at: string
+          error_message: string | null
+          id: string
+          merchant_id: string | null
+          payload: Json | null
+          processing_time_ms: number | null
+          response: Json | null
+          source: string
+          status: string
+          updated_at: string
+          webhook_type: string
+        }
+        Insert: {
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          merchant_id?: string | null
+          payload?: Json | null
+          processing_time_ms?: number | null
+          response?: Json | null
+          source: string
+          status?: string
+          updated_at?: string
+          webhook_type: string
+        }
+        Update: {
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          merchant_id?: string | null
+          payload?: Json | null
+          processing_time_ms?: number | null
+          response?: Json | null
+          source?: string
+          status?: string
+          updated_at?: string
+          webhook_type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "webhook_activity_merchant_id_fkey"
+            columns: ["merchant_id"]
+            isOneToOne: false
+            referencedRelation: "merchants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
