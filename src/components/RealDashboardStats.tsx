@@ -1,13 +1,12 @@
-
 import { TrendingUp, TrendingDown, DollarSign, RefreshCw, Sparkles } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useState, useEffect } from "react";
-import { useProfile } from "@/hooks/useProfile";
+import { useMerchantProfile } from "@/hooks/useMerchantProfile";
 import { RealTimeAnalyticsService, type RealTimeAnalytics } from "@/services/realTimeAnalyticsService";
 
 const RealDashboardStats = () => {
-  const { profile } = useProfile();
+  const { profile } = useMerchantProfile();
   const [analytics, setAnalytics] = useState<RealTimeAnalytics | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);

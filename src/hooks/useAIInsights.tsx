@@ -1,10 +1,10 @@
 
 import { useState, useEffect } from 'react';
-import { useProfile } from './useProfile';
+import { useMerchantProfile } from './useMerchantProfile';
 import { RealAIInsightsService, type RealAIInsight } from '@/services/realAIInsightsService';
 
 export const useAIInsights = () => {
-  const { profile } = useProfile();
+  const { profile } = useMerchantProfile();
   const [insights, setInsights] = useState<RealAIInsight[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
