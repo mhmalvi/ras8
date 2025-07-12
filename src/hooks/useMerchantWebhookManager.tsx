@@ -1,8 +1,8 @@
-
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useMerchantProfile } from '@/hooks/useMerchantProfile';
+import { ServerSideWebhookService } from '@/services/serverSideWebhookService';
 
 interface MerchantWebhookEndpoint {
   id: string;
@@ -199,39 +199,54 @@ export const useMerchantWebhookManager = () => {
     setLoading(true);
 
     try {
-      console.log('🧪 Testing merchant-specific webhook:', webhook.id, 'for merchant:', merchantId);
+      console.log(`🧪 Testing merchant-specific webhook via server-side: ${webhook.id} for merchant: ${merchantId}`);
 
-      const { EnhancedN8nService } = await import('@/services/enhancedN8nService');
-      const result = await EnhancedN8nService.testMerchantWebhooks(merchantId);
+      // Use server-side webhook testing to bypass CORS
+      const result = await ServerSideWebhookService.testWebhook(
+        merchantId,
+        webhook.url,
+        {
+          // Custom test payload for this specific webhook
+          webhook_id: webhook.id,
+          webhook_name: webhook.name,
+          test_timestamp: new Date().toISOString(),
+          merchant_specific: true
+        }
+      );
+
+      // Log the test activity with merchant isolation
+      await supabase.from('analytics_events').insert({
+        event_type: 'webhook_triggered',
+        merchant_id: merchantId,
+        event_data: {
+          webhook_id: webhook.id,
+          webhook_url: webhook.url,
+          test_type: 'server_side',
+          success: result.success,
+          status: result.status,
+          error: result.error,
+          response_data: result.data,
+          merchant_isolated: true,
+          tenant_specific: true,
+          payload_size: result.payloadSize || 0,
+          test_method: 'server_side_edge_function'
+        }
+      });
+
+      await loadMerchantActivity();
 
       if (result.success) {
         toast({
-          title: "Test completed",
-          description: "Webhook test completed. Check your n8n workflow logs.",
+          title: "Test successful",
+          description: `Webhook test completed successfully (Status: ${result.status})`,
         });
-
-        // Log the test activity with merchant isolation
-        await supabase.from('analytics_events').insert({
-          event_type: 'webhook_triggered',
-          merchant_id: merchantId, // CRITICAL: Merchant isolation
-          event_data: {
-            webhook_id: webhook.id,
-            webhook_type: 'test',
-            success: true,
-            merchant_id: merchantId, // CRITICAL: Double isolation
-            test_results: result.results
-          }
-        });
-
       } else {
         toast({
           title: "Test failed",
-          description: "Webhook test failed. Check your configuration.",
+          description: `Webhook test failed: ${result.error || 'Unknown error'}`,
           variant: "destructive",
         });
       }
-
-      await loadMerchantActivity();
 
     } catch (error) {
       console.error('💥 Merchant webhook test failed:', error);
@@ -342,6 +357,6 @@ export const useMerchantWebhookManager = () => {
     deleteWebhook: deleteMerchantWebhook,
     refetchWebhooks: loadMerchantWebhooks,
     refetchActivity: loadMerchantActivity,
-    merchantId // Expose for debugging
+    merchantId
   };
 };

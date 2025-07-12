@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -118,10 +117,10 @@ const EnhancedWebhookManager = () => {
               <CardTitle className="flex items-center gap-2">
                 <Webhook className="h-5 w-5" />
                 <Shield className="h-4 w-4 text-green-600" />
-                Merchant Webhook Manager
+                Server-Side Webhook Manager
               </CardTitle>
               <CardDescription>
-                Manage your merchant-specific webhook endpoints with full tenant isolation
+                Manage webhook endpoints with server-side testing (bypasses CORS limitations)
               </CardDescription>
             </div>
             <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
@@ -204,16 +203,17 @@ const EnhancedWebhookManager = () => {
           </div>
         </CardHeader>
         <CardContent>
-          {/* Tenant isolation info */}
+          {/* Enhanced tenant isolation info */}
           <div className="p-4 bg-green-50 border border-green-200 rounded-lg mb-4">
             <div className="flex items-start gap-2">
               <Shield className="text-green-600 mt-1 h-4 w-4" />
               <div className="text-sm">
-                <p className="font-medium text-green-800 mb-2">✅ Tenant Isolation Active</p>
+                <p className="font-medium text-green-800 mb-2">✅ Server-Side Testing Active</p>
                 <div className="space-y-1 text-green-700">
                   <p><strong>Your Merchant ID:</strong> <code className="bg-green-100 px-1 rounded text-xs">{merchantId}</code></p>
-                  <p><strong>Data Scope:</strong> All webhooks are scoped to your merchant ID: {merchantId}</p>
-                  <p><strong>Security:</strong> Your webhook configurations are completely isolated from other merchants</p>
+                  <p><strong>Testing Method:</strong> Server-side via Supabase Edge Function (No CORS issues)</p>
+                  <p><strong>Security:</strong> Full tenant isolation with comprehensive logging</p>
+                  <p><strong>Payload:</strong> Comprehensive test data including orders, returns, and customer info</p>
                 </div>
               </div>
             </div>
@@ -363,19 +363,29 @@ const EnhancedWebhookManager = () => {
         </CardContent>
       </Card>
 
-      {/* Configuration Help */}
+      {/* Enhanced Configuration Help */}
       <Card>
         <CardHeader>
-          <CardTitle>Configuration Tips</CardTitle>
+          <CardTitle>Server-Side Testing Guide</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
-            <h4 className="font-medium text-blue-800 mb-2">🔧 n8n Webhook Setup</h4>
+            <h4 className="font-medium text-blue-800 mb-2">🚀 Server-Side Testing Benefits</h4>
             <div className="text-sm text-blue-700 space-y-1">
-              <p>• Set your n8n webhook node to <strong>POST</strong> method to receive JSON payloads</p>
-              <p>• Use the webhook URLs provided in the n8n Setup tab</p>
-              <p>• Include your merchant ID parameter: <code>?merchant={merchantId}</code></p>
-              <p>• Test webhooks send comprehensive payload data for validation</p>
+              <p>• <strong>No CORS Issues:</strong> Server-to-server communication bypasses browser limitations</p>
+              <p>• <strong>Production Ready:</strong> Same method used for real webhook deliveries</p>
+              <p>• <strong>Comprehensive Logging:</strong> Full request/response details in activity feed</p>
+              <p>• <strong>Detailed Payloads:</strong> Test with realistic order, return, and customer data</p>
+            </div>
+          </div>
+
+          <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
+            <h4 className="font-medium text-green-800 mb-2">🔧 n8n Configuration</h4>
+            <div className="text-sm text-green-700 space-y-1">
+              <p>• Set your n8n webhook node to <strong>POST</strong> method</p>
+              <p>• Use path: <strong>test-connection</strong> (not webhook/test-connection)</p>
+              <p>• Your webhook URL should be: <code>https://aethonautomation.app.n8n.cloud/test-connection</code></p>
+              <p>• Check n8n execution history for received webhooks</p>
             </div>
           </div>
 
@@ -383,10 +393,10 @@ const EnhancedWebhookManager = () => {
             <div className="flex items-start gap-2">
               <AlertTriangle className="h-4 w-4 text-amber-600 mt-0.5" />
               <div className="text-sm">
-                <p className="font-medium text-amber-800">CORS & Browser Limitations</p>
+                <p className="font-medium text-amber-800">Next Steps After Testing</p>
                 <p className="text-amber-700">
-                  Due to browser security, we cannot verify webhook responses. 
-                  Check your n8n execution history to confirm webhook receipt.
+                  Once testing works, create additional n8n workflows for production endpoints:
+                  return-processing, retention-campaign, and shopify-webhook
                 </p>
               </div>
             </div>
