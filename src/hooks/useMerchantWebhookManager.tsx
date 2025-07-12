@@ -249,10 +249,26 @@ export const useMerchantWebhookManager = () => {
     if (!merchantId) return;
 
     try {
+      // Get the current webhook data first
+      const { data: currentWebhook, error: fetchError } = await supabase
+        .from('analytics_events')
+        .select('event_data')
+        .eq('id', webhookId)
+        .eq('merchant_id', merchantId)
+        .single();
+
+      if (fetchError) throw fetchError;
+
+      // Update the webhook with the new active status
+      const updatedEventData = {
+        ...(currentWebhook.event_data as any),
+        active: active
+      };
+
       const { error } = await supabase
         .from('analytics_events')
         .update({
-          event_data: supabase.raw(`event_data || '{"active": ${active}}'::jsonb`)
+          event_data: updatedEventData
         })
         .eq('id', webhookId)
         .eq('merchant_id', merchantId); // CRITICAL: Merchant isolation
