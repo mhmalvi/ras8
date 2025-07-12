@@ -1,4 +1,5 @@
-import { useState, useEffect } from 'react';
+
+import { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -16,9 +17,9 @@ import {
   Clock,
   CheckCircle,
   XCircle,
-  AlertTriangle
+  Settings
 } from "lucide-react";
-import { useMerchantWebhookManager } from "@/hooks/useMerchantWebhookManager";
+import { useUnifiedWebhookManager } from "@/hooks/useUnifiedWebhookManager";
 import {
   Dialog,
   DialogContent,
@@ -35,20 +36,24 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import WebhookTestDialog from './WebhookTestDialog';
+import WebhookTestingOptions from './WebhookTestingOptions';
 
 const EnhancedWebhookManager = () => {
   const {
     webhooks,
     activities,
     loading,
+    testOptions,
+    setTestOptions,
     createWebhook,
     testWebhook,
     toggleWebhook,
     deleteWebhook,
     merchantId
-  } = useMerchantWebhookManager();
+  } = useUnifiedWebhookManager();
 
   const [showCreateDialog, setShowCreateDialog] = useState(false);
+  const [showOptionsDialog, setShowOptionsDialog] = useState(false);
   const [newWebhook, setNewWebhook] = useState({
     name: '',
     url: '',
@@ -97,6 +102,17 @@ const EnhancedWebhookManager = () => {
     return new Date(timestamp).toLocaleString();
   };
 
+  const getTestTypeBadge = (testType?: string) => {
+    switch (testType) {
+      case 'server_side':
+        return <Badge variant="default" className="text-xs">Server</Badge>;
+      case 'browser_based':
+        return <Badge variant="secondary" className="text-xs">Browser</Badge>;
+      default:
+        return <Badge variant="outline" className="text-xs">Unknown</Badge>;
+    }
+  };
+
   if (!merchantId) {
     return (
       <Card>
@@ -109,7 +125,7 @@ const EnhancedWebhookManager = () => {
 
   return (
     <div className="space-y-6">
-      {/* Header with isolation info */}
+      {/* Header with unified testing info */}
       <Card>
         <CardHeader>
           <div className="flex items-center justify-between">
@@ -117,103 +133,128 @@ const EnhancedWebhookManager = () => {
               <CardTitle className="flex items-center gap-2">
                 <Webhook className="h-5 w-5" />
                 <Shield className="h-4 w-4 text-green-600" />
-                Server-Side Webhook Manager
+                Unified Webhook Manager
               </CardTitle>
               <CardDescription>
-                Manage webhook endpoints with server-side testing (bypasses CORS limitations)
+                Manage webhook endpoints with both server-side and browser-based testing
               </CardDescription>
             </div>
-            <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
-              <DialogTrigger asChild>
-                <Button>
-                  <Plus className="h-4 w-4 mr-2" />
-                  Add Webhook
-                </Button>
-              </DialogTrigger>
-              <DialogContent>
-                <DialogHeader>
-                  <DialogTitle>Create New Webhook</DialogTitle>
-                  <DialogDescription>
-                    Add a new webhook endpoint for your merchant workflows
-                  </DialogDescription>
-                </DialogHeader>
-                <div className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="webhook-name">Webhook Name *</Label>
-                    <Input
-                      id="webhook-name"
-                      placeholder="e.g., Order Processing Webhook"
-                      value={newWebhook.name}
-                      onChange={(e) => setNewWebhook({ ...newWebhook, name: e.target.value })}
-                    />
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <Label htmlFor="webhook-url">Webhook URL *</Label>
-                    <Input
-                      id="webhook-url"
-                      type="url"
-                      placeholder="https://your-n8n.com/webhook/endpoint"
-                      value={newWebhook.url}
-                      onChange={(e) => setNewWebhook({ ...newWebhook, url: e.target.value })}
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="webhook-method">HTTP Method</Label>
-                    <Select
-                      value={newWebhook.method}
-                      onValueChange={(value: 'POST' | 'GET') => 
-                        setNewWebhook({ ...newWebhook, method: value })
-                      }
-                    >
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="POST">POST (Recommended)</SelectItem>
-                        <SelectItem value="GET">GET</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <p className="text-xs text-muted-foreground">
-                      POST is recommended for receiving JSON payloads
-                    </p>
-                  </div>
-
-                  <div className="flex items-center space-x-2">
-                    <Switch
-                      id="webhook-active"
-                      checked={newWebhook.active}
-                      onCheckedChange={(checked) => setNewWebhook({ ...newWebhook, active: checked })}
-                    />
-                    <Label htmlFor="webhook-active">Active</Label>
-                  </div>
-
-                  <div className="flex justify-end gap-2 pt-4">
-                    <Button variant="outline" onClick={() => setShowCreateDialog(false)}>
-                      Cancel
-                    </Button>
-                    <Button onClick={handleCreateWebhook} disabled={loading}>
-                      {loading ? 'Creating...' : 'Create Webhook'}
+            <div className="flex gap-2">
+              <Dialog open={showOptionsDialog} onOpenChange={setShowOptionsDialog}>
+                <DialogTrigger asChild>
+                  <Button variant="outline" size="sm">
+                    <Settings className="h-4 w-4 mr-2" />
+                    Testing Options
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="max-w-2xl">
+                  <DialogHeader>
+                    <DialogTitle>Webhook Testing Configuration</DialogTitle>
+                    <DialogDescription>
+                      Configure how webhook tests are performed across your application
+                    </DialogDescription>
+                  </DialogHeader>
+                  <WebhookTestingOptions
+                    options={testOptions}
+                    onChange={setTestOptions}
+                  />
+                  <div className="flex justify-end pt-4">
+                    <Button onClick={() => setShowOptionsDialog(false)}>
+                      Apply Settings
                     </Button>
                   </div>
-                </div>
-              </DialogContent>
-            </Dialog>
+                </DialogContent>
+              </Dialog>
+              
+              <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
+                <DialogTrigger asChild>
+                  <Button>
+                    <Plus className="h-4 w-4 mr-2" />
+                    Add Webhook
+                  </Button>
+                </DialogTrigger>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>Create New Webhook</DialogTitle>
+                    <DialogDescription>
+                      Add a new webhook endpoint for your merchant workflows
+                    </DialogDescription>
+                  </DialogHeader>
+                  <div className="space-y-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="webhook-name">Webhook Name *</Label>
+                      <Input
+                        id="webhook-name"
+                        placeholder="e.g., Order Processing Webhook"
+                        value={newWebhook.name}
+                        onChange={(e) => setNewWebhook({ ...newWebhook, name: e.target.value })}
+                      />
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <Label htmlFor="webhook-url">Webhook URL *</Label>
+                      <Input
+                        id="webhook-url"
+                        type="url"
+                        placeholder="https://your-n8n.com/webhook/endpoint"
+                        value={newWebhook.url}
+                        onChange={(e) => setNewWebhook({ ...newWebhook, url: e.target.value })}
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="webhook-method">HTTP Method</Label>
+                      <Select
+                        value={newWebhook.method}
+                        onValueChange={(value: 'POST' | 'GET') => 
+                          setNewWebhook({ ...newWebhook, method: value })
+                        }
+                      >
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="POST">POST (Recommended)</SelectItem>
+                          <SelectItem value="GET">GET</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div className="flex items-center space-x-2">
+                      <Switch
+                        id="webhook-active"
+                        checked={newWebhook.active}
+                        onCheckedChange={(checked) => setNewWebhook({ ...newWebhook, active: checked })}
+                      />
+                      <Label htmlFor="webhook-active">Active</Label>
+                    </div>
+
+                    <div className="flex justify-end gap-2 pt-4">
+                      <Button variant="outline" onClick={() => setShowCreateDialog(false)}>
+                        Cancel
+                      </Button>
+                      <Button onClick={handleCreateWebhook} disabled={loading}>
+                        {loading ? 'Creating...' : 'Create Webhook'}
+                      </Button>
+                    </div>
+                  </div>
+                </DialogContent>
+              </Dialog>
+            </div>
           </div>
         </CardHeader>
         <CardContent>
-          {/* Enhanced tenant isolation info */}
+          {/* Enhanced testing info */}
           <div className="p-4 bg-green-50 border border-green-200 rounded-lg mb-4">
             <div className="flex items-start gap-2">
               <Shield className="text-green-600 mt-1 h-4 w-4" />
               <div className="text-sm">
-                <p className="font-medium text-green-800 mb-2">✅ Server-Side Testing Active</p>
+                <p className="font-medium text-green-800 mb-2">✅ Unified Testing Active</p>
                 <div className="space-y-1 text-green-700">
                   <p><strong>Your Merchant ID:</strong> <code className="bg-green-100 px-1 rounded text-xs">{merchantId}</code></p>
-                  <p><strong>Testing Method:</strong> Server-side via Supabase Edge Function (No CORS issues)</p>
+                  <p><strong>Testing Method:</strong> {testOptions.testType === 'both' ? 'Server-side with Browser fallback' : testOptions.testType === 'server_side' ? 'Server-side only' : 'Browser-based only'}</p>
                   <p><strong>Security:</strong> Full tenant isolation with comprehensive logging</p>
-                  <p><strong>Payload:</strong> Comprehensive test data including orders, returns, and customer info</p>
+                  <p><strong>Reliability:</strong> Automatic fallback between testing methods</p>
                 </div>
               </div>
             </div>
@@ -230,7 +271,7 @@ const EnhancedWebhookManager = () => {
             <Badge variant="outline">{webhooks.length}</Badge>
           </CardTitle>
           <CardDescription>
-            Manage your merchant-specific webhook endpoints and test configurations
+            Manage your merchant-specific webhook endpoints with unified testing
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -284,7 +325,7 @@ const EnhancedWebhookManager = () => {
                     <div className="flex items-center gap-2">
                       <WebhookTestDialog
                         webhook={webhook}
-                        onTest={testWebhook}
+                        onTest={(w) => testWebhook(w)}
                         isLoading={loading}
                       />
                       <Switch
@@ -318,7 +359,7 @@ const EnhancedWebhookManager = () => {
             <Badge variant="outline">{activities.length}</Badge>
           </CardTitle>
           <CardDescription>
-            Real-time webhook execution history for your merchant
+            Real-time webhook execution history with testing method indicators
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -351,10 +392,11 @@ const EnhancedWebhookManager = () => {
                       )}
                     </div>
                   </div>
-                  <div className="text-right">
+                  <div className="text-right flex flex-col items-end gap-1">
                     <Badge variant="outline" className="text-xs">
-                      ID: {activity.webhookId}
+                      ID: {activity.webhookId.slice(0, 8)}...
                     </Badge>
+                    {getTestTypeBadge(activity.testType)}
                   </div>
                 </div>
               ))}
@@ -366,39 +408,26 @@ const EnhancedWebhookManager = () => {
       {/* Enhanced Configuration Help */}
       <Card>
         <CardHeader>
-          <CardTitle>Server-Side Testing Guide</CardTitle>
+          <CardTitle>Unified Testing Guide</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
-            <h4 className="font-medium text-blue-800 mb-2">🚀 Server-Side Testing Benefits</h4>
+            <h4 className="font-medium text-blue-800 mb-2">🚀 Unified Testing Benefits</h4>
             <div className="text-sm text-blue-700 space-y-1">
-              <p>• <strong>No CORS Issues:</strong> Server-to-server communication bypasses browser limitations</p>
-              <p>• <strong>Production Ready:</strong> Same method used for real webhook deliveries</p>
-              <p>• <strong>Comprehensive Logging:</strong> Full request/response details in activity feed</p>
-              <p>• <strong>Detailed Payloads:</strong> Test with realistic order, return, and customer data</p>
+              <p>• <strong>Flexible:</strong> Choose between server-side, browser-based, or both testing methods</p>
+              <p>• <strong>Reliable:</strong> Automatic fallback between methods ensures testing always works</p>
+              <p>• <strong>Comprehensive:</strong> Full request/response logging with method identification</p>
+              <p>• <strong>Configurable:</strong> Customize testing behavior per your requirements</p>
             </div>
           </div>
 
           <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
-            <h4 className="font-medium text-green-800 mb-2">🔧 n8n Configuration</h4>
+            <h4 className="font-medium text-green-800 mb-2">🔧 Recommended Configuration</h4>
             <div className="text-sm text-green-700 space-y-1">
-              <p>• Set your n8n webhook node to <strong>POST</strong> method</p>
-              <p>• Use path: <strong>test-connection</strong> (not webhook/test-connection)</p>
-              <p>• Your webhook URL should be: <code>https://aethonautomation.app.n8n.cloud/test-connection</code></p>
-              <p>• Check n8n execution history for received webhooks</p>
-            </div>
-          </div>
-
-          <div className="p-4 bg-amber-50 border border-amber-200 rounded-lg">
-            <div className="flex items-start gap-2">
-              <AlertTriangle className="h-4 w-4 text-amber-600 mt-0.5" />
-              <div className="text-sm">
-                <p className="font-medium text-amber-800">Next Steps After Testing</p>
-                <p className="text-amber-700">
-                  Once testing works, create additional n8n workflows for production endpoints:
-                  return-processing, retention-campaign, and shopify-webhook
-                </p>
-              </div>
+              <p>• Use <strong>"Both Methods"</strong> for maximum reliability</p>
+              <p>• Server-side testing preferred to avoid CORS issues</p>
+              <p>• Browser fallback ensures compatibility with all webhook configurations</p>
+              <p>• Activity log shows which method was used for each test</p>
             </div>
           </div>
         </CardContent>

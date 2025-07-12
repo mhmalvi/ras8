@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -9,6 +8,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Settings, Server, CheckCircle, XCircle, Copy, ExternalLink, Shield } from "lucide-react";
 import { supabase } from '@/integrations/supabase/client';
 import { useProfile } from '@/hooks/useProfile';
+import { UnifiedWebhookService } from '@/services/unifiedWebhookService';
 
 const N8nConnectionSetup = () => {
   const [n8nUrl, setN8nUrl] = useState('');
@@ -36,12 +36,11 @@ const N8nConnectionSetup = () => {
     try {
       console.log(`🔍 Loading MERCHANT-SPECIFIC n8n config for: ${profile.merchant_id}`);
       
-      // Load ONLY this merchant's n8n configuration
       const { data: configs, error } = await supabase
         .from('analytics_events')
         .select('*')
         .eq('event_type', 'n8n_configuration')
-        .eq('merchant_id', profile.merchant_id) // CRITICAL: Merchant-specific isolation
+        .eq('merchant_id', profile.merchant_id)
         .order('created_at', { ascending: false })
         .limit(1);
 
@@ -91,36 +90,84 @@ const N8nConnectionSetup = () => {
 
     setLoading(true);
     try {
-      console.log(`🧪 Testing MERCHANT-SPECIFIC n8n connection for: ${profile.merchant_id}`);
+      console.log(`🧪 Testing MERCHANT-SPECIFIC n8n connection using unified service for: ${profile.merchant_id}`);
       console.log(`🌐 Testing URL: ${n8nUrl}`);
       
-      const { n8nService } = await import('@/services/n8nService');
-      const result = await n8nService.testConnection(n8nUrl, apiKey, profile.merchant_id);
-      
-      if (result.success) {
+      // Test multiple endpoints using unified webhook service
+      const webhookEndpoints = [
+        'test-connection',
+        'return-processing', 
+        'retention-campaign'
+      ];
+
+      const testUrls = webhookEndpoints.map(endpoint => 
+        `${n8nUrl.replace(/\/$/, '')}/webhook/${endpoint}`
+      );
+
+      console.log(`🔗 Testing endpoints:`, testUrls);
+
+      const results = await UnifiedWebhookService.testMultipleWebhooks(
+        profile.merchant_id,
+        testUrls,
+        {
+          preferServerSide: true,
+          fallbackToBrowser: true,
+          testType: 'both'
+        }
+      );
+
+      const successfulTests = results.filter(r => r.success);
+      const testCount = results.length;
+      const successCount = successfulTests.length;
+
+      console.log(`📊 n8n connection test results: ${successCount}/${testCount} successful`);
+
+      if (successCount > 0) {
         setConnectionStatus('connected');
         
-        // Save successful MERCHANT-SPECIFIC configuration
+        // Save successful configuration
         await saveMerchantConfigurationToDatabase(true);
 
         toast({
           title: "Connection test completed",
-          description: `Your personal n8n server connection successful: ${result.data?.message || "Test requests sent successfully."}`,
+          description: `Successfully tested ${successCount}/${testCount} webhook endpoints via unified testing`,
         });
 
         toast({
           title: "Multi-Tenant Isolation Confirmed",
-          description: `Your n8n configuration is now isolated for merchant: ${profile.merchant_id}`,
+          description: `Your n8n configuration is isolated for merchant: ${profile.merchant_id}`,
           variant: "default",
         });
       } else {
         setConnectionStatus('disconnected');
+        
+        const errorMessages = results
+          .filter(r => !r.success)
+          .map(r => r.error)
+          .join(', ');
+
         toast({
           title: "Connection test failed",
-          description: result.error || "Failed to connect to your personal n8n server",
+          description: `All webhook tests failed: ${errorMessages}`,
           variant: "destructive",
         });
       }
+
+      // Log detailed test results
+      await supabase.from('analytics_events').insert({
+        event_type: 'n8n_connection_test',
+        merchant_id: profile.merchant_id,
+        event_data: {
+          test_results: results,
+          success_count: successCount,
+          total_count: testCount,
+          test_type: 'unified_service',
+          connection_verified: successCount > 0,
+          n8n_url: n8nUrl,
+          timestamp: new Date().toISOString()
+        }
+      });
+
     } catch (error) {
       setConnectionStatus('disconnected');
       console.error('💥 MERCHANT-SPECIFIC n8n connection test failed:', error);
@@ -183,18 +230,18 @@ const N8nConnectionSetup = () => {
       webhook_secret: webhookSecret,
       has_api_key: !!apiKey,
       connection_verified: verified,
-      merchantId: profile.merchant_id, // CRITICAL: Merchant isolation
-      tenant_isolated: true, // CRITICAL: Isolation flag
-      merchant_specific: true, // CRITICAL: Merchant-specific flag
+      merchantId: profile.merchant_id,
+      tenant_isolated: true,
+      merchant_specific: true,
+      testing_method: 'unified_service',
       [verified ? 'verified_at' : 'configured_at']: new Date().toISOString()
     };
 
-    // Check for existing MERCHANT-SPECIFIC config
     const { data: existingConfig } = await supabase
       .from('analytics_events')
       .select('id')
       .eq('event_type', 'n8n_configuration')
-      .eq('merchant_id', profile.merchant_id) // CRITICAL: Only check this merchant's config
+      .eq('merchant_id', profile.merchant_id)
       .order('created_at', { ascending: false })
       .limit(1)
       .maybeSingle();
@@ -205,7 +252,7 @@ const N8nConnectionSetup = () => {
         .from('analytics_events')
         .update({ event_data: configData })
         .eq('id', existingConfig.id)
-        .eq('merchant_id', profile.merchant_id); // CRITICAL: Double-check merchant ownership
+        .eq('merchant_id', profile.merchant_id);
       if (error) throw error;
     } else {
       console.log(`🆕 Creating new MERCHANT-SPECIFIC n8n config for: ${profile.merchant_id}`);
@@ -213,7 +260,7 @@ const N8nConnectionSetup = () => {
         .from('analytics_events')
         .insert({
           event_type: 'n8n_configuration',
-          merchant_id: profile.merchant_id, // CRITICAL: Merchant isolation
+          merchant_id: profile.merchant_id,
           event_data: configData
         });
       if (error) throw error;
@@ -232,7 +279,6 @@ const N8nConnectionSetup = () => {
       return;
     }
 
-    // CRITICAL: Include merchant ID in webhook URL for isolation
     const webhookUrl = `${n8nUrl.replace(/\/$/, '')}/webhook/${endpoint}?merchant=${profile.merchant_id}&tenant=${profile.merchant_id}`;
     navigator.clipboard.writeText(webhookUrl);
     toast({
@@ -272,7 +318,7 @@ const N8nConnectionSetup = () => {
                 Your Personal n8n Server Connection
               </CardTitle>
               <CardDescription>
-                Configure your personal n8n automation server (isolated per merchant)
+                Configure your personal n8n automation server with unified testing (isolated per merchant)
               </CardDescription>
             </div>
             <div className="flex items-center gap-2">
@@ -296,32 +342,18 @@ const N8nConnectionSetup = () => {
           </div>
         </CardHeader>
         <CardContent className="space-y-4">
-          {/* Multi-tenancy Info */}
+          {/* Multi-tenancy and Unified Testing Info */}
           <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
             <div className="flex items-start gap-2">
               <Shield className="text-green-600 mt-1 h-4 w-4" />
               <div className="text-sm">
-                <p className="font-medium text-green-800 mb-2">✅ Multi-Tenant Isolation Active</p>
+                <p className="font-medium text-green-800 mb-2">✅ Multi-Tenant Isolation + Unified Testing Active</p>
                 <div className="space-y-1 text-green-700">
                   <p><strong>Your Merchant ID:</strong> <code className="bg-green-100 px-1 rounded text-xs">{profile.merchant_id}</code></p>
                   <p><strong>Data Isolation:</strong> Your n8n configuration is completely separate from other merchants</p>
-                  <p><strong>Webhook URLs:</strong> Include your unique merchant ID for proper routing</p>
+                  <p><strong>Testing Method:</strong> Server-side with browser fallback for maximum reliability</p>
                   <p><strong>Security:</strong> Only you can access and modify your n8n settings</p>
                 </div>
-              </div>
-            </div>
-          </div>
-
-          {/* CORS Warning Notice */}
-          <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
-            <div className="flex items-start gap-2">
-              <div className="text-yellow-600 mt-1">⚠️</div>
-              <div className="text-sm">
-                <p className="font-medium text-yellow-800 mb-1">CORS Limitations</p>
-                <p className="text-yellow-700">
-                  Due to browser security policies, webhook testing is limited. Test requests will be sent, 
-                  but we cannot verify responses. Check your personal n8n workflow execution history to confirm receipt.
-                </p>
               </div>
             </div>
           </div>
@@ -363,7 +395,7 @@ const N8nConnectionSetup = () => {
             <Input
               id="webhook-secret"
               type="password"
-              placeholder="Your personal webhook validation secret, I'm ${profile.merchant_id}"
+              placeholder="Your personal webhook validation secret"
               value={webhookSecret}
               onChange={(e) => setWebhookSecret(e.target.value)}
               disabled={loading}
@@ -403,7 +435,7 @@ const N8nConnectionSetup = () => {
           <CardHeader>
             <CardTitle>n8n Setup Instructions</CardTitle>
             <CardDescription>
-              Step-by-step guide to set up n8n for webhook automation
+              Step-by-step guide to set up n8n for unified webhook testing
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -467,7 +499,7 @@ const N8nConnectionSetup = () => {
               Your Personal Webhook URLs
             </CardTitle>
             <CardDescription>
-              Use these URLs in your personal n8n workflows as webhook triggers (merchant-isolated)
+              Use these URLs in your personal n8n workflows - tested with unified service
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -490,10 +522,10 @@ const N8nConnectionSetup = () => {
                 </div>
               ))}
             </div>
-            <div className="mt-4 p-3 bg-green-50 border border-green-200 rounded-lg">
-              <p className="text-sm text-green-800 flex items-center gap-2">
+            <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+              <p className="text-sm text-blue-800 flex items-center gap-2">
                 <Shield className="h-4 w-4" />
-                <strong>Multi-Tenant Security:</strong> Each webhook URL includes your unique merchant and tenant ID parameters to ensure complete data isolation from other merchants.
+                <strong>Unified Testing:</strong> These webhooks are tested using both server-side and browser-based methods for maximum reliability and compatibility.
               </p>
             </div>
           </CardContent>
