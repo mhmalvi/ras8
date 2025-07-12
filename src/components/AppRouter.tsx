@@ -10,7 +10,7 @@ import Returns from '@/pages/Returns';
 import Analytics from '@/pages/Analytics';
 import Settings from '@/pages/Settings';
 import Auth from '@/pages/Auth';
-import ReturnPortal from '@/pages/ReturnPortal';
+import CustomerPortal from '@/pages/CustomerPortal';
 import Automations from '@/pages/Automations';
 
 const AppRouter = () => {
@@ -21,7 +21,7 @@ const AppRouter = () => {
           <Routes>
             {/* Public Routes */}
             <Route path="/" element={<Index />} />
-            <Route path="/return-portal" element={<ReturnPortal />} />
+            <Route path="/return-portal" element={<CustomerPortal />} />
             
             {/* Auth Route - only accessible when logged out */}
             <Route 

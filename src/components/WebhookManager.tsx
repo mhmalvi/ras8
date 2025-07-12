@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -18,7 +19,7 @@ interface WebhookEndpoint {
   status: 'active' | 'inactive' | 'error';
   method: 'POST' | 'GET';
   headers?: Record<string, string>;
-  merchantId?: string;
+  merchantId: string;
 }
 
 interface WebhookActivity {
@@ -29,6 +30,7 @@ interface WebhookActivity {
   payload: any;
   response?: any;
   error?: string;
+  merchantId: string;
 }
 
 import { useWebhookManager } from '@/hooks/useWebhookManager';
@@ -95,6 +97,15 @@ const WebhookManager = () => {
   };
 
   const handleTestWebhook = async (webhook: WebhookEndpoint) => {
+    // Ensure merchantId is present before testing
+    if (!webhook.merchantId) {
+      toast({
+        title: "Error",
+        description: "Cannot test webhook: missing merchant ID",
+        variant: "destructive",
+      });
+      return;
+    }
     await testWebhook(webhook);
   };
 
