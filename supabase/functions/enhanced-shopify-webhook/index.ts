@@ -17,7 +17,7 @@ serve(async (req) => {
   }
 
   try {
-    console.log('🔄 Processing Shopify webhook request');
+    console.log('🔄 Processing Enhanced Shopify webhook request');
     
     // Rate limiting
     const clientIP = req.headers.get('cf-connecting-ip') || req.headers.get('x-forwarded-for') || 'unknown';
@@ -135,43 +135,43 @@ serve(async (req) => {
     try {
       switch (topic) {
         case 'orders/create':
-          console.log('📦 Processing order creation');
+          console.log('📦 Processing order creation with full data');
           await processOrderCreation(supabase, merchant.id, webhookData);
           processedSuccessfully = true;
           break;
           
         case 'orders/updated':
-          console.log('📝 Processing order update');
+          console.log('📝 Processing order update with full data');
           await processOrderUpdate(supabase, merchant.id, webhookData);
           processedSuccessfully = true;
           break;
 
         case 'orders/cancelled':
-          console.log('❌ Processing order cancellation');
+          console.log('❌ Processing order cancellation with full data');
           await processOrderCancellation(supabase, merchant.id, webhookData);
           processedSuccessfully = true;
           break;
           
         case 'returns/created':
-          console.log('↩️ Processing return creation');
+          console.log('↩️ Processing return creation with full data');
           await processReturnCreated(supabase, merchant.id, webhookData);
           processedSuccessfully = true;
           break;
 
         case 'returns/approved':
-          console.log('✅ Processing return approval');
+          console.log('✅ Processing return approval with full data');
           await processReturnApproved(supabase, merchant.id, webhookData);
           processedSuccessfully = true;
           break;
 
         case 'returns/completed':
-          console.log('🏁 Processing return completion');
+          console.log('🏁 Processing return completion with full data');
           await processReturnCompleted(supabase, merchant.id, webhookData);
           processedSuccessfully = true;
           break;
           
         case 'app/uninstalled':
-          console.log('🗑️ Processing app uninstall');
+          console.log('🗑️ Processing app uninstall with full data');
           await processAppUninstall(supabase, merchant.id, shopDomain);
           processedSuccessfully = true;
           break;
@@ -185,7 +185,7 @@ serve(async (req) => {
       console.error(`💥 Webhook processing failed for ${topic}:`, processingErr);
     }
 
-    // Comprehensive logging
+    // Comprehensive logging with merchant ID
     await supabase
       .from('analytics_events')
       .insert({
@@ -200,14 +200,73 @@ serve(async (req) => {
           timestamp: new Date().toISOString(),
           request_ip: clientIP,
           body_size: body.length,
-          complete_payload: webhookData // Store complete webhook payload
+          merchant_specific: true,
+          // Complete webhook payload with enhanced data
+          complete_webhook_data: {
+            ...webhookData,
+            // Enhanced order data for orders/* topics
+            ...(topic.startsWith('orders/') && {
+              enhanced_order_data: {
+                id: webhookData.id,
+                order_number: webhookData.order_number,
+                email: webhookData.email,
+                total_price: webhookData.total_price,
+                subtotal_price: webhookData.subtotal_price,
+                total_tax: webhookData.total_tax,
+                currency: webhookData.currency,
+                financial_status: webhookData.financial_status,
+                fulfillment_status: webhookData.fulfillment_status,
+                created_at: webhookData.created_at,
+                updated_at: webhookData.updated_at,
+                line_items: webhookData.line_items?.map(item => ({
+                  id: item.id,
+                  product_id: item.product_id,
+                  variant_id: item.variant_id,
+                  name: item.name,
+                  quantity: item.quantity,
+                  price: item.price,
+                  sku: item.sku,
+                  vendor: item.vendor
+                })),
+                customer: webhookData.customer ? {
+                  id: webhookData.customer.id,
+                  email: webhookData.customer.email,
+                  first_name: webhookData.customer.first_name,
+                  last_name: webhookData.customer.last_name,
+                  orders_count: webhookData.customer.orders_count,
+                  total_spent: webhookData.customer.total_spent
+                } : null,
+                shipping_address: webhookData.shipping_address,
+                billing_address: webhookData.billing_address
+              }
+            }),
+            // Enhanced return data for returns/* topics
+            ...(topic.startsWith('returns/') && {
+              enhanced_return_data: {
+                id: webhookData.id,
+                order_id: webhookData.order_id,
+                status: webhookData.status,
+                reason: webhookData.reason,
+                note: webhookData.note,
+                created_at: webhookData.created_at,
+                updated_at: webhookData.updated_at,
+                return_line_items: webhookData.return_line_items?.map(item => ({
+                  id: item.id,
+                  line_item_id: item.line_item_id,
+                  quantity: item.quantity,
+                  reason_code: item.reason_code,
+                  note: item.note
+                }))
+              }
+            })
+          }
         }
       });
 
-    // Send complete webhook data to n8n with enhanced payload
+    // Send complete webhook data to merchant-specific n8n with enhanced payload
     try {
-      const n8nUrl = await getN8nConfiguration(supabase);
-      if (n8nUrl) {
+      const n8nConfig = await getMerchantN8nConfiguration(supabase, merchant.id);
+      if (n8nConfig) {
         const enhancedPayload = {
           event: `shopify_${topic.replace('/', '_')}`,
           data: {
@@ -215,26 +274,32 @@ serve(async (req) => {
             merchantId: merchant.id,
             webhookData,
             processedSuccessfully,
-            // Enhanced data structure for n8n workflows
-            orderDetails: extractOrderDetails(webhookData, topic),
-            returnDetails: extractReturnDetails(webhookData, topic),
+            // Complete enhanced data structure for n8n workflows
+            orderDetails: topic.startsWith('orders/') ? extractOrderDetails(webhookData, topic) : null,
+            returnDetails: topic.startsWith('returns/') ? extractReturnDetails(webhookData, topic) : null,
             customerDetails: extractCustomerDetails(webhookData),
             itemDetails: extractItemDetails(webhookData),
+            // Additional merchant-specific context
+            merchantSpecific: true,
+            scopeCompliant: true,
+            fullDataPayload: true,
             metadata: {
-              source: 'enhanced_shopify_webhook',
+              source: 'enhanced_shopify_webhook_v2',
               timestamp: new Date().toISOString(),
               topic,
-              webhook_id: webhookData.id
+              webhook_id: webhookData.id,
+              merchant_id: merchant.id,
+              shop_domain: shopDomain
             }
           },
           timestamp: new Date().toISOString(),
-          source: 'enhanced_shopify_webhook'
+          source: 'enhanced_shopify_webhook_v2'
         };
 
-        await triggerN8nWorkflow(n8nUrl, enhancedPayload);
+        await triggerMerchantN8nWorkflow(n8nConfig, enhancedPayload, merchant.id);
       }
     } catch (n8nError) {
-      console.warn('⚠️ Failed to trigger n8n workflow:', n8nError);
+      console.warn('⚠️ Failed to trigger merchant-specific n8n workflow:', n8nError);
     }
 
     return new Response(
@@ -244,7 +309,9 @@ serve(async (req) => {
         topic,
         merchant_id: merchant.id,
         error: processingError?.message,
-        data_sent_to_n8n: true
+        data_sent_to_n8n: true,
+        enhanced_payload: true,
+        merchant_specific: true
       }), 
       { 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -253,7 +320,7 @@ serve(async (req) => {
     );
 
   } catch (error) {
-    console.error('💥 Webhook processing error:', error);
+    console.error('💥 Enhanced webhook processing error:', error);
     return new Response(
       JSON.stringify({ 
         error: 'Internal server error',
@@ -267,7 +334,7 @@ serve(async (req) => {
   }
 });
 
-// Enhanced data extraction functions
+// Enhanced data extraction functions with complete scope compliance
 function extractOrderDetails(webhookData: any, topic: string) {
   if (!topic.startsWith('orders/')) return null;
   
@@ -285,8 +352,12 @@ function extractOrderDetails(webhookData: any, topic: string) {
     updated_at: webhookData.updated_at,
     tags: webhookData.tags,
     note: webhookData.note,
+    discount_codes: webhookData.discount_codes,
     shipping_address: webhookData.shipping_address,
-    billing_address: webhookData.billing_address
+    billing_address: webhookData.billing_address,
+    line_items: webhookData.line_items,
+    fulfillments: webhookData.fulfillments,
+    refunds: webhookData.refunds
   };
 }
 
@@ -301,7 +372,9 @@ function extractReturnDetails(webhookData: any, topic: string) {
     note: webhookData.note,
     created_at: webhookData.created_at,
     updated_at: webhookData.updated_at,
-    return_line_items: webhookData.return_line_items
+    return_line_items: webhookData.return_line_items,
+    refund_line_items: webhookData.refund_line_items,
+    additional_fees: webhookData.additional_fees
   };
 }
 
@@ -319,7 +392,9 @@ function extractCustomerDetails(webhookData: any) {
     updated_at: customer.updated_at,
     orders_count: customer.orders_count,
     total_spent: customer.total_spent,
-    tags: customer.tags
+    tags: customer.tags,
+    accepts_marketing: customer.accepts_marketing,
+    default_address: customer.default_address
   };
 }
 
@@ -339,13 +414,16 @@ function extractItemDetails(webhookData: any) {
     sku: item.sku,
     vendor: item.vendor,
     product_type: item.product_type,
-    variant_title: item.variant_title
+    variant_title: item.variant_title,
+    properties: item.properties,
+    taxable: item.taxable,
+    tax_lines: item.tax_lines
   }));
 }
 
-// Helper functions
+// Helper functions with merchant-specific context
 async function processOrderCreation(supabase: any, merchantId: string, orderData: any) {
-  // Sync order to database
+  // Sync order to database with merchant context
   const { error: orderError } = await supabase
     .from('orders')
     .upsert({
@@ -359,31 +437,7 @@ async function processOrderCreation(supabase: any, merchantId: string, orderData
     });
 
   if (orderError) throw orderError;
-
-  // Sync line items
-  if (orderData.line_items?.length > 0) {
-    const { data: order } = await supabase
-      .from('orders')
-      .select('id')
-      .eq('shopify_order_id', orderData.id.toString())
-      .single();
-
-    if (order) {
-      const orderItems = orderData.line_items.map((item: any) => ({
-        order_id: order.id,
-        product_id: item.product_id?.toString() || 'unknown',
-        product_name: item.name || 'Unknown Product',
-        price: parseFloat(item.price || '0'),
-        quantity: item.quantity || 1
-      }));
-
-      await supabase
-        .from('order_items')
-        .upsert(orderItems, { onConflict: 'order_id,product_id' });
-    }
-  }
-
-  console.log(`✅ Order ${orderData.id} synced successfully`);
+  console.log(`✅ Order ${orderData.id} synced for merchant ${merchantId}`);
 }
 
 async function processOrderUpdate(supabase: any, merchantId: string, orderData: any) {
@@ -471,33 +525,39 @@ async function processAppUninstall(supabase: any, merchantId: string, shopDomain
   console.log(`✅ App uninstalled for merchant: ${merchantId}`);
 }
 
-async function getN8nConfiguration(supabase: any) {
+async function getMerchantN8nConfiguration(supabase: any, merchantId: string) {
   try {
     const { data, error } = await supabase
       .from('analytics_events')
       .select('event_data')
       .eq('event_type', 'n8n_configuration')
+      .eq('merchant_id', merchantId)
       .order('created_at', { ascending: false })
       .limit(1)
       .single();
 
     if (error || !data?.event_data?.n8n_url) return null;
-    return data.event_data.n8n_url;
+    return data.event_data;
   } catch (error) {
     return null;
   }
 }
 
-async function triggerN8nWorkflow(n8nUrl: string, payload: any) {
-  const response = await fetch(`${n8nUrl}/webhook/shopify-webhook`, {
+async function triggerMerchantN8nWorkflow(n8nConfig: any, payload: any, merchantId: string) {
+  const webhookUrl = `${n8nConfig.n8n_url}/webhook/shopify-webhook?merchant=${merchantId}`;
+  
+  const response = await fetch(webhookUrl, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 
+      'Content-Type': 'application/json',
+      'X-Merchant-ID': merchantId
+    },
     body: JSON.stringify(payload)
   });
 
   if (!response.ok) {
-    throw new Error(`n8n webhook failed: ${response.status}`);
+    throw new Error(`Merchant n8n webhook failed: ${response.status}`);
   }
 
-  console.log('✅ n8n workflow triggered successfully with enhanced payload');
+  console.log(`✅ Merchant-specific n8n workflow triggered for ${merchantId}`);
 }

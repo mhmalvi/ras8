@@ -2,6 +2,7 @@
 import { useState, useEffect } from 'react';
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from '@/integrations/supabase/client';
+import { useProfile } from '@/hooks/useProfile';
 import { n8nService } from '@/services/n8nService';
 
 interface WebhookEndpoint {
@@ -14,7 +15,7 @@ interface WebhookEndpoint {
   status: 'active' | 'inactive' | 'error';
   method: 'POST' | 'GET';
   headers?: Record<string, string>;
-  merchantId?: string;
+  merchantId: string;
 }
 
 interface WebhookActivity {
@@ -25,28 +26,7 @@ interface WebhookActivity {
   payload: any;
   response?: any;
   error?: string;
-}
-
-interface WebhookData {
-  name?: string;
-  url?: string;
-  events?: string[];
-  active?: boolean;
-  status?: string;
-  method?: string;
-  headers?: Record<string, string>;
-  lastTriggered?: string;
-  createdAt?: string;
-  updatedAt?: string;
-}
-
-interface WebhookActivityData {
-  webhookId?: string;
-  status?: string;
-  payload?: any;
-  response?: any;
-  error?: string;
-  testTriggered?: boolean;
+  merchantId: string;
 }
 
 export const useWebhookManager = () => {
@@ -54,20 +34,24 @@ export const useWebhookManager = () => {
   const [activities, setActivities] = useState<WebhookActivity[]>([]);
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
+  const { profile } = useProfile();
 
-  // Load webhooks from database
+  // Load merchant-specific webhooks from database
   const loadWebhooks = async () => {
+    if (!profile?.merchant_id) return;
+
     try {
       const { data: webhookData, error } = await supabase
         .from('analytics_events')
         .select('*')
         .eq('event_type', 'webhook_configured')
+        .eq('merchant_id', profile.merchant_id)
         .order('created_at', { ascending: false });
 
       if (error) throw error;
 
       const formattedWebhooks: WebhookEndpoint[] = webhookData?.map(item => {
-        const eventData = item.event_data as WebhookData;
+        const eventData = item.event_data as any;
         
         return {
           id: item.id,
@@ -79,7 +63,7 @@ export const useWebhookManager = () => {
           method: (eventData?.method as 'POST' | 'GET') || 'POST',
           headers: eventData?.headers || {},
           lastTriggered: eventData?.lastTriggered,
-          merchantId: item.merchant_id
+          merchantId: profile.merchant_id
         };
       }) || [];
 
@@ -94,20 +78,23 @@ export const useWebhookManager = () => {
     }
   };
 
-  // Load activities from database
+  // Load merchant-specific activities from database
   const loadActivities = async () => {
+    if (!profile?.merchant_id) return;
+
     try {
       const { data: activityData, error } = await supabase
         .from('analytics_events')
         .select('*')
         .eq('event_type', 'webhook_triggered')
+        .eq('merchant_id', profile.merchant_id)
         .order('created_at', { ascending: false })
         .limit(50);
 
       if (error) throw error;
 
       const formattedActivities: WebhookActivity[] = activityData?.map(item => {
-        const eventData = item.event_data as WebhookActivityData;
+        const eventData = item.event_data as any;
         
         return {
           id: item.id,
@@ -116,7 +103,8 @@ export const useWebhookManager = () => {
           status: (eventData?.status as 'success' | 'error' | 'pending') || 'pending',
           payload: eventData?.payload || {},
           response: eventData?.response,
-          error: eventData?.error
+          error: eventData?.error,
+          merchantId: profile.merchant_id
         };
       }) || [];
 
@@ -126,17 +114,28 @@ export const useWebhookManager = () => {
     }
   };
 
-  // Create new webhook
-  const createWebhook = async (webhookData: Omit<WebhookEndpoint, 'id' | 'status' | 'lastTriggered'>) => {
+  // Create new merchant-specific webhook
+  const createWebhook = async (webhookData: Omit<WebhookEndpoint, 'id' | 'status' | 'lastTriggered' | 'merchantId'>) => {
+    if (!profile?.merchant_id) {
+      toast({
+        title: "Error",
+        description: "No merchant ID found. Please ensure you're logged in.",
+        variant: "destructive",
+      });
+      return false;
+    }
+
     setLoading(true);
     try {
       const { error } = await supabase
         .from('analytics_events')
         .insert({
           event_type: 'webhook_configured',
+          merchant_id: profile.merchant_id,
           event_data: {
             ...webhookData,
             status: 'active',
+            merchantId: profile.merchant_id,
             createdAt: new Date().toISOString()
           }
         });
@@ -164,21 +163,24 @@ export const useWebhookManager = () => {
     }
   };
 
-  // Test webhook
+  // Test merchant-specific webhook
   const testWebhook = async (webhook: WebhookEndpoint) => {
+    if (!profile?.merchant_id) return false;
+
     setLoading(true);
     try {
       const result = await n8nService.testWebhookConnection(webhook.url);
       
-      // Log the test activity
+      // Log the test activity with merchant ID
       await supabase
         .from('analytics_events')
         .insert({
           event_type: 'webhook_triggered',
+          merchant_id: profile.merchant_id,
           event_data: {
             webhookId: webhook.id,
             status: result.success ? 'success' : 'error',
-            payload: { test: true },
+            payload: { test: true, merchantId: profile.merchant_id },
             response: result.data,
             error: result.error,
             testTriggered: true
@@ -214,8 +216,10 @@ export const useWebhookManager = () => {
     }
   };
 
-  // Toggle webhook status
+  // Toggle merchant-specific webhook status
   const toggleWebhook = async (webhookId: string, active: boolean) => {
+    if (!profile?.merchant_id) return false;
+
     setLoading(true);
     try {
       // Update in local state first for immediate feedback
@@ -227,17 +231,19 @@ export const useWebhookManager = () => {
         )
       );
 
-      // Update in database
+      // Update in database with merchant validation
       const { error } = await supabase
         .from('analytics_events')
         .update({
           event_data: {
             active,
             status: active ? 'active' : 'inactive',
+            merchantId: profile.merchant_id,
             updatedAt: new Date().toISOString()
           }
         })
-        .eq('id', webhookId);
+        .eq('id', webhookId)
+        .eq('merchant_id', profile.merchant_id); // Ensure only merchant's own webhooks are updated
 
       if (error) throw error;
 
@@ -262,14 +268,17 @@ export const useWebhookManager = () => {
     }
   };
 
-  // Delete webhook
+  // Delete merchant-specific webhook
   const deleteWebhook = async (webhookId: string) => {
+    if (!profile?.merchant_id) return false;
+
     setLoading(true);
     try {
       const { error } = await supabase
         .from('analytics_events')
         .delete()
-        .eq('id', webhookId);
+        .eq('id', webhookId)
+        .eq('merchant_id', profile.merchant_id); // Ensure only merchant's own webhooks are deleted
 
       if (error) throw error;
 
@@ -296,9 +305,11 @@ export const useWebhookManager = () => {
   };
 
   useEffect(() => {
-    loadWebhooks();
-    loadActivities();
-  }, []);
+    if (profile?.merchant_id) {
+      loadWebhooks();
+      loadActivities();
+    }
+  }, [profile?.merchant_id]);
 
   return {
     webhooks,

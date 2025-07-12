@@ -1,13 +1,14 @@
+
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { Settings, Server, CheckCircle, XCircle, Copy, ExternalLink } from "lucide-react";
 import { supabase } from '@/integrations/supabase/client';
+import { useProfile } from '@/hooks/useProfile';
 
 const N8nConnectionSetup = () => {
   const [n8nUrl, setN8nUrl] = useState('');
@@ -17,18 +18,23 @@ const N8nConnectionSetup = () => {
   const [loading, setLoading] = useState(false);
   const [setupInstructions, setSetupInstructions] = useState(false);
   const { toast } = useToast();
+  const { profile } = useProfile();
 
   useEffect(() => {
-    loadConfiguration();
-  }, []);
+    if (profile?.merchant_id) {loadConfiguration();}
+  }, [profile?.merchant_id]);
 
   const loadConfiguration = async () => {
+    if (!profile?.merchant_id) return;
+
     setLoading(true);
     try {
+      // Load merchant-specific n8n configuration
       const { data: configs, error } = await supabase
         .from('analytics_events')
         .select('*')
         .eq('event_type', 'n8n_configuration')
+        .eq('merchant_id', profile.merchant_id)
         .order('created_at', { ascending: false })
         .limit(1);
 
@@ -43,7 +49,7 @@ const N8nConnectionSetup = () => {
         setApiKey(configData.api_key || '');
         setWebhookSecret(configData.webhook_secret || '');
         setConnectionStatus(configData.connection_verified ? 'connected' : 'disconnected');
-        console.log('✅ n8n configuration loaded');
+        console.log('✅ Merchant-specific n8n configuration loaded');
       }
     } catch (error) {
       console.error('Error loading n8n configuration:', error);
@@ -53,6 +59,15 @@ const N8nConnectionSetup = () => {
   };
 
   const testConnection = async () => {
+    if (!profile?.merchant_id) {
+      toast({
+        title: "Error",
+        description: "No merchant ID found. Please ensure you're logged in.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     if (!n8nUrl) {
       toast({
         title: "Error",
@@ -65,12 +80,12 @@ const N8nConnectionSetup = () => {
     setLoading(true);
     try {
       const { n8nService } = await import('@/services/n8nService');
-      const result = await n8nService.testConnection(n8nUrl, apiKey);
+      const result = await n8nService.testConnection(n8nUrl, apiKey, profile.merchant_id);
       
       if (result.success) {
         setConnectionStatus('connected');
         
-        // Save successful configuration
+        // Save successful configuration with merchant ID
         await saveConfigurationToDatabase(true);
 
         toast({
@@ -78,7 +93,6 @@ const N8nConnectionSetup = () => {
           description: result.data?.message || "Test requests sent to n8n webhooks successfully.",
         });
 
-        // Show additional info about CORS limitations
         toast({
           title: "Important Note",
           description: "Due to browser security (CORS), we cannot verify if n8n received the requests. Please check your n8n workflow execution history to confirm.",
@@ -105,6 +119,15 @@ const N8nConnectionSetup = () => {
   };
 
   const saveConfiguration = async () => {
+    if (!profile?.merchant_id) {
+      toast({
+        title: "Error",
+        description: "No merchant ID found. Please ensure you're logged in.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     if (!n8nUrl) {
       toast({
         title: "Error",
@@ -134,19 +157,24 @@ const N8nConnectionSetup = () => {
   };
 
   const saveConfigurationToDatabase = async (verified: boolean = false) => {
+    if (!profile?.merchant_id) return;
+
     const configData = {
       n8n_url: n8nUrl,
       api_key: apiKey,
       webhook_secret: webhookSecret,
       has_api_key: !!apiKey,
       connection_verified: verified,
+      merchantId: profile.merchant_id,
       [verified ? 'verified_at' : 'configured_at']: new Date().toISOString()
     };
 
+    // Check for existing merchant-specific config
     const { data: existingConfig } = await supabase
       .from('analytics_events')
       .select('id')
       .eq('event_type', 'n8n_configuration')
+      .eq('merchant_id', profile.merchant_id)
       .order('created_at', { ascending: false })
       .limit(1)
       .maybeSingle();
@@ -155,13 +183,15 @@ const N8nConnectionSetup = () => {
       const { error } = await supabase
         .from('analytics_events')
         .update({ event_data: configData })
-        .eq('id', existingConfig.id);
+        .eq('id', existingConfig.id)
+        .eq('merchant_id', profile.merchant_id);
       if (error) throw error;
     } else {
       const { error } = await supabase
         .from('analytics_events')
         .insert({
           event_type: 'n8n_configuration',
+          merchant_id: profile.merchant_id,
           event_data: configData
         });
       if (error) throw error;
@@ -186,6 +216,16 @@ const N8nConnectionSetup = () => {
     'ai-exchange-suggestions'
   ];
 
+  if (!profile?.merchant_id) {
+    return (
+      <Card>
+        <CardContent className="p-6">
+          <p className="text-muted-foreground">Loading merchant configuration...</p>
+        </CardContent>
+      </Card>
+    );
+  }
+
   return (
     <div className="space-y-6">
       <Card>
@@ -194,10 +234,10 @@ const N8nConnectionSetup = () => {
             <div>
               <CardTitle className="flex items-center gap-2">
                 <Server className="h-5 w-5" />
-                n8n Server Connection
+                n8n Server Connection (Merchant Specific)
               </CardTitle>
               <CardDescription>
-                Configure connection to your n8n automation server
+                Configure your personal n8n automation server connection
               </CardDescription>
             </div>
             <div className="flex items-center gap-2">
@@ -221,6 +261,19 @@ const N8nConnectionSetup = () => {
           </div>
         </CardHeader>
         <CardContent className="space-y-4">
+          {/* Merchant ID Info */}
+          <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
+            <div className="flex items-start gap-2">
+              <div className="text-blue-600 mt-1">ℹ️</div>
+              <div className="text-sm">
+                <p className="font-medium text-blue-800 mb-1">Merchant-Specific Configuration</p>
+                <p className="text-blue-700">
+                  This configuration is unique to your merchant account: <code className="bg-blue-100 px-1 rounded text-xs">{profile.merchant_id}</code>
+                </p>
+              </div>
+            </div>
+          </div>
+
           {/* CORS Warning Notice */}
           <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
             <div className="flex items-start gap-2">
@@ -244,9 +297,10 @@ const N8nConnectionSetup = () => {
                 placeholder="https://n8n.yourserver.com"
                 value={n8nUrl}
                 onChange={(e) => setN8nUrl(e.target.value)}
+                disabled={loading}
               />
               <p className="text-xs text-muted-foreground">
-                The base URL of your n8n server instance
+                Your personal n8n server instance URL
               </p>
             </div>
 
@@ -258,9 +312,10 @@ const N8nConnectionSetup = () => {
                 placeholder="n8n_api_key_..."
                 value={apiKey}
                 onChange={(e) => setApiKey(e.target.value)}
+                disabled={loading}
               />
               <p className="text-xs text-muted-foreground">
-                API key for authenticated requests
+                Your personal API key for authenticated requests
               </p>
             </div>
           </div>
@@ -273,9 +328,10 @@ const N8nConnectionSetup = () => {
               placeholder="Your webhook validation secret"
               value={webhookSecret}
               onChange={(e) => setWebhookSecret(e.target.value)}
+              disabled={loading}
             />
             <p className="text-xs text-muted-foreground">
-              Secret for validating incoming webhook requests (HMAC)
+              Personal secret for validating incoming webhook requests (HMAC)
             </p>
           </div>
 
@@ -368,9 +424,9 @@ const N8nConnectionSetup = () => {
       {n8nUrl && connectionStatus === 'connected' && (
         <Card>
           <CardHeader>
-            <CardTitle>Generated Webhook URLs</CardTitle>
+            <CardTitle>Your Personal Webhook URLs</CardTitle>
             <CardDescription>
-              Use these URLs in your n8n workflows as webhook triggers
+              Use these URLs in your personal n8n workflows as webhook triggers
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -380,18 +436,23 @@ const N8nConnectionSetup = () => {
                   <div>
                     <p className="font-medium text-sm">{endpoint.replace('-', ' ').replace(/\b\w/g, l => l.toUpperCase())}</p>
                     <code className="text-xs text-muted-foreground">
-                      {`${n8nUrl.replace(/\/$/, '')}/webhook/${endpoint}`}
+                      {`${n8nUrl.replace(/\/$/, '')}/webhook/${endpoint}?merchant=${profile.merchant_id}`}
                     </code>
                   </div>
                   <Button 
                     size="sm" 
                     variant="outline" 
-                    onClick={() => copyWebhookUrl(endpoint)}
+                    onClick={() => copyWebhookUrl(`${endpoint}?merchant=${profile.merchant_id}`)}
                   >
                     <Copy className="h-4 w-4" />
                   </Button>
                 </div>
               ))}
+            </div>
+            <div className="mt-4 p-3 bg-green-50 border border-green-200 rounded-lg">
+              <p className="text-sm text-green-800">
+                <strong>Note:</strong> Each webhook URL includes your unique merchant ID parameter to ensure data isolation.
+              </p>
             </div>
           </CardContent>
         </Card>
