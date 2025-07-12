@@ -1,4 +1,3 @@
-
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from 'https://cdn.skypack.dev/@supabase/supabase-js@2?dts'
 
@@ -18,7 +17,6 @@ serve(async (req) => {
   }
 
   try {
-    // Enhanced logging
     console.log('🔄 Processing Shopify webhook request');
     
     // Rate limiting
@@ -26,7 +24,7 @@ serve(async (req) => {
     const rateLimitKey = `webhook_${clientIP}`;
     const now = Date.now();
     const windowMs = 60 * 60 * 1000; // 1 hour
-    const maxRequests = 1000; // Increased limit
+    const maxRequests = 1000;
 
     const rateLimit = rateLimitStore.get(rateLimitKey);
     if (rateLimit && now < rateLimit.resetTime) {
@@ -130,7 +128,7 @@ serve(async (req) => {
 
     console.log(`✅ Processing webhook for merchant: ${merchant.id}`);
 
-    // Enhanced webhook processing
+    // Enhanced webhook processing with complete data payload
     let processedSuccessfully = false;
     let processingError = null;
 
@@ -147,23 +145,34 @@ serve(async (req) => {
           await processOrderUpdate(supabase, merchant.id, webhookData);
           processedSuccessfully = true;
           break;
+
+        case 'orders/cancelled':
+          console.log('❌ Processing order cancellation');
+          await processOrderCancellation(supabase, merchant.id, webhookData);
+          processedSuccessfully = true;
+          break;
           
-        case 'orders/paid':
-          console.log('💰 Processing order payment');
-          await processOrderPayment(supabase, merchant.id, webhookData);
+        case 'returns/created':
+          console.log('↩️ Processing return creation');
+          await processReturnCreated(supabase, merchant.id, webhookData);
+          processedSuccessfully = true;
+          break;
+
+        case 'returns/approved':
+          console.log('✅ Processing return approval');
+          await processReturnApproved(supabase, merchant.id, webhookData);
+          processedSuccessfully = true;
+          break;
+
+        case 'returns/completed':
+          console.log('🏁 Processing return completion');
+          await processReturnCompleted(supabase, merchant.id, webhookData);
           processedSuccessfully = true;
           break;
           
         case 'app/uninstalled':
           console.log('🗑️ Processing app uninstall');
           await processAppUninstall(supabase, merchant.id, shopDomain);
-          processedSuccessfully = true;
-          break;
-          
-        case 'customers/create':
-        case 'customers/update':
-          console.log('👤 Processing customer data');
-          await processCustomerData(supabase, merchant.id, webhookData);
           processedSuccessfully = true;
           break;
           
@@ -190,29 +199,42 @@ serve(async (req) => {
           processing_error: processingError?.message,
           timestamp: new Date().toISOString(),
           request_ip: clientIP,
-          body_size: body.length
+          body_size: body.length,
+          complete_payload: webhookData // Store complete webhook payload
         }
       });
 
-    // Trigger n8n workflow if configured
+    // Send complete webhook data to n8n with enhanced payload
     try {
       const n8nUrl = await getN8nConfiguration(supabase);
       if (n8nUrl) {
-        await triggerN8nWorkflow(n8nUrl, {
+        const enhancedPayload = {
           event: `shopify_${topic.replace('/', '_')}`,
           data: {
             shopDomain,
             merchantId: merchant.id,
             webhookData,
-            processedSuccessfully
+            processedSuccessfully,
+            // Enhanced data structure for n8n workflows
+            orderDetails: extractOrderDetails(webhookData, topic),
+            returnDetails: extractReturnDetails(webhookData, topic),
+            customerDetails: extractCustomerDetails(webhookData),
+            itemDetails: extractItemDetails(webhookData),
+            metadata: {
+              source: 'enhanced_shopify_webhook',
+              timestamp: new Date().toISOString(),
+              topic,
+              webhook_id: webhookData.id
+            }
           },
           timestamp: new Date().toISOString(),
           source: 'enhanced_shopify_webhook'
-        });
+        };
+
+        await triggerN8nWorkflow(n8nUrl, enhancedPayload);
       }
     } catch (n8nError) {
       console.warn('⚠️ Failed to trigger n8n workflow:', n8nError);
-      // Don't fail the webhook for n8n errors
     }
 
     return new Response(
@@ -221,7 +243,8 @@ serve(async (req) => {
         processed: true,
         topic,
         merchant_id: merchant.id,
-        error: processingError?.message 
+        error: processingError?.message,
+        data_sent_to_n8n: true
       }), 
       { 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -243,6 +266,82 @@ serve(async (req) => {
     );
   }
 });
+
+// Enhanced data extraction functions
+function extractOrderDetails(webhookData: any, topic: string) {
+  if (!topic.startsWith('orders/')) return null;
+  
+  return {
+    id: webhookData.id,
+    order_number: webhookData.order_number,
+    email: webhookData.email,
+    total_price: webhookData.total_price,
+    subtotal_price: webhookData.subtotal_price,
+    total_tax: webhookData.total_tax,
+    currency: webhookData.currency,
+    financial_status: webhookData.financial_status,
+    fulfillment_status: webhookData.fulfillment_status,
+    created_at: webhookData.created_at,
+    updated_at: webhookData.updated_at,
+    tags: webhookData.tags,
+    note: webhookData.note,
+    shipping_address: webhookData.shipping_address,
+    billing_address: webhookData.billing_address
+  };
+}
+
+function extractReturnDetails(webhookData: any, topic: string) {
+  if (!topic.startsWith('returns/')) return null;
+  
+  return {
+    id: webhookData.id,
+    order_id: webhookData.order_id,
+    status: webhookData.status,
+    reason: webhookData.reason,
+    note: webhookData.note,
+    created_at: webhookData.created_at,
+    updated_at: webhookData.updated_at,
+    return_line_items: webhookData.return_line_items
+  };
+}
+
+function extractCustomerDetails(webhookData: any) {
+  const customer = webhookData.customer;
+  if (!customer) return null;
+  
+  return {
+    id: customer.id,
+    email: customer.email,
+    first_name: customer.first_name,
+    last_name: customer.last_name,
+    phone: customer.phone,
+    created_at: customer.created_at,
+    updated_at: customer.updated_at,
+    orders_count: customer.orders_count,
+    total_spent: customer.total_spent,
+    tags: customer.tags
+  };
+}
+
+function extractItemDetails(webhookData: any) {
+  const lineItems = webhookData.line_items || webhookData.return_line_items;
+  if (!lineItems || !Array.isArray(lineItems)) return [];
+  
+  return lineItems.map(item => ({
+    id: item.id,
+    product_id: item.product_id,
+    variant_id: item.variant_id,
+    name: item.name,
+    title: item.title,
+    quantity: item.quantity,
+    price: item.price,
+    total_discount: item.total_discount,
+    sku: item.sku,
+    vendor: item.vendor,
+    product_type: item.product_type,
+    variant_title: item.variant_title
+  }));
+}
 
 // Helper functions
 async function processOrderCreation(supabase: any, merchantId: string, orderData: any) {
@@ -301,17 +400,62 @@ async function processOrderUpdate(supabase: any, merchantId: string, orderData: 
   console.log(`✅ Order ${orderData.id} updated successfully`);
 }
 
-async function processOrderPayment(supabase: any, merchantId: string, orderData: any) {
+async function processOrderCancellation(supabase: any, merchantId: string, orderData: any) {
   const { error } = await supabase
     .from('orders')
     .update({
-      status: 'completed',
+      status: 'cancelled',
       updated_at: new Date().toISOString()
     })
     .eq('shopify_order_id', orderData.id.toString());
 
   if (error) throw error;
-  console.log(`✅ Order payment ${orderData.id} processed successfully`);
+  console.log(`✅ Order ${orderData.id} cancelled successfully`);
+}
+
+async function processReturnCreated(supabase: any, merchantId: string, returnData: any) {
+  const { error } = await supabase
+    .from('returns')
+    .upsert({
+      shopify_order_id: returnData.order_id?.toString() || 'unknown',
+      merchant_id: merchantId,
+      customer_email: returnData.customer?.email || 'unknown',
+      status: 'requested',
+      reason: returnData.reason || 'Return requested',
+      total_amount: parseFloat(returnData.total_amount || '0'),
+      created_at: returnData.created_at
+    }, {
+      onConflict: 'shopify_order_id'
+    });
+
+  if (error) throw error;
+  console.log(`✅ Return created for order ${returnData.order_id}`);
+}
+
+async function processReturnApproved(supabase: any, merchantId: string, returnData: any) {
+  const { error } = await supabase
+    .from('returns')
+    .update({
+      status: 'approved',
+      updated_at: new Date().toISOString()
+    })
+    .eq('shopify_order_id', returnData.order_id?.toString());
+
+  if (error) throw error;
+  console.log(`✅ Return approved for order ${returnData.order_id}`);
+}
+
+async function processReturnCompleted(supabase: any, merchantId: string, returnData: any) {
+  const { error } = await supabase
+    .from('returns')
+    .update({
+      status: 'completed',
+      updated_at: new Date().toISOString()
+    })
+    .eq('shopify_order_id', returnData.order_id?.toString());
+
+  if (error) throw error;
+  console.log(`✅ Return completed for order ${returnData.order_id}`);
 }
 
 async function processAppUninstall(supabase: any, merchantId: string, shopDomain: string) {
@@ -325,25 +469,6 @@ async function processAppUninstall(supabase: any, merchantId: string, shopDomain
 
   if (error) throw error;
   console.log(`✅ App uninstalled for merchant: ${merchantId}`);
-}
-
-async function processCustomerData(supabase: any, merchantId: string, customerData: any) {
-  // Store customer data for future use
-  await supabase
-    .from('analytics_events')
-    .insert({
-      merchant_id: merchantId,
-      event_type: 'customer_data_received',
-      event_data: {
-        customer_id: customerData.id,
-        email: customerData.email,
-        first_name: customerData.first_name,
-        last_name: customerData.last_name,
-        orders_count: customerData.orders_count
-      }
-    });
-
-  console.log(`✅ Customer data processed: ${customerData.email}`);
 }
 
 async function getN8nConfiguration(supabase: any) {
@@ -374,5 +499,5 @@ async function triggerN8nWorkflow(n8nUrl: string, payload: any) {
     throw new Error(`n8n webhook failed: ${response.status}`);
   }
 
-  console.log('✅ n8n workflow triggered successfully');
+  console.log('✅ n8n workflow triggered successfully with enhanced payload');
 }

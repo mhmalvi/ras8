@@ -1,12 +1,11 @@
 
 import React from 'react';
-import { Routes, Route, Navigate } from 'react-router-dom';
+import { Routes, Route } from 'react-router-dom';
 import ProtectedRoute from './ProtectedRoute';
 import Landing from '@/pages/Landing';
 import Auth from '@/pages/Auth';
 import Dashboard from '@/pages/Dashboard';
 import Index from '@/pages/Index';
-import { useAuth } from '@/contexts/AuthContext';
 
 // Import other pages that exist in the read-only files
 import Returns from '@/pages/Returns';
@@ -24,20 +23,9 @@ import DebugPanel from '@/pages/DebugPanel';
 import NotFound from '@/pages/NotFound';
 
 const AppRouter: React.FC = () => {
-  const { user, loading } = useAuth();
-
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-        <span className="ml-2">Loading...</span>
-      </div>
-    );
-  }
-
   return (
     <Routes>
-      {/* Root route - redirect based on authentication */}
+      {/* Root route - smart redirect based on authentication */}
       <Route path="/" element={<Index />} />
       
       {/* Public routes - only accessible when not authenticated */}

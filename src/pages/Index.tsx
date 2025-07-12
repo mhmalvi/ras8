@@ -21,9 +21,11 @@ const Index = () => {
 
   // Show loading while determining where to redirect
   return (
-    <div className="min-h-screen flex items-center justify-center">
-      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-      <span className="ml-2">Loading...</span>
+    <div className="min-h-screen flex items-center justify-center bg-background">
+      <div className="flex flex-col items-center gap-4">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+        <span className="text-muted-foreground">Initializing application...</span>
+      </div>
     </div>
   );
 };

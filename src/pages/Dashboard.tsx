@@ -1,5 +1,5 @@
 
-import React from "react";
+import React, { useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import RealDashboardStats from "@/components/RealDashboardStats";
@@ -16,23 +16,34 @@ const Dashboard: React.FC = () => {
   const { user, loading } = useAuth();
   const { profile, loading: profileLoading, error: profileError } = useProfile();
 
-  console.log('🏠 Dashboard render:', { user: !!user, profile, loading, profileLoading, profileError });
+  useEffect(() => {
+    console.log('🏠 Dashboard mounted:', { 
+      user: !!user, 
+      profile, 
+      loading, 
+      profileLoading, 
+      profileError,
+      currentPath: window.location.pathname
+    });
+  }, [user, profile, loading, profileLoading, profileError]);
 
   if (loading || profileLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-        <span className="ml-2">Loading dashboard...</span>
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="flex flex-col items-center gap-4">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+          <span className="text-muted-foreground">Loading dashboard...</span>
+        </div>
       </div>
     );
   }
 
   if (!user) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
+      <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="text-center">
-          <h2 className="text-xl font-semibold text-gray-900 mb-2">Authentication Required</h2>
-          <p className="text-gray-600">Please sign in to access the dashboard.</p>
+          <h2 className="text-xl font-semibold text-foreground mb-2">Authentication Required</h2>
+          <p className="text-muted-foreground">Please sign in to access the dashboard.</p>
         </div>
       </div>
     );

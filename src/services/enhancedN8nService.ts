@@ -8,6 +8,24 @@ interface WebhookPayload {
   source: string;
 }
 
+interface EnhancedWebhookPayload extends WebhookPayload {
+  data: {
+    shopDomain?: string;
+    merchantId?: string;
+    webhookData?: any;
+    orderDetails?: any;
+    returnDetails?: any;
+    customerDetails?: any;
+    itemDetails?: any[];
+    metadata?: {
+      source: string;
+      timestamp: string;
+      topic: string;
+      webhook_id?: string;
+    };
+  };
+}
+
 interface ReturnProcessingPayload {
   returnId: string;
   merchantId: string;
@@ -62,7 +80,7 @@ export class EnhancedN8nService {
     }
   }
 
-  static async sendWebhook(endpoint: string, payload: WebhookPayload): Promise<{ success: boolean; error?: string }> {
+  static async sendWebhook(endpoint: string, payload: EnhancedWebhookPayload): Promise<{ success: boolean; error?: string }> {
     await this.initialize();
 
     if (!this.baseUrl) {
@@ -71,47 +89,75 @@ export class EnhancedN8nService {
 
     try {
       const url = `${this.baseUrl.replace(/\/$/, '')}/${endpoint}`;
-      console.log(`📤 Sending webhook to: ${url}`);
+      console.log(`📤 Sending enhanced webhook to: ${url}`);
+
+      const enhancedPayload = {
+        ...payload,
+        timestamp: new Date().toISOString(),
+        source: 'returns_automation_saas',
+        version: '2.0',
+        // Add comprehensive event context
+        context: {
+          application: 'returns_automation_saas',
+          environment: 'production',
+          webhook_version: '2.0',
+          supported_events: [
+            'orders/create',
+            'orders/updated', 
+            'orders/cancelled',
+            'returns/created',
+            'returns/approved',
+            'returns/completed',
+            'app/uninstalled'
+          ]
+        }
+      };
 
       const response = await fetch(url, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'X-Webhook-Source': 'returns-automation-saas',
+          'X-Webhook-Version': '2.0',
           ...(this.apiKey && { 'Authorization': `Bearer ${this.apiKey}` })
         },
-        body: JSON.stringify({
-          ...payload,
-          timestamp: new Date().toISOString(),
-          source: 'returns_automation_saas'
-        })
+        body: JSON.stringify(enhancedPayload)
       });
 
       if (!response.ok) {
         const errorText = await response.text().catch(() => 'Unknown error');
-        console.error(`❌ Webhook failed: ${response.status} - ${errorText}`);
+        console.error(`❌ Enhanced webhook failed: ${response.status} - ${errorText}`);
         return { success: false, error: `HTTP ${response.status}: ${errorText}` };
       }
 
-      console.log(`✅ Webhook sent successfully to ${endpoint}`);
+      console.log(`✅ Enhanced webhook sent successfully to ${endpoint}`);
       return { success: true };
 
     } catch (error) {
-      console.error(`💥 Webhook error for ${endpoint}:`, error);
+      console.error(`💥 Enhanced webhook error for ${endpoint}:`, error);
       return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
     }
   }
 
   static async processReturnCreated(returnData: ReturnProcessingPayload): Promise<void> {
-    const payload: WebhookPayload = {
+    const payload: EnhancedWebhookPayload = {
       event: 'return_created',
-      data: returnData,
+      data: {
+        ...returnData,
+        metadata: {
+          source: 'returns_automation_saas',
+          timestamp: new Date().toISOString(),
+          topic: 'returns/created',
+          webhook_id: `return_${returnData.returnId}`
+        }
+      },
       timestamp: new Date().toISOString(),
       source: 'returns_automation_saas'
     };
 
     const result = await this.sendWebhook('webhook/return-processing', payload);
     
-    // Log the attempt
+    // Log the attempt with enhanced details
     await supabase.from('analytics_events').insert({
       event_type: 'webhook_triggered',
       merchant_id: returnData.merchantId,
@@ -119,7 +165,9 @@ export class EnhancedN8nService {
         webhook_type: 'return_processing',
         success: result.success,
         error: result.error,
-        return_id: returnData.returnId
+        return_id: returnData.returnId,
+        enhanced_payload: true,
+        payload_size: JSON.stringify(payload).length
       }
     });
 
@@ -129,16 +177,24 @@ export class EnhancedN8nService {
   }
 
   static async processRetentionCampaign(campaignData: RetentionCampaignPayload): Promise<void> {
-    const payload: WebhookPayload = {
+    const payload: EnhancedWebhookPayload = {
       event: 'retention_campaign',
-      data: campaignData,
+      data: {
+        ...campaignData,
+        metadata: {
+          source: 'returns_automation_saas',
+          timestamp: new Date().toISOString(),
+          topic: 'retention/campaign',
+          webhook_id: `retention_${campaignData.customerId}`
+        }
+      },
       timestamp: new Date().toISOString(),
       source: 'returns_automation_saas'
     };
 
     const result = await this.sendWebhook('webhook/retention-campaign', payload);
     
-    // Log the attempt
+    // Log the attempt with enhanced details
     await supabase.from('analytics_events').insert({
       event_type: 'webhook_triggered',
       merchant_id: campaignData.merchantId,
@@ -146,7 +202,9 @@ export class EnhancedN8nService {
         webhook_type: 'retention_campaign',
         success: result.success,
         error: result.error,
-        customer_id: campaignData.customerId
+        customer_id: campaignData.customerId,
+        enhanced_payload: true,
+        payload_size: JSON.stringify(payload).length
       }
     });
 
@@ -158,13 +216,47 @@ export class EnhancedN8nService {
   static async testAllWebhooks(): Promise<{ success: boolean; results: any[] }> {
     await this.initialize();
 
-    const testPayload: WebhookPayload = {
+    const testPayload: EnhancedWebhookPayload = {
       event: 'connection_test',
       data: {
         test: true,
-        returnId: 'test-return-123',
         merchantId: 'test-merchant-456',
-        customerEmail: 'test@example.com'
+        webhookData: {
+          id: 'test-webhook-123',
+          test_mode: true
+        },
+        orderDetails: {
+          id: 'test-order-789',
+          order_number: '#TEST1001',
+          email: 'test@example.com',
+          total_price: '99.99',
+          currency: 'USD'
+        },
+        returnDetails: {
+          id: 'test-return-456',
+          order_id: 'test-order-789',
+          status: 'requested',
+          reason: 'Test return'
+        },
+        customerDetails: {
+          id: 'test-customer-123',
+          email: 'test@example.com',
+          first_name: 'Test',
+          last_name: 'Customer'
+        },
+        itemDetails: [{
+          id: 'test-item-1',
+          product_id: 'test-product-789',
+          name: 'Test Product',
+          quantity: 1,
+          price: '99.99'
+        }],
+        metadata: {
+          source: 'returns_automation_saas',
+          timestamp: new Date().toISOString(),
+          topic: 'connection_test',
+          webhook_id: 'test-connection-123'
+        }
       },
       timestamp: new Date().toISOString(),
       source: 'returns_automation_saas'
@@ -173,7 +265,8 @@ export class EnhancedN8nService {
     const endpoints = [
       'webhook/test-connection',
       'webhook/return-processing',
-      'webhook/retention-campaign'
+      'webhook/retention-campaign',
+      'webhook/shopify-webhook'
     ];
 
     const results = [];
@@ -181,7 +274,12 @@ export class EnhancedN8nService {
 
     for (const endpoint of endpoints) {
       const result = await this.sendWebhook(endpoint, testPayload);
-      results.push({ endpoint, ...result });
+      results.push({ 
+        endpoint, 
+        ...result,
+        payload_size: JSON.stringify(testPayload).length,
+        enhanced: true
+      });
       if (!result.success) allSuccess = false;
     }
 

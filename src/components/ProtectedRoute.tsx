@@ -15,21 +15,27 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   const { user, loading } = useAuth();
   const location = useLocation();
 
+  // Show loading while checking authentication
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="flex flex-col items-center gap-4">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+          <span className="text-muted-foreground">Checking authentication...</span>
+        </div>
       </div>
     );
   }
 
+  // If auth is required but user is not authenticated
   if (requireAuth && !user) {
-    // Redirect to auth page with return url
+    console.log('🔒 Authentication required, redirecting to auth page');
     return <Navigate to="/auth" state={{ from: location }} replace />;
   }
 
+  // If auth is NOT required but user IS authenticated (public pages)
   if (!requireAuth && user) {
-    // Redirect authenticated users to dashboard
+    console.log('🏠 User already authenticated, redirecting to dashboard');
     return <Navigate to="/dashboard" replace />;
   }
 
