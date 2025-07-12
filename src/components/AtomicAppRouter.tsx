@@ -1,4 +1,5 @@
 
+import React from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { AtomicAuthProvider } from '@/contexts/AtomicAuthContext';
 import { Toaster } from "@/components/ui/toaster";
