@@ -41,10 +41,16 @@ const N8nConnectionSetup = () => {
       if (configs && configs.length > 0 && configs[0].event_data) {
         const configData = configs[0].event_data as any;
         setN8nUrl(configData.n8n_url || '');
-        setApiKey(''); // Don't load API key for security
-        setWebhookSecret(''); // Don't load webhook secret for security
+        // Load API key and webhook secret if they exist (for editing)
+        setApiKey(configData.api_key || '');
+        setWebhookSecret(configData.webhook_secret || '');
         setConnectionStatus(configData.connection_verified ? 'connected' : 
                           configData.has_api_key ? 'disconnected' : 'unknown');
+        console.log('✅ n8n configuration loaded:', { 
+          baseUrl: configData.n8n_url, 
+          hasApiKey: !!configData.api_key, 
+          hasWebhookSecret: !!configData.webhook_secret 
+        });
       }
     } catch (error) {
       console.error('Error loading n8n configuration:', error);
@@ -72,6 +78,20 @@ const N8nConnectionSetup = () => {
       if (result.success) {
         setConnectionStatus('connected');
         
+        // Test webhook endpoints with sample data
+        const webhookEndpoints = ['webhook-test', 'webhook/order-sync', 'webhook/return-created'];
+        let webhookTestsPassed = 0;
+        
+        for (const endpoint of webhookEndpoints) {
+          const webhookUrl = `${n8nUrl.replace(/\/$/, '')}/${endpoint}`;
+          try {
+            const webhookResult = await n8nService.testWebhookConnection(webhookUrl);
+            if (webhookResult.success) webhookTestsPassed++;
+          } catch (error) {
+            console.warn(`Webhook test failed for ${endpoint}:`, error);
+          }
+        }
+
         // Save successful configuration
         const { data: existingConfig } = await supabase
           .from('analytics_events')
@@ -85,8 +105,9 @@ const N8nConnectionSetup = () => {
             .update({
               event_data: {
                 n8n_url: n8nUrl,
-                has_api_key: !!apiKey,
+                api_key: apiKey,
                 webhook_secret: webhookSecret,
+                has_api_key: !!apiKey,
                 connection_verified: true,
                 verified_at: new Date().toISOString()
               }
@@ -99,8 +120,9 @@ const N8nConnectionSetup = () => {
               event_type: 'n8n_configuration',
               event_data: {
                 n8n_url: n8nUrl,
-                has_api_key: !!apiKey,
+                api_key: apiKey,
                 webhook_secret: webhookSecret,
+                has_api_key: !!apiKey,
                 connection_verified: true,
                 verified_at: new Date().toISOString()
               }
@@ -109,7 +131,7 @@ const N8nConnectionSetup = () => {
 
         toast({
           title: "Connection successful",
-          description: "Successfully connected to n8n server. Configuration saved.",
+          description: `Successfully connected to n8n server. ${webhookTestsPassed}/${webhookEndpoints.length} webhook endpoints tested with sample data.`,
         });
       } else {
         setConnectionStatus('disconnected');
@@ -155,8 +177,9 @@ const N8nConnectionSetup = () => {
           .update({
             event_data: {
               n8n_url: n8nUrl,
-              has_api_key: !!apiKey,
+              api_key: apiKey,
               webhook_secret: webhookSecret,
+              has_api_key: !!apiKey,
               configured_at: new Date().toISOString()
             }
           })
@@ -169,8 +192,9 @@ const N8nConnectionSetup = () => {
             event_type: 'n8n_configuration',
             event_data: {
               n8n_url: n8nUrl,
-              has_api_key: !!apiKey,
+              api_key: apiKey,
               webhook_secret: webhookSecret,
+              has_api_key: !!apiKey,
               configured_at: new Date().toISOString()
             }
           });

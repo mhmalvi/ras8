@@ -376,24 +376,47 @@ export class N8nService {
     try {
       console.log('🧪 Testing webhook connection:', webhookUrl);
       
+      const testPayload = {
+        test: true,
+        message: 'Test webhook connection from Returns Automation SaaS',
+        timestamp: new Date().toISOString(),
+        source: 'n8n_connection_test',
+        eventType: 'connection_test',
+        data: {
+          returnId: 'test-return-123',
+          customerEmail: 'test@example.com', 
+          shopifyOrderId: 'test-order-456',
+          status: 'test',
+          reason: 'Connection test from Returns Automation Platform',
+          totalAmount: 99.99,
+          items: [
+            {
+              productId: 'test-product-789',
+              productName: 'Test Product',
+              quantity: 1,
+              price: 99.99
+            }
+          ]
+        }
+      };
+
       const response = await fetch(webhookUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
         },
         mode: 'no-cors',
-        body: JSON.stringify({
-          test: true,
-          timestamp: new Date().toISOString(),
-          data: { message: 'Test webhook connection' }
-        })
+        body: JSON.stringify(testPayload)
       });
 
-      console.log('✅ Webhook test request sent');
+      console.log('✅ Webhook test request sent with test data');
       
       return {
         success: true,
-        data: { message: 'Test request sent successfully - check your n8n workflow execution logs' }
+        data: { 
+          message: 'Test request sent successfully - check your n8n workflow execution logs',
+          payload: testPayload
+        }
       };
     } catch (error) {
       console.error('💥 Webhook test failed:', error);
