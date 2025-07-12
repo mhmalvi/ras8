@@ -43,7 +43,6 @@ import {
   TrendingDown,
   Sparkles,
   Flame,
-  Lightning,
   Layers,
   Command,
   Boxes,
