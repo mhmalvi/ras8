@@ -1,7 +1,7 @@
 
 import React, { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAtomicAuth } from '@/contexts/AtomicAuthContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -12,7 +12,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Loader2, ArrowRight, Shield, Users, Zap } from 'lucide-react';
 
 const Auth = () => {
-  const { signInWithEmail, signUpWithEmail } = useAuth();
+  const { signIn, signUp } = useAtomicAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
   const location = useLocation();
@@ -33,7 +33,7 @@ const Auth = () => {
     lastName: ''
   });
 
-  const from = location.state?.from?.pathname || '/dashboard';
+  const from = location.state?.from?.pathname || '/';
 
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -41,7 +41,7 @@ const Auth = () => {
     setError(null);
 
     try {
-      const { error } = await signInWithEmail(signInForm.email, signInForm.password);
+      const { error } = await signIn(signInForm.email, signInForm.password);
       
       if (error) {
         setError(error.message);
@@ -77,7 +77,7 @@ const Auth = () => {
     }
 
     try {
-      const { error } = await signUpWithEmail(
+      const { error } = await signUp(
         signUpForm.email, 
         signUpForm.password,
         signUpForm.firstName,
@@ -92,7 +92,7 @@ const Auth = () => {
           description: "Please check your email to verify your account.",
         });
         // Navigate to dashboard after successful signup
-        navigate('/dashboard', { replace: true });
+        navigate('/', { replace: true });
       }
     } catch (err) {
       setError('An unexpected error occurred. Please try again.');

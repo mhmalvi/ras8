@@ -1,5 +1,5 @@
 
-import { useAuth } from '@/contexts/AuthContext';
+import { useAtomicAuth } from '@/contexts/AtomicAuthContext';
 import { Button } from '@/components/ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
@@ -7,7 +7,7 @@ import { LogOut, User } from 'lucide-react';
 import { toast } from 'sonner';
 
 const UserMenu = () => {
-  const { user, signOut } = useAuth();
+  const { user, signOut } = useAtomicAuth();
 
   const handleSignOut = async () => {
     try {

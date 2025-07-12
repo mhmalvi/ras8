@@ -2,8 +2,8 @@
 import { AppSidebar } from "@/components/AppSidebar";
 import { SidebarProvider } from "@/components/ui/sidebar";
 import UserMenu from "@/components/UserMenu";
-import { useProfile } from "@/hooks/useProfile";
-import { useAuth } from "@/contexts/AuthContext";
+import { useMerchantProfile } from "@/hooks/useMerchantProfile";
+import { useAtomicAuth } from "@/contexts/AtomicAuthContext";
 import ProfileCreator from "@/components/ProfileCreator";
 import NotificationCenter from "@/components/NotificationCenter";
 import { LoadingSpinner } from "@/components/LoadingStates";
@@ -18,8 +18,8 @@ interface AppLayoutProps {
 }
 
 const AppLayout = ({ children, title = "Dashboard", description }: AppLayoutProps) => {
-  const { user, loading: authLoading } = useAuth();
-  const { profile, loading: profileLoading, error: profileError, refetch } = useProfile();
+  const { user, loading: authLoading } = useAtomicAuth();
+  const { profile, loading: profileLoading, error: profileError, refetch } = useMerchantProfile();
 
   // Show loading for reasonable time only
   if (authLoading || (profileLoading && !profileError)) {

@@ -6,15 +6,15 @@ import RealDashboardStats from "@/components/RealDashboardStats";
 import RealReturnsTable from "@/components/RealReturnsTable";
 import AIInsightsCard from "@/components/AIInsightsCard";
 import AppLayout from "@/components/AppLayout";
-import { useAuth } from "@/contexts/AuthContext";
-import { useProfile } from "@/hooks/useProfile";
+import { useAtomicAuth } from "@/contexts/AtomicAuthContext";
+import { useMerchantProfile } from "@/hooks/useMerchantProfile";
 import MerchantAssignment from "@/components/MerchantAssignment";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Info } from "lucide-react";
 
 const Dashboard: React.FC = () => {
-  const { user, loading } = useAuth();
-  const { profile, loading: profileLoading, error: profileError } = useProfile();
+  const { user, loading } = useAtomicAuth();
+  const { profile, loading: profileLoading, error: profileError } = useMerchantProfile();
 
   useEffect(() => {
     console.log('🏠 Dashboard mounted:', { 
