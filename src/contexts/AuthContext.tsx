@@ -18,66 +18,57 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
-  const [initialized, setInitialized] = useState(false);
 
   useEffect(() => {
-    let mounted = true;
-    
-    // Set up auth state listener FIRST to catch all events
+    let isMounted = true;
+
+    // Get initial session immediately
+    const getInitialSession = async () => {
+      try {
+        const { data: { session }, error } = await supabase.auth.getSession();
+        if (error) {
+          console.error('Error getting initial session:', error);
+        }
+        
+        if (isMounted) {
+          setSession(session);
+          setUser(session?.user ?? null);
+          setLoading(false);
+        }
+      } catch (error) {
+        console.error('Failed to get initial session:', error);
+        if (isMounted) {
+          setLoading(false);
+        }
+      }
+    };
+
+    // Set up auth state listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
         console.log('🔄 Auth state changed:', event, session?.user?.id);
         
-        if (mounted) {
+        if (isMounted) {
           setSession(session);
           setUser(session?.user ?? null);
           
-          // Only set loading to false after we've processed the auth state
-          if (!initialized) {
-            setInitialized(true);
+          // Only set loading to false if we haven't already
+          if (loading) {
             setLoading(false);
           }
         }
       }
     );
 
-    // Get initial session AFTER setting up the listener
-    const getInitialSession = async () => {
-      try {
-        const { data: { session }, error } = await supabase.auth.getSession();
-        if (error) {
-          console.error('Error getting session:', error);
-        } else if (mounted) {
-          setSession(session);
-          setUser(session?.user ?? null);
-        }
-      } catch (error) {
-        console.error('Failed to get initial session:', error);
-      } finally {
-        if (mounted && !initialized) {
-          setInitialized(true);
-          setLoading(false);
-        }
-      }
-    };
-
+    // Get initial session
     getInitialSession();
 
-    // Fallback timeout to prevent infinite loading
-    const timeout = setTimeout(() => {
-      if (mounted && !initialized) {
-        console.warn('Auth initialization timeout - setting loading to false');
-        setInitialized(true);
-        setLoading(false);
-      }
-    }, 3000);
-
+    // Cleanup
     return () => {
-      mounted = false;
-      clearTimeout(timeout);
+      isMounted = false;
       subscription.unsubscribe();
     };
-  }, [initialized]);
+  }, []);
 
   const signInWithEmail = async (email: string, password: string) => {
     const { error } = await supabase.auth.signInWithPassword({

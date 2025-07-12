@@ -1,5 +1,5 @@
 
-import { ReactNode, useEffect, useState } from 'react';
+import { ReactNode } from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 
@@ -10,19 +10,9 @@ interface ProtectedRouteProps {
 const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
   const { user, loading } = useAuth();
   const location = useLocation();
-  const [timeoutReached, setTimeoutReached] = useState(false);
 
-  useEffect(() => {
-    // Set timeout to prevent infinite loading
-    const timer = setTimeout(() => {
-      setTimeoutReached(true);
-    }, 5000);
-
-    return () => clearTimeout(timer);
-  }, []);
-
-  // Show loading state with timeout protection
-  if (loading && !timeoutReached) {
+  // Show loading state while checking authentication
+  if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="flex flex-col items-center gap-4">
@@ -33,7 +23,7 @@ const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
     );
   }
 
-  // If not authenticated after loading, redirect to auth page
+  // If not authenticated, redirect to auth page
   if (!user) {
     console.log('🔒 Authentication required, redirecting to auth page');
     return <Navigate to="/auth" state={{ from: location }} replace />;

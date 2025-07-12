@@ -74,10 +74,7 @@ const AppRouter = () => {
             } 
           />
           
-          {/* Redirect legacy dashboard route */}
-          <Route path="/dashboard" element={<Navigate to="/" replace />} />
-          
-          {/* Catch all - redirect based on auth status */}
+          {/* Catch all - redirect to dashboard for authenticated users */}
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </div>
