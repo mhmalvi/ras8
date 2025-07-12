@@ -37,9 +37,12 @@ const AtomicProtectedRoute = ({ children }: AtomicProtectedRouteProps) => {
 
   // Special handling for master admin - ensure they go to master admin dashboard
   // But only if they're specifically trying to access the root or dashboard AND not already on master admin
-  if (user.email === 'aalvi.hm@gmail.com' && 
-      (location.pathname === '/' || location.pathname === '/dashboard') && 
-      location.pathname !== '/master-admin') {
+  const currentPath = location.pathname;
+  const isMasterAdmin = user.email === 'aalvi.hm@gmail.com';
+  const isOnRootOrDashboard = currentPath === '/' || currentPath === '/dashboard';
+  const isNotOnMasterAdmin = currentPath !== '/master-admin';
+  
+  if (isMasterAdmin && isOnRootOrDashboard && isNotOnMasterAdmin) {
     console.log('🔄 Master admin detected, redirecting to master admin dashboard');
     return <Navigate to="/master-admin" replace />;
   }
