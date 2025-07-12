@@ -51,7 +51,7 @@ export const AtomicAuthProvider = ({ children }: AtomicAuthProviderProps) => {
               setUser(session?.user ?? null);
             }
 
-            // For master admin, ensure profile is set up correctly
+            // For master admin, ensure profile is set up correctly after successful sign in
             if (session?.user?.email === 'aalvi.hm@gmail.com' && event === 'SIGNED_IN') {
               setTimeout(async () => {
                 try {
@@ -74,7 +74,7 @@ export const AtomicAuthProvider = ({ children }: AtomicAuthProviderProps) => {
                 } catch (err) {
                   console.error('Error in profile update:', err);
                 }
-              }, 0);
+              }, 100);
             }
           }
         );
