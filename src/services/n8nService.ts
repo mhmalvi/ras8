@@ -38,56 +38,201 @@ interface AutomationRule {
 }
 
 export class N8nService {
-  private baseUrl: string = '';
-  private apiKey: string = '';
-  private webhookSecret: string = '';
-  private configLoaded: boolean = false;
+  private config: {
+    baseUrl: string;
+    apiKey: string;
+    webhookSecret: string;
+  } | null = null;
 
-  // Load configuration from database
   private async loadConfiguration() {
-    if (this.configLoaded) return;
+    if (this.config) return this.config;
 
     try {
-      const { data: config, error } = await supabase
+      const { data: configs, error } = await supabase
         .from('analytics_events')
         .select('*')
         .eq('event_type', 'n8n_configuration')
         .order('created_at', { ascending: false })
-        .limit(1)
-        .maybeSingle();
+        .limit(1);
 
-      if (error && error.code !== 'PGRST116') {
+      if (error || !configs || configs.length === 0) {
         console.warn('No n8n configuration found');
-        return;
+        return null;
       }
 
-      if (config?.event_data) {
-        const configData = config.event_data as any;
-        this.baseUrl = configData.n8n_url || '';
-        this.apiKey = configData.api_key || '';
-        this.webhookSecret = configData.webhook_secret || '';
-        this.configLoaded = true;
-        console.log('✅ n8n configuration loaded');
-      }
+      const configData = configs[0].event_data as any;
+      this.config = {
+        baseUrl: configData.n8n_url || '',
+        apiKey: configData.api_key || '',
+        webhookSecret: configData.webhook_secret || ''
+      };
+
+      console.log('✅ n8n configuration loaded');
+      return this.config;
     } catch (error) {
       console.warn('Failed to load n8n configuration:', error);
+      return null;
+    }
+  }
+
+  async testConnection(baseUrl: string, apiKey?: string): Promise<{ success: boolean; data?: any; error?: string }> {
+    try {
+      console.log('🧪 Testing n8n connection:', baseUrl);
+      
+      // Clean URL format
+      const cleanUrl = baseUrl.replace(/\/$/, '');
+      
+      // Test with sample webhook data
+      const testPayload = {
+        test: true,
+        source: 'returns_automation_saas',
+        message: 'Connection test from Returns Automation Platform',
+        timestamp: new Date().toISOString(),
+        eventType: 'connection_test',
+        data: {
+          returnId: 'test-return-123',
+          customerEmail: 'test@example.com',
+          shopifyOrderId: 'test-order-456',
+          status: 'test',
+          reason: 'Connection test',
+          totalAmount: 99.99,
+          items: [{
+            productId: 'test-product-789',
+            productName: 'Test Product',
+            quantity: 1,
+            price: 99.99
+          }]
+        }
+      };
+
+      // Test main webhook endpoints
+      const webhookEndpoints = [
+        'webhook/test-connection',
+        'webhook/return-processing',
+        'webhook/retention-campaign'
+      ];
+
+      let successfulTests = 0;
+      const testResults = [];
+
+      for (const endpoint of webhookEndpoints) {
+        const webhookUrl = `${cleanUrl}/${endpoint}`;
+        
+        try {
+          console.log(`🔗 Testing webhook: ${webhookUrl}`);
+          
+          const response = await fetch(webhookUrl, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              ...(apiKey && { 'Authorization': `Bearer ${apiKey}` })
+            },
+            body: JSON.stringify(testPayload)
+          });
+
+          if (response.ok || response.status === 404) {
+            // 404 is acceptable - means n8n is running but webhook doesn't exist yet
+            successfulTests++;
+            testResults.push({ endpoint, status: 'success', message: 'Webhook accessible' });
+            console.log(`✅ Webhook test successful: ${endpoint}`);
+          } else {
+            testResults.push({ endpoint, status: 'warning', message: `HTTP ${response.status}` });
+            console.warn(`⚠️ Webhook test warning: ${endpoint} returned ${response.status}`);
+          }
+        } catch (error) {
+          testResults.push({ endpoint, status: 'error', message: 'Connection failed' });
+          console.warn(`❌ Webhook test failed: ${endpoint}`, error);
+        }
+      }
+
+      if (successfulTests > 0) {
+        return {
+          success: true,
+          data: { 
+            message: `Successfully tested ${successfulTests}/${webhookEndpoints.length} webhook endpoints`,
+            results: testResults,
+            baseUrl: cleanUrl
+          }
+        };
+      } else {
+        return {
+          success: false,
+          error: 'No webhook endpoints were accessible. Please check your n8n server configuration.'
+        };
+      }
+
+    } catch (error) {
+      console.error('💥 n8n connection test failed:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unable to connect to n8n server'
+      };
+    }
+  }
+
+  async testWebhookConnection(webhookUrl: string): Promise<{ success: boolean; data?: any; error?: string }> {
+    try {
+      console.log('🧪 Testing specific webhook:', webhookUrl);
+      
+      const testPayload = {
+        test: true,
+        source: 'returns_automation_saas_webhook_test',
+        message: 'Direct webhook test',
+        timestamp: new Date().toISOString(),
+        eventType: 'webhook_test',
+        data: {
+          returnId: 'webhook-test-123',
+          customerEmail: 'webhook-test@example.com',
+          testData: true
+        }
+      };
+
+      const response = await fetch(webhookUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(testPayload)
+      });
+
+      if (response.ok) {
+        return {
+          success: true,
+          data: { 
+            message: 'Test data sent successfully to webhook',
+            webhookUrl,
+            status: response.status
+          }
+        };
+      } else {
+        return {
+          success: false,
+          error: `Webhook returned status ${response.status}`
+        };
+      }
+    } catch (error) {
+      console.error('💥 Webhook test failed:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Webhook test failed'
+      };
     }
   }
 
   async triggerRetentionCampaign(data: RetentionCampaignTrigger): Promise<N8nWorkflowExecution> {
-    await this.loadConfiguration();
+    const config = await this.loadConfiguration();
 
-    if (!this.baseUrl) {
+    if (!config?.baseUrl) {
       throw new Error('N8n configuration not found. Please configure n8n connection first.');
     }
 
     console.log('🔄 Triggering retention campaign for:', data.customerEmail);
     
-    const response = await fetch(`${this.baseUrl}/webhook/retention-campaign`, {
+    const response = await fetch(`${config.baseUrl}/webhook/retention-campaign`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        ...(this.apiKey && { 'Authorization': `Bearer ${this.apiKey}` })
+        ...(config.apiKey && { 'Authorization': `Bearer ${config.apiKey}` })
       },
       body: JSON.stringify({
         customerData: data,
@@ -113,19 +258,19 @@ export class N8nService {
   }
 
   async processShopifyWebhook(webhookData: N8nWebhookPayload): Promise<void> {
-    await this.loadConfiguration();
+    const config = await this.loadConfiguration();
 
-    if (!this.baseUrl) {
+    if (!config?.baseUrl) {
       throw new Error('N8n configuration not found. Please configure n8n connection first.');
     }
 
     console.log('📨 Processing Shopify webhook:', webhookData.event);
     
-    const response = await fetch(`${this.baseUrl}/webhook/shopify-webhook`, {
+    const response = await fetch(`${config.baseUrl}/webhook/shopify-webhook`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        ...(this.apiKey && { 'Authorization': `Bearer ${this.apiKey}` })
+        ...(config.apiKey && { 'Authorization': `Bearer ${config.apiKey}` })
       },
       body: JSON.stringify(webhookData)
     });
@@ -141,122 +286,6 @@ export class N8nService {
     });
 
     console.log('✅ Shopify webhook processed successfully');
-  }
-
-  async testConnection(baseUrl: string, apiKey?: string): Promise<{ success: boolean; data?: any; error?: string }> {
-    try {
-      console.log('🧪 Testing n8n connection:', baseUrl);
-      
-      // For n8n cloud instances, validate URL format
-      const isCloudInstance = baseUrl.includes('n8n.cloud');
-      
-      if (isCloudInstance) {
-        const urlPattern = /^https:\/\/[a-zA-Z0-9-]+\.app\.n8n\.cloud\/?$/;
-        if (urlPattern.test(baseUrl)) {
-          console.log('✅ n8n cloud instance URL format is valid');
-          
-          // Test webhook endpoint with sample data
-          await this.testWebhookEndpoint(`${baseUrl.replace(/\/$/, '')}/webhook/test-connection`);
-          
-          return {
-            success: true,
-            data: { message: 'n8n cloud instance URL validated and webhook tested successfully', status: 200 }
-          };
-        } else {
-          return {
-            success: false,
-            error: 'Invalid n8n cloud URL format. Expected: https://yourinstance.app.n8n.cloud'
-          };
-        }
-      }
-
-      // For self-hosted instances, try to reach health endpoint
-      const testUrl = `${baseUrl.replace(/\/$/, '')}/healthz`;
-
-      const response = await fetch(testUrl, {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(apiKey && { 'Authorization': `Bearer ${apiKey}` })
-        },
-        mode: 'no-cors',
-        signal: AbortSignal.timeout(5000)
-      });
-
-      console.log('✅ n8n connection test successful');
-      return {
-        success: true,
-        data: { message: 'Connection successful', status: 200 }
-      };
-
-    } catch (error) {
-      console.error('💥 n8n connection test failed:', error);
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : 'Unable to connect to n8n server'
-      };
-    }
-  }
-
-  private async testWebhookEndpoint(webhookUrl: string): Promise<void> {
-    const testPayload = {
-      test: true,
-      source: 'returns_automation_saas',
-      message: 'Connection test from Returns Automation Platform',
-      timestamp: new Date().toISOString(),
-      eventType: 'connection_test',
-      data: {
-        returnId: 'test-return-123',
-        customerEmail: 'test@example.com',
-        shopifyOrderId: 'test-order-456',
-        status: 'test',
-        reason: 'Connection test',
-        totalAmount: 99.99,
-        items: [{
-          productId: 'test-product-789',
-          productName: 'Test Product',
-          quantity: 1,
-          price: 99.99
-        }]
-      }
-    };
-
-    try {
-      const response = await fetch(webhookUrl, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(testPayload),
-        mode: 'no-cors'
-      });
-
-      console.log('✅ Test webhook data sent successfully');
-    } catch (error) {
-      console.warn('⚠️ Webhook test failed, but this may be normal due to CORS:', error);
-    }
-  }
-
-  async testWebhookConnection(webhookUrl: string): Promise<{ success: boolean; data?: any; error?: string }> {
-    try {
-      console.log('🧪 Testing webhook connection:', webhookUrl);
-      
-      await this.testWebhookEndpoint(webhookUrl);
-      
-      return {
-        success: true,
-        data: { 
-          message: 'Test request sent successfully - check your n8n workflow execution logs',
-          webhookUrl
-        }
-      };
-    } catch (error) {
-      console.error('💥 Webhook test failed:', error);
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : 'Unknown error'
-      };
-    }
   }
 
   async getAutomationRules(): Promise<AutomationRule[]> {

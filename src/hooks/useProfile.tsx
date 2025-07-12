@@ -14,10 +14,6 @@ interface Profile {
   updated_at: string;
 }
 
-// Simple cache to prevent multiple fetches
-const profileCache = new Map<string, Profile>();
-const activeRequests = new Map<string, Promise<Profile | null>>();
-
 export const useProfile = () => {
   const { user } = useAuth();
   const [profile, setProfile] = useState<Profile | null>(null);
@@ -25,44 +21,20 @@ export const useProfile = () => {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!user?.id) {
-      setProfile(null);
-      setLoading(false);
-      setError(null);
-      return;
-    }
+    let isMounted = true;
 
-    // Check cache first
-    const cachedProfile = profileCache.get(user.id);
-    if (cachedProfile) {
-      console.log('✨ Using cached profile for user:', user.id);
-      setProfile(cachedProfile);
-      setLoading(false);
-      setError(null);
-      return;
-    }
-
-    // Check if request is already in progress
-    const existingRequest = activeRequests.get(user.id);
-    if (existingRequest) {
-      console.log('⏳ Profile request already in progress');
-      existingRequest.then(result => {
-        setProfile(result);
+    const fetchProfile = async () => {
+      if (!user?.id) {
+        setProfile(null);
         setLoading(false);
         setError(null);
-      }).catch(err => {
-        setError(err.message);
-        setLoading(false);
-      });
-      return;
-    }
+        return;
+      }
 
-    console.log('👤 Fetching profile for user:', user.id);
-    setLoading(true);
-    setError(null);
+      console.log('👤 Fetching profile for user:', user.id);
+      setLoading(true);
+      setError(null);
 
-    // Create new request
-    const fetchRequest = async (): Promise<Profile | null> => {
       try {
         const { data, error: fetchError } = await supabase
           .from('profiles')
@@ -70,42 +42,37 @@ export const useProfile = () => {
           .eq('id', user.id)
           .maybeSingle();
 
+        if (!isMounted) return;
+
         if (fetchError) {
-          throw new Error(fetchError.message);
-        }
-
-        if (data) {
-          profileCache.set(user.id, data);
+          console.error('💥 Profile fetch failed:', fetchError);
+          setError(fetchError.message);
+          setProfile(null);
+        } else {
           console.log('✅ Profile loaded successfully:', data);
+          setProfile(data);
+          setError(null);
         }
-
-        return data;
       } catch (err) {
-        console.error('💥 Profile fetch failed:', err);
-        throw err;
+        if (!isMounted) return;
+        
+        console.error('💥 Profile fetch error:', err);
+        const errorMessage = err instanceof Error ? err.message : 'Unknown error';
+        setError(errorMessage);
+        setProfile(null);
       } finally {
-        activeRequests.delete(user.id);
+        if (isMounted) {
+          setLoading(false);
+          console.log('🏁 Profile fetch completed');
+        }
       }
     };
 
-    // Store and execute request
-    const request = fetchRequest();
-    activeRequests.set(user.id, request);
+    fetchProfile();
 
-    request
-      .then(result => {
-        setProfile(result);
-        setError(null);
-      })
-      .catch(err => {
-        setError(err instanceof Error ? err.message : 'Unknown error');
-        setProfile(null);
-      })
-      .finally(() => {
-        setLoading(false);
-        console.log('🏁 Profile fetch completed');
-      });
-
+    return () => {
+      isMounted = false;
+    };
   }, [user?.id]);
 
   const updateProfile = async (updates: Partial<Profile>) => {
@@ -127,7 +94,6 @@ export const useProfile = () => {
       }
       
       if (data) {
-        profileCache.set(user.id, data);
         setProfile(data);
       }
       
@@ -142,10 +108,9 @@ export const useProfile = () => {
 
   const refetch = async () => {
     if (user?.id) {
-      profileCache.delete(user.id);
-      activeRequests.delete(user.id);
       setLoading(true);
       setError(null);
+      // The useEffect will handle the refetch when loading state changes
     }
   };
 
