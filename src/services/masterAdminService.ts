@@ -85,11 +85,12 @@ export class MasterAdminService {
         const merchantReturns = returns?.filter(r => r.merchant_id === merchant.id) || [];
         const merchantRevenue = merchantReturns.reduce((sum, r) => sum + Number(r.total_amount || 0), 0);
         
-        // Check if merchant is suspended
-        const isSuspended = merchant.settings && 
-          typeof merchant.settings === 'object' && 
-          'suspended' in merchant.settings && 
-          merchant.settings.suspended === true;
+        // Safely check if merchant is suspended
+        let isSuspended = false;
+        if (merchant.settings && typeof merchant.settings === 'object' && merchant.settings !== null) {
+          const settingsObj = merchant.settings as Record<string, any>;
+          isSuspended = settingsObj.suspended === true;
+        }
         
         return {
           merchant_id: merchant.id,
@@ -236,8 +237,13 @@ export class MasterAdminService {
         throw fetchError;
       }
 
+      // Safely handle merchant settings
+      let currentSettings: Record<string, any> = {};
+      if (merchant.settings && typeof merchant.settings === 'object' && merchant.settings !== null) {
+        currentSettings = { ...merchant.settings as Record<string, any> };
+      }
+
       // Update merchant settings
-      const currentSettings = merchant.settings || {};
       const updatedSettings = {
         ...currentSettings,
         suspended: suspend,
