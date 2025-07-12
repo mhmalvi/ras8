@@ -26,6 +26,7 @@ export const useProfile = () => {
 
   useEffect(() => {
     let mounted = true;
+    let timeoutId: NodeJS.Timeout;
 
     const fetchProfile = async () => {
       if (!user?.id) {
@@ -40,7 +41,7 @@ export const useProfile = () => {
 
       // Check cache first
       if (profileCache[user.id]) {
-        console.log('✨ Using cached profile for user:', user.id);
+        console.log('✨ Using cached profile for user:', user.id, Object.keys(profileCache).length);
         if (mounted) {
           setProfile(profileCache[user.id]);
           setLoading(false);
@@ -51,7 +52,7 @@ export const useProfile = () => {
 
       // Check if there's already a pending request
       if (profilePromises[user.id]) {
-        console.log('⏳ Profile fetch already in progress for user:', user.id);
+        console.log('⏳ Profile still loading, waiting...');
         try {
           const cachedProfile = await profilePromises[user.id];
           if (mounted) {
@@ -75,6 +76,16 @@ export const useProfile = () => {
         setLoading(true);
         setError(null);
       }
+
+      // Set a timeout to prevent infinite loading
+      timeoutId = setTimeout(() => {
+        if (mounted) {
+          console.warn('⚠️ Profile fetch timeout, forcing completion');
+          setLoading(false);
+          setError('Profile fetch timed out');
+          delete profilePromises[user.id];
+        }
+      }, 10000); // 10 second timeout
 
       // Create a promise for this fetch to prevent duplicates
       profilePromises[user.id] = (async () => {
@@ -110,11 +121,13 @@ export const useProfile = () => {
       try {
         const fetchedProfile = await profilePromises[user.id];
         if (mounted) {
+          clearTimeout(timeoutId);
           setProfile(fetchedProfile);
           setError(null);
         }
       } catch (err) {
         if (mounted) {
+          clearTimeout(timeoutId);
           setError(err instanceof Error ? err.message : 'Unknown error');
           setProfile(null);
         }
@@ -130,6 +143,9 @@ export const useProfile = () => {
 
     return () => {
       mounted = false;
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+      }
     };
   }, [user?.id]);
 
