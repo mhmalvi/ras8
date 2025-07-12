@@ -106,7 +106,7 @@ const RealDashboardStats = () => {
     );
   }
 
-  // Calculate trends from monthly data (compare current month to previous month)
+  // Calculate trends from current vs previous month
   const currentMonth = analytics.monthlyTrends[analytics.monthlyTrends.length - 1];
   const previousMonth = analytics.monthlyTrends[analytics.monthlyTrends.length - 2];
 
@@ -125,7 +125,6 @@ const RealDashboardStats = () => {
     previousMonth?.revenue || 0
   );
 
-  // Calculate AI trend based on acceptance rate vs target
   const aiTrend = analytics.aiAcceptanceRate >= 80 ? 
     { trend: 'up' as const, value: 'Above target' } : 
     { trend: 'down' as const, value: 'Below target' };

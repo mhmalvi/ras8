@@ -1,11 +1,8 @@
 
 import { supabase } from '@/integrations/supabase/client';
-import { PerformanceOptimizer } from '@/utils/performanceOptimizer';
-import { MonitoringService } from '@/utils/monitoringService';
 
 export interface RealTimeAnalytics {
   totalReturns: number;
-  totalRefunds: number;
   totalExchanges: number;
   aiAcceptanceRate: number;
   revenueImpact: number;
@@ -14,169 +11,134 @@ export interface RealTimeAnalytics {
     approved: number;
     in_transit: number;
     completed: number;
+    rejected: number;
   };
   monthlyTrends: Array<{
     month: string;
     returns: number;
     exchanges: number;
-    refunds: number;
     revenue: number;
-  }>;
-  topReturnReasons: Array<{
-    reason: string;
-    count: number;
-    percentage: number;
   }>;
 }
 
 export class RealTimeAnalyticsService {
   static async getAnalytics(merchantId: string): Promise<RealTimeAnalytics> {
-    return MonitoringService.monitorApiCall(
-      'analytics_fetch',
-      async () => {
-        console.log('🔄 Fetching optimized analytics for merchant:', merchantId);
+    console.log('📊 Fetching real-time analytics for merchant:', merchantId);
 
-        try {
-          // Use optimized analytics query with caching
-          const analyticsData = await PerformanceOptimizer.getOptimizedAnalytics(merchantId);
-          
-          const analytics = this.calculateAnalytics(
-            analyticsData.returns,
-            analyticsData.returnItems,
-            analyticsData.aiSuggestions
-          );
-          
-          MonitoringService.info('Analytics calculation completed', {
-            merchantId,
-            totalReturns: analytics.totalReturns,
-            calculationTime: Date.now()
-          });
-          
-          return analytics;
+    try {
+      // Fetch returns data with return items
+      const { data: returns, error: returnsError } = await supabase
+        .from('returns')
+        .select(`
+          *,
+          return_items (*)
+        `)
+        .eq('merchant_id', merchantId);
 
-        } catch (error) {
-          MonitoringService.error('Analytics calculation failed', { merchantId, error });
-          throw error;
+      if (returnsError) throw returnsError;
+
+      // Fetch AI suggestions data
+      const { data: aiSuggestions, error: aiError } = await supabase
+        .from('ai_suggestions')
+        .select('*')
+        .in('return_id', returns?.map(r => r.id) || []);
+
+      if (aiError) throw aiError;
+
+      // Calculate analytics
+      const totalReturns = returns?.length || 0;
+      const totalExchanges = returns?.filter(r => 
+        r.return_items?.some((item: any) => item.action === 'exchange')
+      ).length || 0;
+
+      // Calculate AI acceptance rate
+      const acceptedAI = aiSuggestions?.filter(ai => ai.accepted === true).length || 0;
+      const totalAI = aiSuggestions?.length || 0;
+      const aiAcceptanceRate = totalAI > 0 ? Math.round((acceptedAI / totalAI) * 100) : 0;
+
+      // Calculate revenue impact (from completed exchanges)
+      const revenueImpact = returns?.reduce((sum, returnItem) => {
+        if (returnItem.status === 'completed' && 
+            returnItem.return_items?.some((item: any) => item.action === 'exchange')) {
+          return sum + (Number(returnItem.total_amount) || 0);
         }
-      },
-      { merchantId }
-    );
-  }
+        return sum;
+      }, 0) || 0;
 
-  private static calculateAnalytics(
-    returnsData: any[],
-    returnItemsData: any[],
-    aiSuggestionsData: any[]
-  ): RealTimeAnalytics {
-    // Calculate totals
-    const totalReturns = returnsData.length;
-    const totalRefunds = returnItemsData.filter(item => item.action === 'refund').length;
-    const totalExchanges = returnItemsData.filter(item => item.action === 'exchange').length;
-
-    // Calculate AI acceptance rate from real data
-    const acceptedSuggestions = aiSuggestionsData.filter(s => s.accepted === true).length;
-    const totalSuggestions = aiSuggestionsData.filter(s => s.accepted !== null).length;
-    const aiAcceptanceRate = totalSuggestions > 0 ? Math.round((acceptedSuggestions / totalSuggestions) * 100) : 0;
-
-    // Calculate revenue impact from actual exchanges
-    const revenueImpact = returnItemsData
-      .filter(item => item.action === 'exchange')
-      .reduce((sum, item) => sum + (Number(item.price) || 0), 0);
-
-    // Calculate status breakdown
-    const returnsByStatus = {
-      requested: returnsData.filter(r => r.status === 'requested').length,
-      approved: returnsData.filter(r => r.status === 'approved').length,
-      in_transit: returnsData.filter(r => r.status === 'in_transit').length,
-      completed: returnsData.filter(r => r.status === 'completed').length,
-    };
-
-    // Calculate monthly trends from real data
-    const monthlyTrends = this.calculateMonthlyTrends(returnsData, returnItemsData);
-
-    // Calculate top return reasons
-    const topReturnReasons = this.calculateTopReturnReasons(returnsData);
-
-    return {
-      totalReturns,
-      totalRefunds,
-      totalExchanges,
-      aiAcceptanceRate,
-      revenueImpact,
-      returnsByStatus,
-      monthlyTrends,
-      topReturnReasons
-    };
-  }
-
-  private static calculateMonthlyTrends(returnsData: any[], returnItemsData: any[]) {
-    const now = new Date();
-    const months = Array.from({ length: 6 }, (_, i) => {
-      const date = new Date(now.getFullYear(), now.getMonth() - (5 - i), 1);
-      return {
-        month: date.toLocaleDateString('en-US', { month: 'short' }),
-        year: date.getFullYear(),
-        monthIndex: date.getMonth(),
-        returns: 0,
-        exchanges: 0,
-        refunds: 0,
-        revenue: 0
+      // Calculate returns by status
+      const returnsByStatus = {
+        requested: returns?.filter(r => r.status === 'requested').length || 0,
+        approved: returns?.filter(r => r.status === 'approved').length || 0,
+        in_transit: returns?.filter(r => r.status === 'in_transit').length || 0,
+        completed: returns?.filter(r => r.status === 'completed').length || 0,
+        rejected: returns?.filter(r => r.status === 'rejected').length || 0,
       };
-    });
 
-    // Count returns by month
-    returnsData.forEach(ret => {
-      const retDate = new Date(ret.created_at);
-      const monthData = months.find(m => 
-        m.monthIndex === retDate.getMonth() && m.year === retDate.getFullYear()
-      );
-      if (monthData) monthData.returns++;
-    });
+      // Calculate monthly trends (last 6 months)
+      const monthlyTrends = this.calculateMonthlyTrends(returns || []);
 
-    // Count items and calculate revenue by month
-    returnItemsData.forEach(item => {
-      const itemDate = new Date(item.returns?.created_at);
-      const monthData = months.find(m => 
-        m.monthIndex === itemDate.getMonth() && m.year === itemDate.getFullYear()
-      );
-      if (monthData) {
-        if (item.action === 'exchange') {
-          monthData.exchanges++;
-          monthData.revenue += Number(item.price) || 0;
-        }
-        if (item.action === 'refund') {
-          monthData.refunds++;
-        }
-      }
-    });
+      const analytics: RealTimeAnalytics = {
+        totalReturns,
+        totalExchanges,
+        aiAcceptanceRate,
+        revenueImpact,
+        returnsByStatus,
+        monthlyTrends
+      };
 
-    return months.map(({ month, returns, exchanges, refunds, revenue }) => ({
-      month, returns, exchanges, refunds, revenue
-    }));
+      console.log('✅ Analytics calculated:', analytics);
+      return analytics;
+
+    } catch (error) {
+      console.error('💥 Error fetching analytics:', error);
+      throw error;
+    }
   }
 
-  private static calculateTopReturnReasons(returnsData: any[]) {
-    const reasonCounts = new Map<string, number>();
-    
-    returnsData.forEach(ret => {
-      const reason = ret.reason || 'Not specified';
-      reasonCounts.set(reason, (reasonCounts.get(reason) || 0) + 1);
-    });
+  static calculateMonthlyTrends(returns: any[]): Array<{
+    month: string;
+    returns: number;
+    exchanges: number;
+    revenue: number;
+  }> {
+    const now = new Date();
+    const trends = [];
 
-    const total = returnsData.length;
-    return Array.from(reasonCounts.entries())
-      .map(([reason, count]) => ({
-        reason,
-        count,
-        percentage: total > 0 ? Math.round((count / total) * 100) : 0
-      }))
-      .sort((a, b) => b.count - a.count)
-      .slice(0, 5);
+    for (let i = 5; i >= 0; i--) {
+      const date = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      const monthStart = new Date(date.getFullYear(), date.getMonth(), 1);
+      const monthEnd = new Date(date.getFullYear(), date.getMonth() + 1, 0);
+
+      const monthReturns = returns.filter(r => {
+        const returnDate = new Date(r.created_at);
+        return returnDate >= monthStart && returnDate <= monthEnd;
+      });
+
+      const exchanges = monthReturns.filter(r => 
+        r.return_items?.some((item: any) => item.action === 'exchange')
+      ).length;
+
+      const revenue = monthReturns.reduce((sum, r) => sum + (Number(r.total_amount) || 0), 0);
+
+      trends.push({
+        month: date.toLocaleDateString('en-US', { month: 'short', year: 'numeric' }),
+        returns: monthReturns.length,
+        exchanges,
+        revenue
+      });
+    }
+
+    return trends;
   }
 
-  static async subscribeToUpdates(merchantId: string, callback: (analytics: RealTimeAnalytics) => void) {
+  static async subscribeToUpdates(
+    merchantId: string, 
+    callback: (analytics: RealTimeAnalytics) => void
+  ) {
+    console.log('📡 Setting up real-time analytics subscription for merchant:', merchantId);
+
     const channel = supabase
-      .channel(`enhanced-analytics-${merchantId}`)
+      .channel(`analytics-${merchantId}`)
       .on(
         'postgres_changes',
         {
@@ -185,9 +147,14 @@ export class RealTimeAnalyticsService {
           table: 'returns',
           filter: `merchant_id=eq.${merchantId}`
         },
-        () => {
-          MonitoringService.info('Real-time analytics update triggered', { merchantId });
-          this.handleDataUpdate(merchantId, callback);
+        async () => {
+          console.log('🔄 Returns data changed, refreshing analytics...');
+          try {
+            const updatedAnalytics = await this.getAnalytics(merchantId);
+            callback(updatedAnalytics);
+          } catch (error) {
+            console.error('💥 Error refreshing analytics:', error);
+          }
         }
       )
       .on(
@@ -195,33 +162,20 @@ export class RealTimeAnalyticsService {
         {
           event: '*',
           schema: 'public',
-          table: 'return_items',
+          table: 'ai_suggestions'
         },
-        () => this.handleDataUpdate(merchantId, callback)
-      )
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'ai_suggestions',
-        },
-        () => this.handleDataUpdate(merchantId, callback)
+        async () => {
+          console.log('🔄 AI suggestions changed, refreshing analytics...');
+          try {
+            const updatedAnalytics = await this.getAnalytics(merchantId);
+            callback(updatedAnalytics);
+          } catch (error) {
+            console.error('💥 Error refreshing analytics:', error);
+          }
+        }
       )
       .subscribe();
 
     return channel;
-  }
-
-  private static async handleDataUpdate(merchantId: string, callback: (analytics: RealTimeAnalytics) => void) {
-    try {
-      // Invalidate cache to force fresh data
-      PerformanceOptimizer.invalidateCache(`analytics_${merchantId}`);
-      
-      const analytics = await this.getAnalytics(merchantId);
-      callback(analytics);
-    } catch (error) {
-      MonitoringService.error('Real-time analytics update failed', { merchantId, error });
-    }
   }
 }
