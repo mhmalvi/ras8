@@ -35,9 +35,18 @@ interface ShopifyWebhookPayload {
   cancelled_at?: string;
   financial_status?: string;
   fulfillment_status?: string;
+  // Return-specific fields
+  return_reason?: string;
+  refund_amount?: string;
+  items?: Array<{
+    id: string;
+    product_id: string;
+    quantity: number;
+    reason?: string;
+  }>;
 }
 
-interface EnhancedWebhookData {
+interface ComprehensiveWebhookData {
   event: string;
   shopDomain: string;
   merchantId: string;
@@ -54,6 +63,11 @@ interface EnhancedWebhookData {
     cancelled_at?: string;
     financial_status?: string;
     fulfillment_status?: string;
+    tags?: string;
+    addresses?: {
+      shipping: any;
+      billing: any;
+    };
   };
   customerDetails: {
     id: string;
@@ -74,7 +88,18 @@ interface EnhancedWebhookData {
     order_id: string;
     status: string;
     reason?: string;
+    refund_amount?: string;
     created_at: string;
+    items?: Array<{
+      id: string;
+      product_id: string;
+      quantity: number;
+      reason?: string;
+    }>;
+  };
+  appDetails?: {
+    uninstalled_at?: string;
+    reason?: string;
   };
   metadata: {
     source: string;
@@ -82,6 +107,7 @@ interface EnhancedWebhookData {
     topic: string;
     shop_domain: string;
     webhook_id: string;
+    merchant_id: string;
   };
 }
 
@@ -101,7 +127,7 @@ serve(async (req) => {
     const topic = req.headers.get('x-shopify-topic') || 'unknown';
     const hmac = req.headers.get('x-shopify-hmac-sha256');
 
-    console.log(`📨 Enhanced Shopify webhook received: ${topic} from ${shopDomain}`);
+    console.log(`📨 Comprehensive Shopify webhook: ${topic} from ${shopDomain}`);
 
     // Get merchant ID from shop domain
     const { data: merchant, error: merchantError } = await supabase
@@ -118,8 +144,8 @@ serve(async (req) => {
       );
     }
 
-    // Build comprehensive webhook data based on scope
-    const enhancedData: EnhancedWebhookData = {
+    // Build comprehensive webhook data for ALL supported scopes
+    const comprehensiveData: ComprehensiveWebhookData = {
       event: topic,
       shopDomain,
       merchantId: merchant.id,
@@ -135,7 +161,12 @@ serve(async (req) => {
         updated_at: shopifyData.updated_at,
         cancelled_at: shopifyData.cancelled_at,
         financial_status: shopifyData.financial_status,
-        fulfillment_status: shopifyData.fulfillment_status
+        fulfillment_status: shopifyData.fulfillment_status,
+        tags: shopifyData.tags,
+        addresses: {
+          shipping: shopifyData.shipping_address,
+          billing: shopifyData.billing_address
+        }
       },
       customerDetails: {
         id: shopifyData.customer?.id || shopifyData.id,
@@ -156,42 +187,68 @@ serve(async (req) => {
         timestamp: new Date().toISOString(),
         topic,
         shop_domain: shopDomain,
-        webhook_id: `webhook_${Date.now()}`
+        webhook_id: `webhook_${Date.now()}`,
+        merchant_id: merchant.id
       }
     };
 
-    // Add return-specific data for return events
-    if (topic.includes('returns/') || topic.includes('return')) {
-      enhancedData.returnDetails = {
-        id: `return_${shopifyData.id}`,
-        order_id: shopifyData.id,
-        status: getReturnStatus(topic),
-        reason: 'Webhook triggered return',
-        created_at: new Date().toISOString()
-      };
+    // Add scope-specific data based on webhook topic
+    switch (topic) {
+      case 'returns/created':
+      case 'returns/approved':
+      case 'returns/completed':
+        comprehensiveData.returnDetails = {
+          id: `return_${shopifyData.id}`,
+          order_id: shopifyData.id,
+          status: getReturnStatus(topic),
+          reason: shopifyData.return_reason || 'No reason provided',
+          refund_amount: shopifyData.refund_amount || shopifyData.total_price,
+          created_at: new Date().toISOString(),
+          items: shopifyData.items || shopifyData.line_items?.map(item => ({
+            id: item.id,
+            product_id: item.product_id,
+            quantity: item.quantity,
+            reason: 'Return requested'
+          }))
+        };
+        break;
+        
+      case 'app/uninstalled':
+        comprehensiveData.appDetails = {
+          uninstalled_at: new Date().toISOString(),
+          reason: 'Merchant uninstalled app'
+        };
+        break;
+        
+      case 'orders/create':
+      case 'orders/updated':
+      case 'orders/cancelled':
+        // Order details already included in base structure
+        break;
     }
 
-    // Store the enhanced webhook in analytics_events
+    // Store comprehensive webhook data with merchant isolation
     const { error: insertError } = await supabase
       .from('analytics_events')
       .insert({
-        event_type: 'enhanced_shopify_webhook',
+        event_type: 'comprehensive_shopify_webhook',
         merchant_id: merchant.id,
         event_data: {
           webhook_topic: topic,
           shop_domain: shopDomain,
-          enhanced_data: enhancedData,
+          comprehensive_data: comprehensiveData,
           original_payload: shopifyData,
           hmac_verified: !!hmac,
-          processed_at: new Date().toISOString()
+          processed_at: new Date().toISOString(),
+          merchant_isolated: true
         }
       });
 
     if (insertError) {
-      console.error('❌ Error storing enhanced webhook:', insertError);
+      console.error('❌ Error storing comprehensive webhook:', insertError);
     }
 
-    // Get merchant's n8n configuration for forwarding
+    // Get merchant-specific n8n configuration
     const { data: n8nConfig } = await supabase
       .from('analytics_events')
       .select('event_data')
@@ -201,7 +258,7 @@ serve(async (req) => {
       .limit(1)
       .single();
 
-    // Forward to merchant's n8n if configured
+    // Forward to merchant-specific n8n if configured
     if (n8nConfig?.event_data?.n8n_url) {
       const n8nUrl = `${n8nConfig.event_data.n8n_url}/webhook/shopify-webhook?merchant=${merchant.id}`;
       
@@ -212,36 +269,39 @@ serve(async (req) => {
             'Content-Type': 'application/json',
             'X-Merchant-ID': merchant.id,
             'X-Webhook-Topic': topic,
-            'X-Shop-Domain': shopDomain
+            'X-Shop-Domain': shopDomain,
+            'X-Webhook-Source': 'returns-automation-saas'
           },
-          body: JSON.stringify(enhancedData)
+          body: JSON.stringify(comprehensiveData)
         });
         
-        console.log(`✅ Enhanced webhook forwarded to merchant's n8n: ${n8nUrl}`);
+        console.log(`✅ Comprehensive webhook forwarded to merchant n8n: ${n8nUrl}`);
       } catch (error) {
-        console.error('❌ Failed to forward to n8n:', error);
+        console.error('❌ Failed to forward to merchant n8n:', error);
       }
     }
 
     return new Response(
       JSON.stringify({ 
         success: true, 
-        message: 'Enhanced webhook processed successfully',
-        webhook_id: enhancedData.metadata.webhook_id,
+        message: 'Comprehensive webhook processed successfully',
+        webhook_id: comprehensiveData.metadata.webhook_id,
         merchant_id: merchant.id,
-        data_sent: {
+        comprehensive_data: {
           order_details: true,
           customer_details: true,
-          item_details: enhancedData.itemDetails.length > 0,
-          return_details: !!enhancedData.returnDetails,
-          comprehensive_scope: true
+          item_details: comprehensiveData.itemDetails.length > 0,
+          return_details: !!comprehensiveData.returnDetails,
+          app_details: !!comprehensiveData.appDetails,
+          addresses_included: true,
+          all_scopes_supported: true
         }
       }), 
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
 
   } catch (error) {
-    console.error('💥 Enhanced webhook processing error:', error);
+    console.error('💥 Comprehensive webhook processing error:', error);
     return new Response(
       JSON.stringify({ error: 'Internal server error', details: error.message }), 
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }

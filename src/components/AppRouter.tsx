@@ -32,7 +32,7 @@ const AppRouter = () => {
             } 
           />
           
-          {/* Protected Routes - Dashboard is now root "/" */}
+          {/* Protected Routes - Dashboard is at root "/" */}
           <Route 
             path="/" 
             element={
@@ -74,11 +74,11 @@ const AppRouter = () => {
             } 
           />
           
-          {/* Redirect old dashboard route */}
+          {/* Redirect legacy dashboard route */}
           <Route path="/dashboard" element={<Navigate to="/" replace />} />
           
-          {/* Catch all - redirect to landing for unauthenticated, home for authenticated */}
-          <Route path="*" element={<Navigate to="/landing" replace />} />
+          {/* Catch all - redirect based on auth status */}
+          <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </div>
       <Toaster />

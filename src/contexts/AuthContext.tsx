@@ -18,6 +18,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
+  const [initialized, setInitialized] = useState(false);
 
   useEffect(() => {
     let mounted = true;
@@ -30,22 +31,12 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         if (mounted) {
           setSession(session);
           setUser(session?.user ?? null);
-          setLoading(false);
-        }
-
-        // Handle subscription check after auth state is set
-        if (session?.user && (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED')) {
-          // Use setTimeout to defer Supabase calls and prevent deadlock
-          setTimeout(async () => {
-            try {
-              const { data, error } = await supabase.functions.invoke('check-subscription');
-              if (error) {
-                console.warn('Subscription check function not available:', error);
-              }
-            } catch (error) {
-              console.warn('Error checking subscription - function may not exist:', error);
-            }
-          }, 0);
+          
+          // Only set loading to false after we've processed the auth state
+          if (!initialized) {
+            setInitialized(true);
+            setLoading(false);
+          }
         }
       }
     );
@@ -63,7 +54,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       } catch (error) {
         console.error('Failed to get initial session:', error);
       } finally {
-        if (mounted) {
+        if (mounted && !initialized) {
+          setInitialized(true);
           setLoading(false);
         }
       }
@@ -71,11 +63,21 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
     getInitialSession();
 
+    // Fallback timeout to prevent infinite loading
+    const timeout = setTimeout(() => {
+      if (mounted && !initialized) {
+        console.warn('Auth initialization timeout - setting loading to false');
+        setInitialized(true);
+        setLoading(false);
+      }
+    }, 3000);
+
     return () => {
       mounted = false;
+      clearTimeout(timeout);
       subscription.unsubscribe();
     };
-  }, []);
+  }, [initialized]);
 
   const signInWithEmail = async (email: string, password: string) => {
     const { error } = await supabase.auth.signInWithPassword({

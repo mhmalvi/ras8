@@ -11,13 +11,13 @@ interface WebhookPayload {
 interface EnhancedWebhookPayload extends WebhookPayload {
   data: {
     shopDomain?: string;
-    merchantId: string; // Made required for multi-tenancy
+    merchantId: string;
     webhookData?: any;
     orderDetails?: any;
     returnDetails?: any;
     customerDetails?: any;
     itemDetails?: any[];
-    campaignData?: any; // Added this missing property
+    campaignData?: any;
     test?: boolean;
     metadata?: {
       source: string;
@@ -53,18 +53,17 @@ interface MerchantN8nConfig {
   baseUrl: string;
   apiKey: string;
   webhookSecret: string;
+  merchantId: string;
 }
 
 export class EnhancedN8nService {
   private static merchantConfigs: Map<string, MerchantN8nConfig> = new Map();
 
   static async getMerchantConfig(merchantId: string): Promise<MerchantN8nConfig | null> {
-    // Check cache first
-    if (this.merchantConfigs.has(merchantId)) {
-      return this.merchantConfigs.get(merchantId)!;
-    }
-
+    // Always check database for latest merchant-specific config
     try {
+      console.log(`🔍 Loading merchant-specific n8n config for: ${merchantId}`);
+      
       const { data: config, error } = await supabase
         .from('analytics_events')
         .select('event_data')
@@ -75,24 +74,25 @@ export class EnhancedN8nService {
         .single();
 
       if (error || !config?.event_data) {
-        console.warn(`No n8n configuration found for merchant: ${merchantId}`);
+        console.warn(`❌ No merchant-specific n8n configuration found for: ${merchantId}`);
         return null;
       }
 
       const configData = config.event_data as any;
-      const merchantConfig = {
+      const merchantConfig: MerchantN8nConfig = {
         baseUrl: configData.n8n_url || '',
         apiKey: configData.api_key || '',
-        webhookSecret: configData.webhook_secret || ''
+        webhookSecret: configData.webhook_secret || '',
+        merchantId: merchantId
       };
 
-      // Cache the config
+      // Cache the merchant-specific config
       this.merchantConfigs.set(merchantId, merchantConfig);
       
       console.log(`✅ Merchant-specific n8n config loaded for: ${merchantId}`);
       return merchantConfig;
     } catch (error) {
-      console.error(`Failed to load n8n config for merchant ${merchantId}:`, error);
+      console.error(`💥 Failed to load merchant n8n config for ${merchantId}:`, error);
       return null;
     }
   }
@@ -101,27 +101,29 @@ export class EnhancedN8nService {
     const config = await this.getMerchantConfig(merchantId);
 
     if (!config?.baseUrl) {
-      return { success: false, error: 'n8n not configured for this merchant' };
+      return { success: false, error: `n8n not configured for merchant: ${merchantId}` };
     }
 
     try {
-      // Ensure merchantId is always in the payload
+      // Ensure merchantId is always in the payload for multi-tenancy
       payload.data.merchantId = merchantId;
       
       const url = `${config.baseUrl.replace(/\/$/, '')}/${endpoint}?merchant=${merchantId}`;
       console.log(`📤 Sending merchant-specific webhook to: ${url}`);
 
-      const enhancedPayload = {
+      const comprehensivePayload = {
         ...payload,
         timestamp: new Date().toISOString(),
         source: 'returns_automation_saas',
         version: '2.0',
-        merchantId, // Top-level merchant ID
+        merchantId,
+        multiTenant: true,
         context: {
           application: 'returns_automation_saas',
           environment: 'production',
           webhook_version: '2.0',
           merchant_id: merchantId,
+          tenant_isolated: true,
           supported_events: [
             'orders/create',
             'orders/updated', 
@@ -141,15 +143,16 @@ export class EnhancedN8nService {
           'X-Webhook-Source': 'returns-automation-saas',
           'X-Webhook-Version': '2.0',
           'X-Merchant-ID': merchantId,
+          'X-Tenant-ID': merchantId,
           ...(config.apiKey && { 'Authorization': `Bearer ${config.apiKey}` }),
           ...(config.webhookSecret && { 'X-Webhook-Secret': config.webhookSecret })
         },
-        body: JSON.stringify(enhancedPayload)
+        body: JSON.stringify(comprehensivePayload)
       });
 
       if (!response.ok) {
         const errorText = await response.text().catch(() => 'Unknown error');
-        console.error(`❌ Merchant webhook failed: ${response.status} - ${errorText}`);
+        console.error(`❌ Merchant webhook failed for ${merchantId}: ${response.status} - ${errorText}`);
         return { success: false, error: `HTTP ${response.status}: ${errorText}` };
       }
 
@@ -157,7 +160,7 @@ export class EnhancedN8nService {
       return { success: true };
 
     } catch (error) {
-      console.error(`💥 Merchant webhook error for ${endpoint}:`, error);
+      console.error(`💥 Merchant webhook error for ${endpoint} (merchant: ${merchantId}):`, error);
       return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
     }
   }
@@ -181,7 +184,7 @@ export class EnhancedN8nService {
 
     const result = await this.sendWebhook(returnData.merchantId, 'webhook/return-processing', payload);
     
-    // Log the attempt with merchant isolation
+    // Log with merchant isolation
     await supabase.from('analytics_events').insert({
       event_type: 'webhook_triggered',
       merchant_id: returnData.merchantId,
@@ -190,14 +193,14 @@ export class EnhancedN8nService {
         success: result.success,
         error: result.error,
         return_id: returnData.returnId,
-        enhanced_payload: true,
-        merchant_specific: true,
+        merchant_isolated: true,
+        tenant_specific: true,
         payload_size: JSON.stringify(payload).length
       }
     });
 
     if (!result.success) {
-      console.error(`Failed to process return webhook for merchant ${returnData.merchantId}:`, result.error);
+      console.error(`❌ Failed to process return webhook for merchant ${returnData.merchantId}:`, result.error);
     }
   }
 
@@ -210,7 +213,7 @@ export class EnhancedN8nService {
           id: campaignData.customerId,
           email: campaignData.customerEmail
         },
-        campaignData, // Now this property exists in the interface
+        campaignData,
         metadata: {
           source: 'returns_automation_saas',
           timestamp: new Date().toISOString(),
@@ -233,14 +236,14 @@ export class EnhancedN8nService {
         success: result.success,
         error: result.error,
         customer_id: campaignData.customerId,
-        enhanced_payload: true,
-        merchant_specific: true,
+        merchant_isolated: true,
+        tenant_specific: true,
         payload_size: JSON.stringify(payload).length
       }
     });
 
     if (!result.success) {
-      console.error(`Failed to process retention campaign for merchant ${campaignData.merchantId}:`, result.error);
+      console.error(`❌ Failed to process retention campaign for merchant ${campaignData.merchantId}:`, result.error);
     }
   }
 
@@ -250,7 +253,7 @@ export class EnhancedN8nService {
     if (!config?.baseUrl) {
       return { 
         success: false, 
-        results: [{ error: 'No n8n configuration found for this merchant' }] 
+        results: [{ error: `No merchant-specific n8n configuration found for merchant: ${merchantId}` }] 
       };
     }
 
@@ -261,7 +264,8 @@ export class EnhancedN8nService {
         merchantId,
         webhookData: {
           id: 'test-webhook-123',
-          test_mode: true
+          test_mode: true,
+          merchant_specific: true
         },
         orderDetails: {
           id: 'test-order-789',
@@ -315,10 +319,10 @@ export class EnhancedN8nService {
       results.push({ 
         endpoint, 
         merchantId,
+        merchantSpecific: true,
         ...result,
         payload_size: JSON.stringify(testPayload).length,
-        enhanced: true,
-        merchant_specific: true
+        tenant_isolated: true
       });
       if (!result.success) allSuccess = false;
     }
@@ -326,7 +330,7 @@ export class EnhancedN8nService {
     return { success: allSuccess, results };
   }
 
-  // Clear merchant config cache when needed
+  // Clear merchant-specific config cache
   static clearMerchantCache(merchantId: string): void {
     this.merchantConfigs.delete(merchantId);
     console.log(`🧹 Cleared n8n config cache for merchant: ${merchantId}`);

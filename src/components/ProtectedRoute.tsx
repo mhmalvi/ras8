@@ -10,21 +10,19 @@ interface ProtectedRouteProps {
 const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
   const { user, loading } = useAuth();
   const location = useLocation();
-  const [hasChecked, setHasChecked] = useState(false);
+  const [timeoutReached, setTimeoutReached] = useState(false);
 
   useEffect(() => {
-    // Give auth system time to initialize
+    // Set timeout to prevent infinite loading
     const timer = setTimeout(() => {
-      if (!loading) {
-        setHasChecked(true);
-      }
-    }, 100);
+      setTimeoutReached(true);
+    }, 5000);
 
     return () => clearTimeout(timer);
-  }, [loading]);
+  }, []);
 
-  // Show loading state while checking authentication - with timeout to prevent infinite loading
-  if (loading || !hasChecked) {
+  // Show loading state with timeout protection
+  if (loading && !timeoutReached) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="flex flex-col items-center gap-4">
@@ -35,7 +33,7 @@ const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
     );
   }
 
-  // If not authenticated, redirect to auth page with return path
+  // If not authenticated after loading, redirect to auth page
   if (!user) {
     console.log('🔒 Authentication required, redirecting to auth page');
     return <Navigate to="/auth" state={{ from: location }} replace />;
