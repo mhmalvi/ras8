@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import type { SystemMetrics, TenantMetric, AuditLog, MasterAdminProfile } from '@/types/MasterAdmin';
 
@@ -121,17 +120,22 @@ export class MasterAdminService {
 
       if (error) throw error;
 
-      return data?.map(log => ({
-        id: log.id,
-        admin_user_id: log.merchant_id || '',
-        action: log.event_data?.action || '',
-        resource_type: log.event_data?.resource_type || '',
-        resource_id: log.event_data?.resource_id || '',
-        details: log.event_data?.details || {},
-        ip_address: log.event_data?.ip_address || '',
-        user_agent: log.event_data?.user_agent || '',
-        timestamp: log.created_at
-      })) || [];
+      return data?.map(log => {
+        // Type guard to check if event_data is an object
+        const eventData = log.event_data as Record<string, any> | null;
+        
+        return {
+          id: log.id,
+          admin_user_id: log.merchant_id || '',
+          action: eventData?.action || '',
+          resource_type: eventData?.resource_type || '',
+          resource_id: eventData?.resource_id || '',
+          details: eventData?.details || {},
+          ip_address: eventData?.ip_address || '',
+          user_agent: eventData?.user_agent || '',
+          timestamp: log.created_at
+        };
+      }) || [];
     } catch (error) {
       console.error('Error fetching audit logs:', error);
       throw error;
