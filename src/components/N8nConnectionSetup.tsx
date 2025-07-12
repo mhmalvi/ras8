@@ -26,19 +26,20 @@ const N8nConnectionSetup = () => {
   const loadConfiguration = async () => {
     setLoading(true);
     try {
-      const { data: config, error } = await supabase
+      const { data: configs, error } = await supabase
         .from('analytics_events')
         .select('*')
         .eq('event_type', 'n8n_configuration')
-        .maybeSingle();
+        .order('created_at', { ascending: false })
+        .limit(1);
 
       if (error) {
         console.error('Error loading n8n config:', error);
         return;
       }
 
-      if (config?.event_data) {
-        const configData = config.event_data as any;
+      if (configs && configs.length > 0 && configs[0].event_data) {
+        const configData = configs[0].event_data as any;
         setN8nUrl(configData.n8n_url || '');
         setApiKey(''); // Don't load API key for security
         setWebhookSecret(''); // Don't load webhook secret for security
