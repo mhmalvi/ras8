@@ -14,6 +14,7 @@ import Settings from '@/pages/Settings';
 import Auth from '@/pages/Auth';
 import CustomerPortal from '@/pages/CustomerPortal';
 import Automations from '@/pages/Automations';
+import MasterAdmin from '@/pages/MasterAdmin';
 
 const ErrorFallback = ({ error, resetErrorBoundary }: { error: Error; resetErrorBoundary: () => void }) => (
   <div className="min-h-screen flex items-center justify-center bg-background">
@@ -52,6 +53,16 @@ const AtomicAppRouter = () => {
                 <AtomicPublicRoute>
                   <Auth />
                 </AtomicPublicRoute>
+              } 
+            />
+            
+            {/* Master Admin Route - highest security */}
+            <Route 
+              path="/master-admin" 
+              element={
+                <AtomicProtectedRoute>
+                  <MasterAdmin />
+                </AtomicProtectedRoute>
               } 
             />
             
