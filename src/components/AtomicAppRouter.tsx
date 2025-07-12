@@ -1,0 +1,139 @@
+
+import { Routes, Route, Navigate } from 'react-router-dom';
+import { AtomicAuthProvider } from '@/contexts/AtomicAuthContext';
+import { Toaster } from "@/components/ui/toaster";
+import { ErrorBoundary } from 'react-error-boundary';
+import AtomicProtectedRoute from '@/components/AtomicProtectedRoute';
+import AtomicPublicRoute from '@/components/AtomicPublicRoute';
+import Index from '@/pages/Index';
+import Dashboard from '@/pages/Dashboard';
+import Returns from '@/pages/Returns';
+import Analytics from '@/pages/Analytics';
+import Settings from '@/pages/Settings';
+import Auth from '@/pages/Auth';
+import CustomerPortal from '@/pages/CustomerPortal';
+import Automations from '@/pages/Automations';
+
+const ErrorFallback = ({ error, resetErrorBoundary }: { error: Error; resetErrorBoundary: () => void }) => (
+  <div className="min-h-screen flex items-center justify-center bg-background">
+    <div className="text-center space-y-4 p-6 max-w-md">
+      <h2 className="text-xl font-semibold text-red-600">Something went wrong</h2>
+      <p className="text-muted-foreground">{error.message}</p>
+      <button 
+        onClick={resetErrorBoundary}
+        className="px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90"
+      >
+        Try again
+      </button>
+    </div>
+  </div>
+);
+
+const AtomicAppRouter = () => {
+  return (
+    <ErrorBoundary
+      FallbackComponent={ErrorFallback}
+      onError={(error, errorInfo) => {
+        console.error('💥 App Error:', error, errorInfo);
+      }}
+    >
+      <AtomicAuthProvider>
+        <div className="min-h-screen bg-background">
+          <Routes>
+            {/* Public Routes */}
+            <Route path="/landing" element={<Index />} />
+            <Route path="/return-portal" element={<CustomerPortal />} />
+            
+            {/* Auth Route - only accessible when logged out */}
+            <Route 
+              path="/auth" 
+              element={
+                <AtomicPublicRoute>
+                  <Auth />
+                </AtomicPublicRoute>
+              } 
+            />
+            
+            {/* Protected Routes - Dashboard is at root "/" */}
+            <Route 
+              path="/" 
+              element={
+                <AtomicProtectedRoute>
+                  <Dashboard />
+                </AtomicProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/returns" 
+              element={
+                <AtomicProtectedRoute>
+                  <Returns />
+                </AtomicProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/analytics" 
+              element={
+                <AtomicProtectedRoute>
+                  <Analytics />
+                </AtomicProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/automations" 
+              element={
+                <AtomicProtectedRoute>
+                  <Automations />
+                </AtomicProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/settings" 
+              element={
+                <AtomicProtectedRoute>
+                  <Settings />
+                </AtomicProtectedRoute>
+              } 
+            />
+            
+            {/* Error/Fallback Routes */}
+            <Route path="/unauthorized" element={
+              <div className="min-h-screen flex items-center justify-center">
+                <div className="text-center">
+                  <h2 className="text-xl font-semibold mb-2">Access Denied</h2>
+                  <p className="text-muted-foreground mb-4">You don't have permission to access this resource.</p>
+                  <a href="/auth" className="text-primary hover:underline">Sign In</a>
+                </div>
+              </div>
+            } />
+            
+            <Route path="/loading" element={
+              <div className="min-h-screen flex items-center justify-center">
+                <div className="flex flex-col items-center gap-4">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+                  <span className="text-muted-foreground">Loading...</span>
+                </div>
+              </div>
+            } />
+            
+            <Route path="/error" element={
+              <div className="min-h-screen flex items-center justify-center">
+                <div className="text-center">
+                  <h2 className="text-xl font-semibold text-red-600 mb-2">An Error Occurred</h2>
+                  <p className="text-muted-foreground mb-4">We're sorry, something went wrong.</p>
+                  <a href="/" className="text-primary hover:underline">Go to Dashboard</a>
+                </div>
+              </div>
+            } />
+            
+            {/* Catch all - redirect to dashboard for authenticated users */}
+            <Route path="*" element={<Navigate to="/" replace />} />
+          </Routes>
+        </div>
+        <Toaster />
+      </AtomicAuthProvider>
+    </ErrorBoundary>
+  );
+};
+
+export default AtomicAppRouter;
