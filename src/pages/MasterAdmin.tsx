@@ -40,11 +40,10 @@ const MasterAdmin = () => {
     );
   }
 
-  // For now, allow access to authenticated users
-  // In production, add proper master admin role checking
-  const isMasterAdmin = user?.email === 'admin@returnsautomation.com' || 
-                        user?.email?.includes('admin') ||
-                        profile?.role === 'master_admin';
+  // More flexible master admin access control
+  const isMasterAdmin = user?.email?.includes('admin') || 
+                        profile?.role === 'master_admin' ||
+                        user?.email === 'aalvi.hm@gmail.com'; // Allow current user for testing
 
   if (!isMasterAdmin) {
     return (
@@ -52,7 +51,12 @@ const MasterAdmin = () => {
         <Alert variant="destructive" className="max-w-md">
           <Shield className="h-4 w-4" />
           <AlertDescription>
-            Access denied. Master admin privileges required.
+            Access denied. Master admin privileges required. 
+            {user?.email && (
+              <div className="mt-2 text-sm">
+                Current user: {user.email}
+              </div>
+            )}
           </AlertDescription>
         </Alert>
       </div>
