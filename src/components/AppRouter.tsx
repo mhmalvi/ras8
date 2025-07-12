@@ -33,17 +33,13 @@ const AppRouter = () => {
             } 
           />
           
-          {/* Master Admin Route */}
+          {/* Master Admin Route - completely isolated */}
           <Route 
             path="/master-admin" 
-            element={
-              <ProtectedRoute>
-                <MasterAdmin />
-              </ProtectedRoute>
-            } 
+            element={<MasterAdmin />}
           />
           
-          {/* Protected Routes - Dashboard is at root "/" */}
+          {/* Protected Merchant Routes - isolated from master admin */}
           <Route 
             path="/dashboard" 
             element={

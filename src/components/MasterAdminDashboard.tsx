@@ -40,7 +40,6 @@ import {
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useLocation } from 'react-router-dom';
-import MasterAdminSidebar from './MasterAdminSidebar';
 
 const MasterAdminDashboard = () => {
   const { user } = useAtomicAuth();
@@ -50,7 +49,6 @@ const MasterAdminDashboard = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
   // Get active tab from URL params
   const urlParams = new URLSearchParams(location.search);
@@ -754,32 +752,25 @@ const MasterAdminDashboard = () => {
   };
 
   return (
-    <div className="min-h-screen flex w-full bg-gradient-to-br from-slate-50 via-purple-50/20 to-blue-50/20">
-      <MasterAdminSidebar 
-        collapsed={sidebarCollapsed} 
-        onToggle={() => setSidebarCollapsed(!sidebarCollapsed)} 
-      />
-      
-      <div className="flex-1 flex flex-col">
-        {/* Header */}
-        <header className="border-b border-slate-200/60 bg-white/80 backdrop-blur-sm supports-[backdrop-filter]:bg-white/60 shadow-sm">
-          <div className="flex h-16 items-center px-6 gap-4">
-            <div className="flex-1">
-              <h1 className="text-2xl font-bold bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent">
-                Master Admin Console
-              </h1>
-              <p className="text-sm text-slate-600">
-                Advanced system management and monitoring dashboard
-              </p>
-            </div>
+    <div className="flex flex-col h-full">
+      {/* Header */}
+      <header className="border-b border-slate-200/60 bg-white/80 backdrop-blur-sm supports-[backdrop-filter]:bg-white/60 shadow-sm">
+        <div className="flex h-16 items-center px-6 gap-4">
+          <div className="flex-1">
+            <h1 className="text-2xl font-bold bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent">
+              Master Admin Console
+            </h1>
+            <p className="text-sm text-slate-600">
+              Advanced system management and monitoring dashboard
+            </p>
           </div>
-        </header>
+        </div>
+      </header>
 
-        {/* Main Content */}
-        <main className="flex-1 p-6 overflow-auto">
-          {renderTabContent()}
-        </main>
-      </div>
+      {/* Main Content */}
+      <main className="flex-1 p-6 overflow-auto">
+        {renderTabContent()}
+      </main>
     </div>
   );
 };

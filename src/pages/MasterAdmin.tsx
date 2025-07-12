@@ -1,13 +1,11 @@
 
-import { useEffect } from 'react';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useAtomicAuth } from '@/contexts/AtomicAuthContext';
 import { useMerchantProfile } from '@/hooks/useMerchantProfile';
 import MasterAdminDashboard from '@/components/MasterAdminDashboard';
 import MasterAdminSidebar from '@/components/MasterAdminSidebar';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Shield, AlertTriangle, Lock } from 'lucide-react';
-import { SidebarProvider } from '@/components/ui/sidebar';
 
 const MasterAdmin = () => {
   const { user, loading: authLoading } = useAtomicAuth();
@@ -61,10 +59,10 @@ const MasterAdmin = () => {
     );
   }
 
-  // Strict master admin access control - ONLY for designated master admins
+  // Strict master admin access control
   const isMasterAdmin = user?.email === 'aalvi.hm@gmail.com' || 
                         profile?.role === 'master_admin' ||
-                        user?.email?.endsWith('@admin.returnsauto.com'); // Admin domain check
+                        user?.email?.endsWith('@admin.returnsauto.com');
 
   if (!isMasterAdmin) {
     return (
@@ -98,19 +96,17 @@ const MasterAdmin = () => {
     );
   }
 
-  // Master Admin Dashboard with its own sidebar - completely separate from regular app
+  // Master Admin Dashboard - completely isolated layout without SidebarProvider
   return (
-    <SidebarProvider>
-      <div className="min-h-screen w-full flex bg-gradient-to-br from-slate-50 via-purple-50/30 to-blue-50/20">
-        <MasterAdminSidebar 
-          collapsed={sidebarCollapsed} 
-          onToggle={() => setSidebarCollapsed(!sidebarCollapsed)} 
-        />
-        <div className="flex-1 overflow-hidden">
-          <MasterAdminDashboard />
-        </div>
+    <div className="min-h-screen w-full flex bg-gradient-to-br from-slate-50 via-purple-50/30 to-blue-50/20">
+      <MasterAdminSidebar 
+        collapsed={sidebarCollapsed} 
+        onToggle={() => setSidebarCollapsed(!sidebarCollapsed)} 
+      />
+      <div className="flex-1 overflow-hidden">
+        <MasterAdminDashboard />
       </div>
-    </SidebarProvider>
+    </div>
   );
 };
 

@@ -12,13 +12,6 @@ import {
   Brain,
   Zap,
   Shield,
-  Bug,
-  Crown,
-  Database,
-  UserCog,
-  Activity,
-  FileText,
-  MessageSquare,
   CreditCard,
   Globe,
   Webhook
@@ -41,6 +34,7 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar";
 
+// Merchant-only navigation items - limited feature set
 const mainItems = [
   { title: "Dashboard", url: "/dashboard", icon: Home },
   { title: "Returns", url: "/returns", icon: RefreshCw },
@@ -64,22 +58,6 @@ const systemItems = [
   { title: "Webhooks", url: "/webhooks", icon: Webhook },
 ];
 
-// These items are only for master admin users
-const devItems = [
-  { title: "Debug Panel", url: "/debug", icon: Bug },
-  { title: "Database", url: "/database", icon: Database },
-  { title: "Logs", url: "/logs", icon: FileText },
-  { title: "API Monitor", url: "/api-monitor", icon: Activity },
-];
-
-// These items are only for master admin users
-const adminItems = [
-  { title: "Master Admin", url: "/master-admin", icon: Crown },
-  { title: "User Management", url: "/user-management", icon: UserCog },
-  { title: "System Reports", url: "/system-reports", icon: FileText },
-  { title: "Support Center", url: "/support", icon: MessageSquare },
-];
-
 export function AppSidebar() {
   const { state } = useSidebar();
   const collapsed = state === "collapsed";
@@ -94,10 +72,16 @@ export function AppSidebar() {
       ? "bg-blue-100 text-blue-700 font-medium" 
       : "text-slate-600 hover:bg-slate-100 hover:text-slate-900";
 
-  // Check if user has master admin access - more restrictive than before
+  // Block master admin users from using merchant sidebar
   const isMasterAdmin = user?.email === 'aalvi.hm@gmail.com' || 
                         profile?.role === 'master_admin' ||
-                        user?.email?.endsWith('@admin.returnsauto.com'); // Admin domain check
+                        user?.email?.endsWith('@admin.returnsauto.com');
+
+  // If master admin, redirect to master admin dashboard
+  if (isMasterAdmin && currentPath !== '/master-admin') {
+    window.location.href = '/master-admin';
+    return null;
+  }
 
   return (
     <Sidebar className="border-r border-slate-200">
@@ -109,7 +93,7 @@ export function AppSidebar() {
           {!collapsed && (
             <div>
               <h2 className="font-bold text-slate-900">Returns Auto</h2>
-              <p className="text-xs text-slate-500">AI-Powered Platform</p>
+              <p className="text-xs text-slate-500">Merchant Platform</p>
             </div>
           )}
         </div>
@@ -178,77 +162,17 @@ export function AppSidebar() {
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
-
-        {/* Development section - ONLY for master admin */}
-        {isMasterAdmin && (
-          <SidebarGroup>
-            <SidebarGroupLabel>
-              <div className="flex items-center gap-2">
-                <Bug className="h-3 w-3 text-amber-600" />
-                {!collapsed && <span className="text-amber-700 font-semibold">Development</span>}
-              </div>
-            </SidebarGroupLabel>
-            <SidebarGroupContent>
-              <SidebarMenu>
-                {devItems.map((item) => (
-                  <SidebarMenuItem key={item.title}>
-                    <SidebarMenuButton asChild>
-                      <NavLink 
-                        to={item.url} 
-                        className={`${getNavClass(item.url)} ${isActive(item.url) ? 'bg-amber-100 text-amber-700' : 'hover:bg-amber-50'}`}
-                      >
-                        <item.icon className="h-4 w-4" />
-                        {!collapsed && <span>{item.title}</span>}
-                      </NavLink>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                ))}
-              </SidebarMenu>
-            </SidebarGroupContent>
-          </SidebarGroup>
-        )}
-
-        {/* Admin section - ONLY for master admin */}
-        {isMasterAdmin && (
-          <SidebarGroup>
-            <SidebarGroupLabel>
-              <div className="flex items-center gap-2">
-                <Crown className="h-3 w-3 text-yellow-600" />
-                {!collapsed && <span className="text-yellow-700 font-semibold">Admin</span>}
-              </div>
-            </SidebarGroupLabel>
-            <SidebarGroupContent>
-              <SidebarMenu>
-                {adminItems.map((item) => (
-                  <SidebarMenuItem key={item.title}>
-                    <SidebarMenuButton asChild>
-                      <NavLink 
-                        to={item.url} 
-                        className={`${getNavClass(item.url)} ${isActive(item.url) ? 'bg-yellow-100 text-yellow-700' : 'hover:bg-yellow-50'}`}
-                      >
-                        <item.icon className="h-4 w-4" />
-                        {!collapsed && <span>{item.title}</span>}
-                      </NavLink>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                ))}
-              </SidebarMenu>
-            </SidebarGroupContent>
-          </SidebarGroup>
-        )}
       </SidebarContent>
 
       <SidebarFooter className="border-t border-slate-200 p-4">
         {!collapsed && (
           <div className="text-xs text-slate-500 text-center space-y-1">
             <p>© 2024 Returns Automation</p>
-            <p>v1.2.0 Enterprise</p>
-            {isMasterAdmin && (
-              <div className="flex items-center justify-center gap-1 text-yellow-600">
-                <Crown className="h-3 w-3" />
-                <span className="font-medium">Admin Access</span>
-              </div>
-            )}
+            <p>v1.2.0 Merchant</p>
+            <div className="flex items-center justify-center gap-1 text-blue-600">
+              <Package className="h-3 w-3" />
+              <span className="font-medium">Merchant Access</span>
+            </div>
           </div>
         )}
       </SidebarFooter>
