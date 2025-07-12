@@ -71,6 +71,7 @@ export const useAutomationRules = () => {
   // Load automation rules from database
   const loadRules = async () => {
     try {
+      setLoading(true);
       const { data: rulesData, error } = await supabase
         .from('analytics_events')
         .select('*')
@@ -147,6 +148,8 @@ export const useAutomationRules = () => {
         description: "Failed to load automation rules",
         variant: "destructive",
       });
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -257,8 +260,7 @@ export const useAutomationRules = () => {
   };
 
   useEffect(() => {
-    setLoading(true);
-    loadRules().finally(() => setLoading(false));
+    loadRules();
   }, []);
 
   return {
