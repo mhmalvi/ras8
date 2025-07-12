@@ -1,130 +1,195 @@
 
-import { useEffect } from 'react';
-import { Navigate } from 'react-router-dom';
-import { useAuth } from '@/contexts/AuthContext';
-import { Button } from "@/components/ui/button";
-import { ArrowRight, Shield, Zap, BarChart3, Sparkles } from "lucide-react";
 import { Link } from 'react-router-dom';
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { ArrowRight, BarChart3, Bot, RefreshCw, Shield, Zap } from "lucide-react";
 
 const Index = () => {
-  const { user, loading } = useAuth();
-
-  useEffect(() => {
-    console.log('🏠 Index page loaded, checking auth state');
-  }, []);
-
-  // Show loading state while checking authentication
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-primary"></div>
-      </div>
-    );
-  }
-
-  // If user is authenticated, redirect to dashboard
-  if (user) {
-    console.log('✅ User authenticated, redirecting to dashboard');
-    return <Navigate to="/dashboard" replace />;
-  }
-
-  // Show landing page for non-authenticated users
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
-      {/* Navigation */}
-      <nav className="flex justify-between items-center px-6 py-4">
-        <div className="text-2xl font-bold text-primary">Returns Automation</div>
-        <div className="space-x-4">
-          <Link to="/return-portal">
-            <Button variant="ghost">Return Portal</Button>
-          </Link>
-          <Link to="/auth">
-            <Button>Sign In</Button>
-          </Link>
+    <div className="min-h-screen bg-gradient-to-b from-blue-50 to-white">
+      {/* Header */}
+      <header className="border-b bg-white/80 backdrop-blur-sm sticky top-0 z-50">
+        <div className="container mx-auto px-4 py-4 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <RefreshCw className="h-8 w-8 text-blue-600" />
+            <span className="text-xl font-bold">Returns Automation</span>
+          </div>
+          <div className="flex items-center gap-4">
+            <Link to="/return-portal">
+              <Button variant="ghost">Return Portal</Button>
+            </Link>
+            <Link to="/auth">
+              <Button>Get Started</Button>
+            </Link>
+          </div>
         </div>
-      </nav>
+      </header>
 
       {/* Hero Section */}
-      <div className="container mx-auto px-6 pt-20 pb-16">
-        <div className="text-center max-w-4xl mx-auto">
-          <h1 className="text-5xl font-bold text-gray-900 mb-6 leading-tight">
-            Automate Your Returns Process with
-            <span className="text-primary block">AI-Powered Intelligence</span>
+      <section className="container mx-auto px-4 py-20 text-center">
+        <div className="max-w-3xl mx-auto">
+          <h1 className="text-5xl font-bold text-gray-900 mb-6">
+            Automate Your Returns with AI
           </h1>
-          <p className="text-xl text-gray-600 mb-8 leading-relaxed">
-            Transform your e-commerce returns management with smart automation, 
-            AI recommendations, and seamless customer experiences.
+          <p className="text-xl text-gray-600 mb-8">
+            Transform your e-commerce returns process with intelligent automation. 
+            Reduce manual work, increase exchanges, and boost customer satisfaction.
           </p>
-          <div className="flex gap-4 justify-center">
+          <div className="flex items-center justify-center gap-4">
             <Link to="/auth">
-              <Button size="lg" className="text-lg px-8 py-3">
-                Get Started <ArrowRight className="ml-2 h-5 w-5" />
+              <Button size="lg" className="px-8">
+                Start Free Trial
+                <ArrowRight className="ml-2 h-4 w-4" />
               </Button>
             </Link>
             <Link to="/return-portal">
-              <Button size="lg" variant="outline" className="text-lg px-8 py-3">
+              <Button size="lg" variant="outline" className="px-8">
                 Try Return Portal
               </Button>
             </Link>
           </div>
         </div>
-      </div>
+      </section>
 
-      {/* Features Section */}
-      <div className="container mx-auto px-6 py-16">
-        <h2 className="text-3xl font-bold text-center mb-12">Why Choose Returns Automation?</h2>
-        <div className="grid md:grid-cols-3 gap-8">
-          <div className="bg-white p-8 rounded-lg shadow-md">
-            <div className="flex items-center mb-4">
-              <Sparkles className="h-8 w-8 text-primary mr-3" />
-              <h3 className="text-xl font-semibold">AI-Powered Suggestions</h3>
-            </div>
-            <p className="text-gray-600">
-              Smart exchange recommendations that increase conversion rates and reduce refunds.
-            </p>
-          </div>
-          
-          <div className="bg-white p-8 rounded-lg shadow-md">
-            <div className="flex items-center mb-4">
-              <Zap className="h-8 w-8 text-primary mr-3" />
-              <h3 className="text-xl font-semibold">Workflow Automation</h3>
-            </div>
-            <p className="text-gray-600">
-              Streamline your returns process with n8n integration and custom automation rules.
-            </p>
-          </div>
-          
-          <div className="bg-white p-8 rounded-lg shadow-md">
-            <div className="flex items-center mb-4">
-              <BarChart3 className="h-8 w-8 text-primary mr-3" />
-              <h3 className="text-xl font-semibold">Advanced Analytics</h3>
-            </div>
-            <p className="text-gray-600">
-              Deep insights into return patterns, revenue impact, and customer behavior.
-            </p>
-          </div>
+      {/* Features Grid */}
+      <section className="container mx-auto px-4 py-16">
+        <div className="text-center mb-12">
+          <h2 className="text-3xl font-bold text-gray-900 mb-4">
+            Everything You Need to Automate Returns
+          </h2>
+          <p className="text-gray-600 max-w-2xl mx-auto">
+            Powerful features designed to streamline your returns process and improve your bottom line.
+          </p>
         </div>
-      </div>
+        
+        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+          <Card>
+            <CardHeader>
+              <Bot className="h-12 w-12 text-blue-600 mb-4" />
+              <CardTitle>AI-Powered Suggestions</CardTitle>
+              <CardDescription>
+                Smart exchange recommendations to turn returns into sales
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <p className="text-sm text-gray-600">
+                Our AI analyzes customer preferences and inventory to suggest the perfect exchange options, increasing revenue retention.
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <Zap className="h-12 w-12 text-green-600 mb-4" />
+              <CardTitle>Automated Workflows</CardTitle>
+              <CardDescription>
+                Streamline approvals and processing with n8n integration
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <p className="text-sm text-gray-600">
+                Set up custom automation rules to handle routine returns automatically, freeing up your team for strategic work.
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <BarChart3 className="h-12 w-12 text-purple-600 mb-4" />
+              <CardTitle>Advanced Analytics</CardTitle>
+              <CardDescription>
+                Gain insights into return patterns and customer behavior
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <p className="text-sm text-gray-600">
+                Track return rates, identify trends, and make data-driven decisions to reduce future returns.
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <Shield className="h-12 w-12 text-red-600 mb-4" />
+              <CardTitle>Fraud Detection</CardTitle>
+              <CardDescription>
+                Protect your business from return abuse
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <p className="text-sm text-gray-600">
+                AI-powered fraud detection identifies suspicious return patterns and protects your revenue.
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <RefreshCw className="h-12 w-12 text-blue-600 mb-4" />
+              <CardTitle>Shopify Integration</CardTitle>
+              <CardDescription>
+                Seamless integration with your existing store
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <p className="text-sm text-gray-600">
+                Connect directly to your Shopify store for automatic order syncing and real-time updates.
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <Bot className="h-12 w-12 text-green-600 mb-4" />
+              <CardTitle>Customer Portal</CardTitle>
+              <CardDescription>
+                Self-service returns portal for customers
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <p className="text-sm text-gray-600">
+                Branded return portal that provides a smooth experience for your customers while reducing support tickets.
+              </p>
+            </CardContent>
+          </Card>
+        </div>
+      </section>
 
       {/* CTA Section */}
-      <div className="bg-primary text-white py-16">
-        <div className="container mx-auto px-6 text-center">
-          <h2 className="text-3xl font-bold mb-4">Ready to Transform Your Returns?</h2>
-          <p className="text-xl mb-8 opacity-90">
-            Join hundreds of merchants who have automated their returns process
+      <section className="bg-blue-600 py-16">
+        <div className="container mx-auto px-4 text-center">
+          <h2 className="text-3xl font-bold text-white mb-4">
+            Ready to Transform Your Returns Process?
+          </h2>
+          <p className="text-blue-100 mb-8 max-w-2xl mx-auto">
+            Join hundreds of merchants who have automated their returns and increased customer satisfaction.
           </p>
           <Link to="/auth">
-            <Button size="lg" variant="secondary" className="text-lg px-8 py-3">
-              Start Free Trial <ArrowRight className="ml-2 h-5 w-5" />
+            <Button size="lg" variant="secondary" className="px-8">
+              Start Your Free Trial
+              <ArrowRight className="ml-2 h-4 w-4" />
             </Button>
           </Link>
         </div>
-      </div>
+      </section>
 
       {/* Footer */}
-      <footer className="bg-gray-800 text-white py-8">
-        <div className="container mx-auto px-6 text-center">
-          <p>&copy; 2024 Returns Automation SaaS. All rights reserved.</p>
+      <footer className="bg-gray-50 py-12">
+        <div className="container mx-auto px-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <RefreshCw className="h-6 w-6 text-blue-600" />
+              <span className="font-semibold">Returns Automation</span>
+            </div>
+            <div className="flex items-center gap-6">
+              <Link to="/return-portal" className="text-gray-600 hover:text-gray-900">
+                Return Portal
+              </Link>
+              <Link to="/auth" className="text-gray-600 hover:text-gray-900">
+                Sign In
+              </Link>
+            </div>
+          </div>
         </div>
       </footer>
     </div>

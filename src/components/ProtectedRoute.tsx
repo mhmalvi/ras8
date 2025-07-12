@@ -13,16 +13,24 @@ const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
   const [hasChecked, setHasChecked] = useState(false);
 
   useEffect(() => {
-    if (!loading) {
-      setHasChecked(true);
-    }
+    // Give auth system time to initialize
+    const timer = setTimeout(() => {
+      if (!loading) {
+        setHasChecked(true);
+      }
+    }, 100);
+
+    return () => clearTimeout(timer);
   }, [loading]);
 
-  // Show loading state while checking authentication
+  // Show loading state while checking authentication - with timeout to prevent infinite loading
   if (loading || !hasChecked) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-primary"></div>
+        <div className="flex flex-col items-center gap-4">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+          <span className="text-muted-foreground">Loading...</span>
+        </div>
       </div>
     );
   }

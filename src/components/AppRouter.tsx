@@ -19,7 +19,7 @@ const AppRouter = () => {
       <div className="min-h-screen bg-background">
         <Routes>
           {/* Public Routes */}
-          <Route path="/" element={<Index />} />
+          <Route path="/landing" element={<Index />} />
           <Route path="/return-portal" element={<CustomerPortal />} />
           
           {/* Auth Route - only accessible when logged out */}
@@ -32,9 +32,9 @@ const AppRouter = () => {
             } 
           />
           
-          {/* Protected Routes - only accessible when logged in */}
+          {/* Protected Routes - Dashboard is now root "/" */}
           <Route 
-            path="/dashboard" 
+            path="/" 
             element={
               <ProtectedRoute>
                 <Dashboard />
@@ -74,8 +74,11 @@ const AppRouter = () => {
             } 
           />
           
-          {/* Catch all - redirect to home */}
-          <Route path="*" element={<Navigate to="/" replace />} />
+          {/* Redirect old dashboard route */}
+          <Route path="/dashboard" element={<Navigate to="/" replace />} />
+          
+          {/* Catch all - redirect to landing for unauthenticated, home for authenticated */}
+          <Route path="*" element={<Navigate to="/landing" replace />} />
         </Routes>
       </div>
       <Toaster />

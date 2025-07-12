@@ -22,7 +22,35 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   useEffect(() => {
     let mounted = true;
     
-    // Get initial session
+    // Set up auth state listener FIRST to catch all events
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (event, session) => {
+        console.log('🔄 Auth state changed:', event, session?.user?.id);
+        
+        if (mounted) {
+          setSession(session);
+          setUser(session?.user ?? null);
+          setLoading(false);
+        }
+
+        // Handle subscription check after auth state is set
+        if (session?.user && (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED')) {
+          // Use setTimeout to defer Supabase calls and prevent deadlock
+          setTimeout(async () => {
+            try {
+              const { data, error } = await supabase.functions.invoke('check-subscription');
+              if (error) {
+                console.warn('Subscription check function not available:', error);
+              }
+            } catch (error) {
+              console.warn('Error checking subscription - function may not exist:', error);
+            }
+          }, 0);
+        }
+      }
+    );
+
+    // Get initial session AFTER setting up the listener
     const getInitialSession = async () => {
       try {
         const { data: { session }, error } = await supabase.auth.getSession();
@@ -43,29 +71,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
     getInitialSession();
 
-    // Listen for auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
-        console.log('Auth state changed:', event, session?.user?.id);
-        setSession(session);
-        setUser(session?.user ?? null);
-        setLoading(false);
-
-        // Check subscription status after auth change if user is logged in
-        if (session?.user && (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED')) {
-          try {
-            // Only check subscription if the function exists
-            const { data, error } = await supabase.functions.invoke('check-subscription');
-            if (error) {
-              console.warn('Subscription check function not available:', error);
-            }
-          } catch (error) {
-            console.warn('Error checking subscription - function may not exist:', error);
-          }
-        }
-      }
-    );
-
     return () => {
       mounted = false;
       subscription.unsubscribe();
@@ -81,7 +86,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   };
 
   const signUpWithEmail = async (email: string, password: string, firstName?: string, lastName?: string) => {
-    const redirectUrl = `${window.location.origin}/dashboard`;
+    const redirectUrl = `${window.location.origin}/`;
     
     const { error } = await supabase.auth.signUp({
       email,

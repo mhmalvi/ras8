@@ -11,13 +11,13 @@ interface WebhookPayload {
 interface EnhancedWebhookPayload extends WebhookPayload {
   data: {
     shopDomain?: string;
-    merchantId?: string;
+    merchantId: string; // Made required for multi-tenancy
     webhookData?: any;
     orderDetails?: any;
     returnDetails?: any;
     customerDetails?: any;
     itemDetails?: any[];
-    test?: boolean; // Added test property
+    test?: boolean;
     metadata?: {
       source: string;
       timestamp: string;
@@ -48,60 +48,79 @@ interface RetentionCampaignPayload {
   lastOrderValue: number;
 }
 
-export class EnhancedN8nService {
-  private static baseUrl: string = '';
-  private static apiKey: string = '';
-  private static initialized = false;
+interface MerchantN8nConfig {
+  baseUrl: string;
+  apiKey: string;
+  webhookSecret: string;
+}
 
-  static async initialize() {
-    if (this.initialized) return;
+export class EnhancedN8nService {
+  private static merchantConfigs: Map<string, MerchantN8nConfig> = new Map();
+
+  static async getMerchantConfig(merchantId: string): Promise<MerchantN8nConfig | null> {
+    // Check cache first
+    if (this.merchantConfigs.has(merchantId)) {
+      return this.merchantConfigs.get(merchantId)!;
+    }
 
     try {
       const { data: config, error } = await supabase
         .from('analytics_events')
         .select('event_data')
         .eq('event_type', 'n8n_configuration')
+        .eq('merchant_id', merchantId)
         .order('created_at', { ascending: false })
         .limit(1)
         .single();
 
       if (error || !config?.event_data) {
-        console.warn('No n8n configuration found');
-        return;
+        console.warn(`No n8n configuration found for merchant: ${merchantId}`);
+        return null;
       }
 
       const configData = config.event_data as any;
-      this.baseUrl = configData.n8n_url || '';
-      this.apiKey = configData.api_key || '';
-      this.initialized = true;
+      const merchantConfig = {
+        baseUrl: configData.n8n_url || '',
+        apiKey: configData.api_key || '',
+        webhookSecret: configData.webhook_secret || ''
+      };
 
-      console.log('✅ Enhanced n8n service initialized');
+      // Cache the config
+      this.merchantConfigs.set(merchantId, merchantConfig);
+      
+      console.log(`✅ Merchant-specific n8n config loaded for: ${merchantId}`);
+      return merchantConfig;
     } catch (error) {
-      console.error('Failed to initialize n8n service:', error);
+      console.error(`Failed to load n8n config for merchant ${merchantId}:`, error);
+      return null;
     }
   }
 
-  static async sendWebhook(endpoint: string, payload: EnhancedWebhookPayload): Promise<{ success: boolean; error?: string }> {
-    await this.initialize();
+  static async sendWebhook(merchantId: string, endpoint: string, payload: EnhancedWebhookPayload): Promise<{ success: boolean; error?: string }> {
+    const config = await this.getMerchantConfig(merchantId);
 
-    if (!this.baseUrl) {
-      return { success: false, error: 'n8n not configured' };
+    if (!config?.baseUrl) {
+      return { success: false, error: 'n8n not configured for this merchant' };
     }
 
     try {
-      const url = `${this.baseUrl.replace(/\/$/, '')}/${endpoint}`;
-      console.log(`📤 Sending enhanced webhook to: ${url}`);
+      // Ensure merchantId is always in the payload
+      payload.data.merchantId = merchantId;
+      
+      const url = `${config.baseUrl.replace(/\/$/, '')}/${endpoint}?merchant=${merchantId}`;
+      console.log(`📤 Sending merchant-specific webhook to: ${url}`);
 
       const enhancedPayload = {
         ...payload,
         timestamp: new Date().toISOString(),
         source: 'returns_automation_saas',
         version: '2.0',
-        // Add comprehensive event context
+        merchantId, // Top-level merchant ID
         context: {
           application: 'returns_automation_saas',
           environment: 'production',
           webhook_version: '2.0',
+          merchant_id: merchantId,
           supported_events: [
             'orders/create',
             'orders/updated', 
@@ -120,22 +139,24 @@ export class EnhancedN8nService {
           'Content-Type': 'application/json',
           'X-Webhook-Source': 'returns-automation-saas',
           'X-Webhook-Version': '2.0',
-          ...(this.apiKey && { 'Authorization': `Bearer ${this.apiKey}` })
+          'X-Merchant-ID': merchantId,
+          ...(config.apiKey && { 'Authorization': `Bearer ${config.apiKey}` }),
+          ...(config.webhookSecret && { 'X-Webhook-Secret': config.webhookSecret })
         },
         body: JSON.stringify(enhancedPayload)
       });
 
       if (!response.ok) {
         const errorText = await response.text().catch(() => 'Unknown error');
-        console.error(`❌ Enhanced webhook failed: ${response.status} - ${errorText}`);
+        console.error(`❌ Merchant webhook failed: ${response.status} - ${errorText}`);
         return { success: false, error: `HTTP ${response.status}: ${errorText}` };
       }
 
-      console.log(`✅ Enhanced webhook sent successfully to ${endpoint}`);
+      console.log(`✅ Merchant webhook sent successfully to ${endpoint} for merchant ${merchantId}`);
       return { success: true };
 
     } catch (error) {
-      console.error(`💥 Enhanced webhook error for ${endpoint}:`, error);
+      console.error(`💥 Merchant webhook error for ${endpoint}:`, error);
       return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
     }
   }
@@ -144,7 +165,8 @@ export class EnhancedN8nService {
     const payload: EnhancedWebhookPayload = {
       event: 'return_created',
       data: {
-        ...returnData,
+        merchantId: returnData.merchantId,
+        returnDetails: returnData,
         metadata: {
           source: 'returns_automation_saas',
           timestamp: new Date().toISOString(),
@@ -156,9 +178,9 @@ export class EnhancedN8nService {
       source: 'returns_automation_saas'
     };
 
-    const result = await this.sendWebhook('webhook/return-processing', payload);
+    const result = await this.sendWebhook(returnData.merchantId, 'webhook/return-processing', payload);
     
-    // Log the attempt with enhanced details
+    // Log the attempt with merchant isolation
     await supabase.from('analytics_events').insert({
       event_type: 'webhook_triggered',
       merchant_id: returnData.merchantId,
@@ -168,12 +190,13 @@ export class EnhancedN8nService {
         error: result.error,
         return_id: returnData.returnId,
         enhanced_payload: true,
+        merchant_specific: true,
         payload_size: JSON.stringify(payload).length
       }
     });
 
     if (!result.success) {
-      console.error('Failed to process return webhook:', result.error);
+      console.error(`Failed to process return webhook for merchant ${returnData.merchantId}:`, result.error);
     }
   }
 
@@ -181,7 +204,12 @@ export class EnhancedN8nService {
     const payload: EnhancedWebhookPayload = {
       event: 'retention_campaign',
       data: {
-        ...campaignData,
+        merchantId: campaignData.merchantId,
+        customerDetails: {
+          id: campaignData.customerId,
+          email: campaignData.customerEmail
+        },
+        campaignData,
         metadata: {
           source: 'returns_automation_saas',
           timestamp: new Date().toISOString(),
@@ -193,9 +221,9 @@ export class EnhancedN8nService {
       source: 'returns_automation_saas'
     };
 
-    const result = await this.sendWebhook('webhook/retention-campaign', payload);
+    const result = await this.sendWebhook(campaignData.merchantId, 'webhook/retention-campaign', payload);
     
-    // Log the attempt with enhanced details
+    // Log with merchant isolation
     await supabase.from('analytics_events').insert({
       event_type: 'webhook_triggered',
       merchant_id: campaignData.merchantId,
@@ -205,23 +233,31 @@ export class EnhancedN8nService {
         error: result.error,
         customer_id: campaignData.customerId,
         enhanced_payload: true,
+        merchant_specific: true,
         payload_size: JSON.stringify(payload).length
       }
     });
 
     if (!result.success) {
-      console.error('Failed to process retention campaign:', result.error);
+      console.error(`Failed to process retention campaign for merchant ${campaignData.merchantId}:`, result.error);
     }
   }
 
-  static async testAllWebhooks(): Promise<{ success: boolean; results: any[] }> {
-    await this.initialize();
+  static async testMerchantWebhooks(merchantId: string): Promise<{ success: boolean; results: any[] }> {
+    const config = await this.getMerchantConfig(merchantId);
+
+    if (!config?.baseUrl) {
+      return { 
+        success: false, 
+        results: [{ error: 'No n8n configuration found for this merchant' }] 
+      };
+    }
 
     const testPayload: EnhancedWebhookPayload = {
       event: 'connection_test',
       data: {
         test: true,
-        merchantId: 'test-merchant-456',
+        merchantId,
         webhookData: {
           id: 'test-webhook-123',
           test_mode: true
@@ -274,16 +310,30 @@ export class EnhancedN8nService {
     let allSuccess = true;
 
     for (const endpoint of endpoints) {
-      const result = await this.sendWebhook(endpoint, testPayload);
+      const result = await this.sendWebhook(merchantId, endpoint, testPayload);
       results.push({ 
         endpoint, 
+        merchantId,
         ...result,
         payload_size: JSON.stringify(testPayload).length,
-        enhanced: true
+        enhanced: true,
+        merchant_specific: true
       });
       if (!result.success) allSuccess = false;
     }
 
     return { success: allSuccess, results };
+  }
+
+  // Clear merchant config cache when needed
+  static clearMerchantCache(merchantId: string): void {
+    this.merchantConfigs.delete(merchantId);
+    console.log(`🧹 Cleared n8n config cache for merchant: ${merchantId}`);
+  }
+
+  // Clear all cached configs
+  static clearAllCache(): void {
+    this.merchantConfigs.clear();
+    console.log('🧹 Cleared all n8n config cache');
   }
 }
