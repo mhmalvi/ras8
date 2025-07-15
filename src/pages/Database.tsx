@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import AppLayout from "@/components/AppLayout";
+import MasterAdminLayout from "@/components/MasterAdminLayout";
 import { 
   Database, 
   Shield, 
@@ -48,7 +48,7 @@ const DatabasePage = () => {
   };
 
   return (
-    <AppLayout 
+    <MasterAdminLayout 
       title="🗄️ Database Management" 
       description="Database administration and monitoring (Master Admin Only)"
     >
@@ -347,7 +347,7 @@ const DatabasePage = () => {
           </TabsContent>
         </Tabs>
       </div>
-    </AppLayout>
+    </MasterAdminLayout>
   );
 };
 

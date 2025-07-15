@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import AppLayout from "@/components/AppLayout";
+import MasterAdminLayout from "@/components/MasterAdminLayout";
 import { 
   Bug, 
   Code, 
@@ -69,7 +69,7 @@ const DebugPanel = () => {
   };
 
   return (
-    <AppLayout 
+    <MasterAdminLayout 
       title="🐛 Debug Panel" 
       description="System debugging and diagnostic tools (Master Admin Only)"
     >
@@ -271,7 +271,7 @@ const DebugPanel = () => {
           </TabsContent>
         </Tabs>
       </div>
-    </AppLayout>
+    </MasterAdminLayout>
   );
 };
 
