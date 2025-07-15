@@ -17,9 +17,7 @@ const MasterAdminLayout = ({ children, title, description }: MasterAdminLayoutPr
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
   // Security check - only master admins can use this layout
-  const isMasterAdmin = user?.email === 'aalvi.hm@gmail.com' || 
-                        profile?.role === 'master_admin' ||
-                        user?.email?.endsWith('@admin.returnsauto.com');
+  const isMasterAdmin = profile?.role === 'master_admin';
 
   if (authLoading || profileLoading) {
     return (

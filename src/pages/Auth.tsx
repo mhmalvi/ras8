@@ -39,13 +39,9 @@ const Auth = () => {
   useEffect(() => {
     if (user) {
       console.log('🔄 User authenticated, checking redirect...');
-      // Special redirect logic for master admin
-      if (user.email === 'aalvi.hm@gmail.com') {
-        console.log('🔄 Master admin detected, redirecting to master admin dashboard');
-        navigate('/master-admin', { replace: true });
-      } else {
-        navigate(from, { replace: true });
-      }
+      // We'll need to check user role after profile loads
+      // For now, just redirect to dashboard and let ProtectedRoute handle master admin redirect
+      navigate(from, { replace: true });
     }
   }, [user, navigate, from]);
 

@@ -278,7 +278,7 @@ export class ShopifyService {
             id: user.id,
             email: user.email || '',
             merchant_id: merchantData.id,
-            role: 'admin'
+            role: 'merchant_admin' as const
           }, {
             onConflict: 'id'
           });

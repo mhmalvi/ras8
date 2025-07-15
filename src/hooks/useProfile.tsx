@@ -9,7 +9,7 @@ interface Profile {
   email: string;
   first_name: string | null;
   last_name: string | null;
-  role: string;
+  role: 'merchant_admin' | 'merchant_staff' | 'master_admin';
   created_at: string;
   updated_at: string;
 }

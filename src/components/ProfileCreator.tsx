@@ -52,7 +52,7 @@ const ProfileCreator = () => {
           email: user.email || '',
           first_name: user.user_metadata?.first_name || null,
           last_name: user.user_metadata?.last_name || null,
-          role: 'admin'
+          role: 'merchant_admin' as const
         })
         .select()
         .single();

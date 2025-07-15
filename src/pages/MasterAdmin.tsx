@@ -73,10 +73,8 @@ const MasterAdmin = () => {
     );
   }
 
-  // Enhanced master admin access control - check both email and profile role
-  const isMasterAdmin = user?.email === 'aalvi.hm@gmail.com' || 
-                        profile?.role === 'master_admin' ||
-                        user?.email?.endsWith('@admin.returnsauto.com');
+  // Enhanced master admin access control - use proper role check
+  const isMasterAdmin = profile?.role === 'master_admin';
 
   if (!isMasterAdmin) {
     return (

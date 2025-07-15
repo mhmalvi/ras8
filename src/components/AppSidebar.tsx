@@ -72,10 +72,8 @@ export function AppSidebar() {
       ? "bg-blue-100 text-blue-700 font-medium" 
       : "text-slate-600 hover:bg-slate-100 hover:text-slate-900";
 
-  // Block master admin users from using merchant sidebar
-  const isMasterAdmin = user?.email === 'aalvi.hm@gmail.com' || 
-                        profile?.role === 'master_admin' ||
-                        user?.email?.endsWith('@admin.returnsauto.com');
+  // Block master admin users from using merchant sidebar - use proper role check
+  const isMasterAdmin = profile?.role === 'master_admin';
 
   // If master admin, redirect to master admin dashboard
   if (isMasterAdmin && currentPath !== '/master-admin') {

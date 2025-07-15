@@ -39,9 +39,7 @@ const MasterAdminSidebar = ({ collapsed, onToggle }: MasterAdminSidebarProps) =>
   const currentPath = location.pathname;
 
   // Security check - only master admins can use this sidebar
-  const isMasterAdmin = user?.email === 'aalvi.hm@gmail.com' || 
-                        profile?.role === 'master_admin' ||
-                        user?.email?.endsWith('@admin.returnsauto.com');
+  const isMasterAdmin = profile?.role === 'master_admin';
 
   // If not master admin, show access denied
   if (!isMasterAdmin) {

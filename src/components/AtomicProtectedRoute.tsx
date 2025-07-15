@@ -2,6 +2,7 @@
 import { ReactNode } from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
 import { useAtomicAuth } from '@/contexts/AtomicAuthContext';
+import { useMerchantProfile } from '@/hooks/useMerchantProfile';
 
 interface AtomicProtectedRouteProps {
   children: ReactNode;
@@ -38,7 +39,10 @@ const AtomicProtectedRoute = ({ children }: AtomicProtectedRouteProps) => {
   // Special handling for master admin - ensure they go to master admin dashboard
   // But only if they're specifically trying to access the root or dashboard AND not already on master admin
   const currentPath = location.pathname;
-  const isMasterAdmin = user.email === 'aalvi.hm@gmail.com';
+  
+  // We'll check role from profile in a useEffect since we need to wait for profile data
+  const { profile } = useMerchantProfile();
+  const isMasterAdmin = profile?.role === 'master_admin';
   const isOnRootOrDashboard = currentPath === '/' || currentPath === '/dashboard';
   const isNotOnMasterAdmin = currentPath !== '/master-admin';
   
