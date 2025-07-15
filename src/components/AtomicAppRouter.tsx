@@ -22,6 +22,15 @@ import ApiMonitor from '@/pages/ApiMonitor';
 import UserManagement from '@/pages/UserManagement';
 import SystemReports from '@/pages/SystemReports';
 import SupportCenter from '@/pages/SupportCenter';
+import AIInsights from '@/pages/AIInsights';
+import Customers from '@/pages/Customers';
+import Products from '@/pages/Products';
+import Performance from '@/pages/Performance';
+import Billing from '@/pages/Billing';
+import Notifications from '@/pages/Notifications';
+import Security from '@/pages/Security';
+import Integrations from '@/pages/Integrations';
+import Webhooks from '@/pages/Webhooks';
 
 const ErrorFallback = ({ error, resetErrorBoundary }: { error: Error; resetErrorBoundary: () => void }) => (
   <div className="min-h-screen flex items-center justify-center bg-background">
@@ -139,6 +148,14 @@ const AtomicAppRouter = () => {
               } 
             />
             <Route 
+              path="/dashboard" 
+              element={
+                <AtomicProtectedRoute>
+                  <Dashboard />
+                </AtomicProtectedRoute>
+              } 
+            />
+            <Route 
               path="/returns" 
               element={
                 <AtomicProtectedRoute>
@@ -155,10 +172,42 @@ const AtomicAppRouter = () => {
               } 
             />
             <Route 
-              path="/automations" 
+              path="/ai-insights" 
               element={
                 <AtomicProtectedRoute>
-                  <Automations />
+                  <AIInsights />
+                </AtomicProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/customers" 
+              element={
+                <AtomicProtectedRoute>
+                  <Customers />
+                </AtomicProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/products" 
+              element={
+                <AtomicProtectedRoute>
+                  <Products />
+                </AtomicProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/performance" 
+              element={
+                <AtomicProtectedRoute>
+                  <Performance />
+                </AtomicProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/billing" 
+              element={
+                <AtomicProtectedRoute>
+                  <Billing />
                 </AtomicProtectedRoute>
               } 
             />
@@ -167,6 +216,46 @@ const AtomicAppRouter = () => {
               element={
                 <AtomicProtectedRoute>
                   <Settings />
+                </AtomicProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/notifications" 
+              element={
+                <AtomicProtectedRoute>
+                  <Notifications />
+                </AtomicProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/automations" 
+              element={
+                <AtomicProtectedRoute>
+                  <Automations />
+                </AtomicProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/security" 
+              element={
+                <AtomicProtectedRoute>
+                  <Security />
+                </AtomicProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/integrations" 
+              element={
+                <AtomicProtectedRoute>
+                  <Integrations />
+                </AtomicProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/webhooks" 
+              element={
+                <AtomicProtectedRoute>
+                  <Webhooks />
                 </AtomicProtectedRoute>
               } 
             />
