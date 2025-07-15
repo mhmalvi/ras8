@@ -13,6 +13,13 @@ import Auth from '@/pages/Auth';
 import CustomerPortal from '@/pages/CustomerPortal';
 import Automations from '@/pages/Automations';
 import MasterAdmin from '@/pages/MasterAdmin';
+import DebugPanel from '@/pages/DebugPanel';
+import Database from '@/pages/Database';
+import Logs from '@/pages/Logs';
+import ApiMonitor from '@/pages/ApiMonitor';
+import UserManagement from '@/pages/UserManagement';
+import SystemReports from '@/pages/SystemReports';
+import SupportCenter from '@/pages/SupportCenter';
 
 const AppRouter = () => {
   return (
@@ -33,10 +40,38 @@ const AppRouter = () => {
             } 
           />
           
-          {/* Master Admin Route - completely isolated */}
+          {/* Master Admin Routes - completely isolated */}
           <Route 
             path="/master-admin" 
             element={<MasterAdmin />}
+          />
+          <Route 
+            path="/debug" 
+            element={<DebugPanel />}
+          />
+          <Route 
+            path="/database" 
+            element={<Database />}
+          />
+          <Route 
+            path="/logs" 
+            element={<Logs />}
+          />
+          <Route 
+            path="/api-monitor" 
+            element={<ApiMonitor />}
+          />
+          <Route 
+            path="/user-management" 
+            element={<UserManagement />}
+          />
+          <Route 
+            path="/system-reports" 
+            element={<SystemReports />}
+          />
+          <Route 
+            path="/support" 
+            element={<SupportCenter />}
           />
           
           {/* Protected Merchant Routes - isolated from master admin */}
