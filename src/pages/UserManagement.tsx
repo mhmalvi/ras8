@@ -1,11 +1,11 @@
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import AppLayout from "@/components/AppLayout";
+import MasterAdminLayout from "@/components/MasterAdminLayout";
 import { UserCog, Shield, AlertTriangle } from "lucide-react";
 
 const UserManagementPage = () => {
   return (
-    <AppLayout 
+    <MasterAdminLayout 
       title="👥 User Management" 
       description="System-wide user administration (Master Admin Only)"
     >
@@ -42,7 +42,7 @@ const UserManagementPage = () => {
           </CardContent>
         </Card>
       </div>
-    </AppLayout>
+    </MasterAdminLayout>
   );
 };
 
