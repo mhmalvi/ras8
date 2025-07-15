@@ -1,25 +1,38 @@
 
 import { useEffect, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { useAtomicAuth } from '@/contexts/AtomicAuthContext';
 import { useMerchantProfile } from '@/hooks/useMerchantProfile';
 import MasterAdminDashboard from '@/components/MasterAdminDashboard';
 import MasterAdminSidebar from '@/components/MasterAdminSidebar';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Shield, AlertTriangle, Lock } from 'lucide-react';
+import { Shield, AlertTriangle, Lock, Crown } from 'lucide-react';
+
+// Import tab components
+import SystemHealthTab from '@/components/master-admin/SystemHealthTab';
+import MerchantsTab from '@/components/master-admin/MerchantsTab'; 
+import MonitoringTab from '@/components/master-admin/MonitoringTab';
+import ReportsTab from '@/components/master-admin/ReportsTab';
+import SettingsTab from '@/components/master-admin/SettingsTab';
 
 const MasterAdmin = () => {
   const { user, loading: authLoading } = useAtomicAuth();
   const { profile, loading: profileLoading } = useMerchantProfile();
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [searchParams] = useSearchParams();
+  
+  // Get the current tab from URL parameters
+  const currentTab = searchParams.get('tab') || 'overview';
 
   useEffect(() => {
     console.log('🔐 Master Admin access attempt:', { 
       user: !!user, 
       profile,
       userEmail: user?.email,
-      profileRole: profile?.role
+      profileRole: profile?.role,
+      currentTab
     });
-  }, [user, profile]);
+  }, [user, profile, currentTab]);
 
   if (authLoading || profileLoading) {
     return (
@@ -102,6 +115,24 @@ const MasterAdmin = () => {
     );
   }
 
+  // Function to render the appropriate tab content
+  const renderTabContent = () => {
+    switch (currentTab) {
+      case 'system':
+        return <SystemHealthTab />;
+      case 'tenants':
+        return <MerchantsTab />;
+      case 'monitoring':
+        return <MonitoringTab />;
+      case 'reports':
+        return <ReportsTab />;
+      case 'settings':
+        return <SettingsTab />;
+      default:
+        return <MasterAdminDashboard />;
+    }
+  };
+
   // Master Admin Dashboard - completely isolated layout without SidebarProvider
   return (
     <div className="min-h-screen w-full flex bg-gradient-to-br from-slate-50 via-purple-50/30 to-blue-50/20">
@@ -110,7 +141,34 @@ const MasterAdmin = () => {
         onToggle={() => setSidebarCollapsed(!sidebarCollapsed)} 
       />
       <div className="flex-1 overflow-hidden">
-        <MasterAdminDashboard />
+        <div className="bg-white/80 backdrop-blur-sm border-b border-purple-100/50 px-6 py-4">
+          <div className="max-w-7xl mx-auto">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-gradient-to-br from-purple-500 to-blue-600 rounded-xl flex items-center justify-center shadow-lg">
+                <Crown className="h-5 w-5 text-white" />
+              </div>
+              <div>
+                <h1 className="text-2xl font-bold bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent">
+                  Master Admin Console
+                </h1>
+                <p className="text-slate-600 text-sm">
+                  Welcome back, {user?.email} • System Status: Operational • Last Updated: 2:34:19 AM
+                </p>
+              </div>
+              <div className="ml-auto">
+                <button className="px-4 py-2 bg-white/60 hover:bg-white/80 border border-purple-200/50 rounded-lg text-purple-700 text-sm font-medium transition-colors">
+                  🔄 Refresh Data
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <main className="flex-1 overflow-auto p-6">
+          <div className="max-w-7xl mx-auto">
+            {renderTabContent()}
+          </div>
+        </main>
       </div>
     </div>
   );
