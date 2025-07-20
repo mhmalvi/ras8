@@ -107,10 +107,13 @@ export class AdvancedAnalyticsService {
     const totalAI = aiSuggestions.length;
     const aiAcceptanceRate = totalAI > 0 ? (acceptedAI / totalAI) * 100 : 0;
 
-    // Revenue impact
+    // Revenue impact - ensure numeric conversion
     const revenueImpact = items
       .filter(item => item.action === 'exchange')
-      .reduce((sum, item) => sum + (Number(item.price) || 0), 0);
+      .reduce((sum, item) => {
+        const price = typeof item.price === 'number' ? item.price : parseFloat(item.price) || 0;
+        return sum + price;
+      }, 0);
 
     // Processing time calculation
     const completedReturns = returns.filter(r => r.status === 'completed');
@@ -143,14 +146,21 @@ export class AdvancedAnalyticsService {
         items.filter(i => i.action === 'exchange' && new Date(i.returns?.created_at) >= twoMonthsAgo && new Date(i.returns?.created_at) < lastMonth).length
       ),
       revenue: this.calculateGrowthRate(
-        items.filter(i => new Date(i.returns?.created_at) >= lastMonth).reduce((sum, i) => sum + (Number(i.price) || 0), 0),
-        items.filter(i => new Date(i.returns?.created_at) >= twoMonthsAgo && new Date(i.returns?.created_at) < lastMonth).reduce((sum, i) => sum + (Number(i.price) || 0), 0)
+        items.filter(i => new Date(i.returns?.created_at) >= lastMonth).reduce((sum, i) => {
+          const price = typeof i.price === 'number' ? i.price : parseFloat(i.price) || 0;
+          return sum + price;
+        }, 0),
+        items.filter(i => new Date(i.returns?.created_at) >= twoMonthsAgo && new Date(i.returns?.created_at) < lastMonth).reduce((sum, i) => {
+          const price = typeof i.price === 'number' ? i.price : parseFloat(i.price) || 0;
+          return sum + price;
+        }, 0)
       )
     };
 
-    // Top return reasons
-    const reasonCounts = returns.reduce((acc, r) => {
-      acc[r.reason] = (acc[r.reason] || 0) + 1;
+    // Top return reasons with proper type safety
+    const reasonCounts: Record<string, number> = returns.reduce((acc, r) => {
+      const reason = r.reason || 'Unknown';
+      acc[reason] = (acc[reason] || 0) + 1;
       return acc;
     }, {} as Record<string, number>);
 
@@ -159,7 +169,7 @@ export class AdvancedAnalyticsService {
       .slice(0, 5)
       .map(([reason, count]) => ({
         reason,
-        count,
+        count: count as number, // Explicit type assertion since we know it's a number
         percentage: (count / totalReturns) * 100
       }));
 
@@ -234,13 +244,13 @@ export class AdvancedAnalyticsService {
       riskFactors.push('Return volume increasing rapidly');
     }
     
-    const lowAIAcceptance = (aiSuggestions.filter(ai => ai.accepted === true).length / aiSuggestions.length) < 0.5;
-    if (lowAIAcceptance && aiSuggestions.length > 0) {
+    const lowAIAcceptance = aiSuggestions.length > 0 && (aiSuggestions.filter(ai => ai.accepted === true).length / aiSuggestions.length) < 0.5;
+    if (lowAIAcceptance) {
       riskFactors.push('Low AI recommendation acceptance');
     }
 
     // Opportunity analysis
-    const exchangeRate = items.filter(i => i.action === 'exchange').length / items.length;
+    const exchangeRate = items.length > 0 ? items.filter(i => i.action === 'exchange').length / items.length : 0;
     if (exchangeRate > 0.3) {
       opportunities.push('High exchange rate indicates customer retention');
     }
