@@ -23,13 +23,12 @@ const WebhookMonitoringDashboard = () => {
   const [activities, setActivities] = useState<WebhookActivity[]>([]);
   const [stats, setStats] = useState<any>(null);
   const [loading, setLoading] = useState(true);
-  const [timeframe, setTimeframe] = useState('24h');
 
   useEffect(() => {
     if (profile?.merchant_id) {
       loadWebhookData();
     }
-  }, [profile?.merchant_id, timeframe]);
+  }, [profile?.merchant_id]);
 
   const loadWebhookData = async () => {
     if (!profile?.merchant_id) return;
@@ -38,7 +37,7 @@ const WebhookMonitoringDashboard = () => {
       setLoading(true);
       const [activitiesData, statsData] = await Promise.all([
         WebhookMonitoringService.getWebhookActivity(profile.merchant_id),
-        WebhookMonitoringService.getWebhookStats(profile.merchant_id, timeframe)
+        WebhookMonitoringService.getWebhookStats(profile.merchant_id)
       ]);
       
       setActivities(activitiesData as WebhookActivity[]);
@@ -110,7 +109,7 @@ const WebhookMonitoringDashboard = () => {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm text-muted-foreground">Success Rate</p>
-                  <p className="text-2xl font-bold">{stats.successRate}%</p>
+                  <p className="text-2xl font-bold">{stats.total > 0 ? Math.round((stats.successful / stats.total) * 100) : 0}%</p>
                 </div>
                 <CheckCircle className="h-8 w-8 text-green-600" />
               </div>
@@ -134,7 +133,7 @@ const WebhookMonitoringDashboard = () => {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm text-muted-foreground">Avg Time</p>
-                  <p className="text-2xl font-bold">{stats.avgProcessingTime}ms</p>
+                  <p className="text-2xl font-bold">{Math.round(stats.averageProcessingTime)}ms</p>
                 </div>
                 <Zap className="h-8 w-8 text-purple-600" />
               </div>

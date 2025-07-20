@@ -1,3 +1,4 @@
+
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -14,7 +15,7 @@ import Customers from "./pages/Customers";
 import Notifications from "./pages/Notifications";
 import Billing from "./pages/Billing";
 import Settings from "./pages/Settings";
-import Support from "./pages/Support";
+import SupportCenter from "./pages/SupportCenter";
 import MasterAdmin from "./pages/MasterAdmin";
 import AtomicProtectedRoute from "./components/AtomicProtectedRoute";
 import Webhooks from "./pages/Webhooks";
@@ -116,7 +117,7 @@ const App = () => (
               path="/support"
               element={
                 <AtomicProtectedRoute>
-                  <Support />
+                  <SupportCenter />
                 </AtomicProtectedRoute>
               }
             />

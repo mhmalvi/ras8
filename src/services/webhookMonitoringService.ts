@@ -44,12 +44,12 @@ export class WebhookMonitoringService {
       throw error;
     }
 
-    return activity;
+    return activity as WebhookActivity;
   }
 
   static async updateWebhookStatus(
     activityId: string,
-    status: 'completed' | 'failed',
+    status: 'received' | 'processing' | 'completed' | 'failed',
     response?: any,
     errorMessage?: string,
     processingTimeMs?: number
@@ -84,7 +84,7 @@ export class WebhookMonitoringService {
       throw error;
     }
 
-    return data || [];
+    return (data || []) as WebhookActivity[];
   }
 
   static async getWebhookStats(merchantId: string): Promise<{
