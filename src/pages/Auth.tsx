@@ -12,7 +12,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Loader2, ArrowRight, Shield, Users, Zap } from 'lucide-react';
 
 const Auth = () => {
-  const { signIn, signUp, user } = useAtomicAuth();
+  const { signIn, signUp, user, loading: authLoading } = useAtomicAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
   const location = useLocation();
@@ -35,15 +35,16 @@ const Auth = () => {
 
   const from = location.state?.from?.pathname || '/';
 
-  // Handle redirect when user is authenticated
+  // Handle redirect when user is authenticated - simplified logic
   useEffect(() => {
-    if (user) {
-      console.log('🔄 User authenticated, checking redirect...');
-      // We'll need to check user role after profile loads
-      // For now, just redirect to dashboard and let ProtectedRoute handle master admin redirect
-      navigate(from, { replace: true });
+    if (user && !authLoading) {
+      console.log('🔄 User authenticated, redirecting to:', from);
+      // Small delay to ensure all auth processes complete
+      setTimeout(() => {
+        navigate(from, { replace: true });
+      }, 100);
     }
-  }, [user, navigate, from]);
+  }, [user, authLoading, navigate, from]);
 
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -51,19 +52,34 @@ const Auth = () => {
     setError(null);
 
     try {
+      console.log('🔐 Attempting sign in with:', signInForm.email);
       const { error } = await signIn(signInForm.email, signInForm.password);
       
       if (error) {
+        console.error('❌ Sign in error:', error.message);
         setError(error.message);
+        toast({
+          variant: "destructive",
+          title: "Sign in failed",
+          description: error.message,
+        });
       } else {
+        console.log('✅ Sign in successful, waiting for redirect...');
         toast({
           title: "Welcome back!",
           description: "You've successfully signed in.",
         });
-        // Navigation will be handled by useEffect above
+        // Don't navigate here - let useEffect handle it
       }
     } catch (err) {
-      setError('An unexpected error occurred. Please try again.');
+      console.error('💥 Unexpected sign in error:', err);
+      const errorMessage = 'An unexpected error occurred. Please try again.';
+      setError(errorMessage);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: errorMessage,
+      });
     } finally {
       setLoading(false);
     }
@@ -74,6 +90,7 @@ const Auth = () => {
     setLoading(true);
     setError(null);
 
+    // Validation
     if (signUpForm.password !== signUpForm.confirmPassword) {
       setError('Passwords do not match');
       setLoading(false);
@@ -87,6 +104,7 @@ const Auth = () => {
     }
 
     try {
+      console.log('🔐 Attempting sign up with:', signUpForm.email);
       const { error } = await signUp(
         signUpForm.email, 
         signUpForm.password,
@@ -95,21 +113,46 @@ const Auth = () => {
       );
       
       if (error) {
+        console.error('❌ Sign up error:', error.message);
         setError(error.message);
+        toast({
+          variant: "destructive",
+          title: "Sign up failed",
+          description: error.message,
+        });
       } else {
+        console.log('✅ Sign up successful');
         toast({
           title: "Account created!",
           description: "Please check your email to verify your account.",
         });
-        // Navigate to dashboard after successful signup
-        navigate('/', { replace: true });
+        // Don't navigate here - let useEffect handle it after email verification
       }
     } catch (err) {
-      setError('An unexpected error occurred. Please try again.');
+      console.error('💥 Unexpected sign up error:', err);
+      const errorMessage = 'An unexpected error occurred. Please try again.';
+      setError(errorMessage);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: errorMessage,
+      });
     } finally {
       setLoading(false);
     }
   };
+
+  // Show loading if auth is still initializing
+  if (authLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="flex flex-col items-center gap-4">
+          <Loader2 className="h-8 w-8 animate-spin" />
+          <span className="text-muted-foreground">Checking authentication...</span>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
