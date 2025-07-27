@@ -1,42 +1,65 @@
-
 import '@testing-library/jest-dom';
-import { beforeAll, vi } from 'vitest';
+import { expect, afterEach, vi } from 'vitest';
+import { cleanup } from '@testing-library/react';
+import * as matchers from '@testing-library/jest-dom/matchers';
 
-// Mock Supabase client
+// Extend Vitest's expect with jest-dom matchers
+expect.extend(matchers);
+
+// Cleanup after each test
+afterEach(() => {
+  cleanup();
+});
+
+// Mock environment variables
 vi.mock('@/integrations/supabase/client', () => ({
   supabase: {
     from: vi.fn(() => ({
-      select: vi.fn().mockReturnThis(),
-      insert: vi.fn().mockReturnThis(),
-      update: vi.fn().mockReturnThis(),
-      delete: vi.fn().mockReturnThis(),
-      eq: vi.fn().mockReturnThis(),
-      ilike: vi.fn().mockReturnThis(),
-      order: vi.fn().mockReturnThis(),
-      limit: vi.fn().mockReturnThis(),
-      single: vi.fn().mockReturnThis(),
-      maybeSingle: vi.fn().mockReturnThis(),
+      select: vi.fn(() => ({
+        eq: vi.fn(() => ({
+          data: [],
+          error: null
+        })),
+        order: vi.fn(() => ({
+          data: [],
+          error: null
+        })),
+        limit: vi.fn(() => ({
+          data: [],
+          error: null
+        }))
+      })),
+      insert: vi.fn(() => ({
+        data: null,
+        error: null
+      })),
+      update: vi.fn(() => ({
+        eq: vi.fn(() => ({
+          data: null,
+          error: null
+        }))
+      }))
     })),
     auth: {
-      getUser: vi.fn(),
-      getSession: vi.fn(),
-      signUp: vi.fn(),
+      getUser: vi.fn(() => Promise.resolve({
+        data: { user: { id: 'test-user-id' } },
+        error: null
+      })),
       signInWithPassword: vi.fn(),
-      signOut: vi.fn(),
+      signOut: vi.fn()
     },
     functions: {
-      invoke: vi.fn(),
-    },
-  },
+      invoke: vi.fn(() => Promise.resolve({
+        data: null,
+        error: null
+      }))
+    }
+  }
 }));
 
-// Mock window.crypto for UUID generation
-Object.defineProperty(window, 'crypto', {
-  value: {
-    randomUUID: () => 'test-uuid-' + Math.random().toString(36).substr(2, 9),
-  },
-});
-
-beforeAll(() => {
-  // Set up any global test configuration
-});
+// Mock console methods to reduce noise in tests
+global.console = {
+  ...console,
+  warn: vi.fn(),
+  error: vi.fn(),
+};
