@@ -42,7 +42,7 @@ export class EnhancedAuthService {
       if (!validation.success) {
         return {
           success: false,
-          error: validation.errors.join(', ')
+          error: 'errors' in validation ? validation.errors.join(', ') : 'Validation failed'
         };
       }
 
@@ -96,7 +96,7 @@ export class EnhancedAuthService {
       if (!validation.success) {
         return {
           success: false,
-          error: validation.errors.join(', ')
+          error: 'errors' in validation ? validation.errors.join(', ') : 'Validation failed'
         };
       }
 
@@ -264,7 +264,7 @@ export class EnhancedAuthService {
       if (!validation.success) {
         return {
           success: false,
-          error: validation.errors.join(', ')
+          error: 'errors' in validation ? validation.errors.join(', ') : 'Validation failed'
         };
       }
 
@@ -301,7 +301,7 @@ export class EnhancedAuthService {
       if (!validation.success) {
         return {
           success: false,
-          error: validation.errors.join(', ')
+          error: 'errors' in validation ? validation.errors.join(', ') : 'Validation failed'
         };
       }
 

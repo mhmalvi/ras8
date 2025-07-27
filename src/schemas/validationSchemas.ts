@@ -106,14 +106,14 @@ export const merchantSchema = z.object({
   shop_domain: z.string().min(1, 'Shop domain is required'),
   access_token: z.string().min(1, 'Access token is required'),
   plan_type: z.enum(['starter', 'growth', 'pro']).default('starter'),
-  settings: z.record(z.any()).optional()
+  settings: z.record(z.string(), z.any()).optional()
 });
 
 export const webhookActivitySchema = z.object({
   merchant_id: uuidSchema,
   webhook_type: z.string().min(1, 'Webhook type is required'),
   source: z.string().min(1, 'Source is required'),
-  payload: z.record(z.any()),
+  payload: z.record(z.string(), z.any()),
   status: z.enum(['received', 'processing', 'completed', 'failed']).default('received')
 });
 

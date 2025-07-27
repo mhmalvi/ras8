@@ -85,7 +85,7 @@ export class RateLimiter {
   /**
    * Generate rate limit key from request
    */
-  private generateKey(req: Request): string {
+  protected generateKey(req: Request): string {
     if (this.config.keyGenerator) {
       return this.config.keyGenerator(req);
     }
@@ -198,12 +198,12 @@ export class MerchantRateLimiter extends RateLimiter {
           }
         }
         
-        return `ip:${this.getClientIP(req)}`;
+        return `ip:${this.getIPAddress(req)}`;
       }
     });
   }
   
-  private getClientIP(req: Request): string {
+  private getIPAddress(req: Request): string {
     const forwarded = req.headers.get('x-forwarded-for');
     if (forwarded) return forwarded.split(',')[0].trim();
     
@@ -260,7 +260,7 @@ export function createRateLimitMiddleware(limiter: RateLimiter) {
     const result = limiter.check(req);
     
     if (!result.allowed) {
-      console.warn(`🚫 Rate limit exceeded for ${limiter.generateKey?.(req) || 'request'}`);
+      console.warn(`🚫 Rate limit exceeded for request`);
       
       return new Response(
         JSON.stringify({
@@ -291,5 +291,5 @@ export function createRateLimitMiddleware(limiter: RateLimiter) {
  */
 export function createMerchantRateLimit(maxRequestsPerMinute: number = 100) {
   const limiter = new MerchantRateLimiter(60 * 1000, maxRequestsPerMinute);
-  return createRateLimitMiddleware(limiter);
+  return createRateLimitMiddleware(limiter as RateLimiter);
 }

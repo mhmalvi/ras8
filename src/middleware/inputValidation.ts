@@ -81,7 +81,7 @@ export const RequestSchemas = {
   webhookPayload: z.object({
     shopify_order_id: ValidationSchemas.shopifyOrderId,
     event_type: z.string().min(1),
-    data: z.record(z.any())
+    data: z.record(z.string(), z.any())
   })
 };
 
@@ -140,7 +140,7 @@ class InputValidator {
       };
     } catch (error) {
       if (error instanceof z.ZodError) {
-        const errors: ValidationError[] = error.errors.map(err => ({
+        const errors: ValidationError[] = error.issues.map(err => ({
           field: err.path.join('.'),
           message: err.message,
           code: err.code
