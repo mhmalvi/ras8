@@ -1,18 +1,10 @@
-
-import "https://deno.land/x/xhr@0.1.0/mod.ts";
-import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
+import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.50.2';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
-
-interface StandardResponse {
-  success: boolean;
-  data?: any;
-  error?: string;
-  fallback?: boolean;
-}
 
 serve(async (req) => {
   // Handle CORS preflight requests
@@ -21,139 +13,181 @@ serve(async (req) => {
   }
 
   try {
-    const { returnReason, productName, customerEmail, orderValue } = await req.json();
+    const { returnId, productId, customerEmail, reason, orderValue } = await req.json();
 
-    const openAIApiKey = Deno.env.get('OPENAI_API_KEY');
-    if (!openAIApiKey) {
-      console.error('OpenAI API key not configured');
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'OpenAI API key not configured',
-        fallback: true,
-        data: {
-          suggestedProduct: `Enhanced ${productName}`,
-          confidence: 75,
-          reasoning: 'Fallback recommendation - API key not configured'
-        }
-      } as StandardResponse), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 200
-      });
+    if (!returnId || !productId) {
+      throw new Error('Missing required fields: returnId and productId');
     }
 
+    // Initialize Supabase client
+    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+    const supabase = createClient(supabaseUrl, supabaseKey);
+
+    // Get OpenAI API key
+    const openaiApiKey = Deno.env.get('OPENAI_API_KEY');
+    if (!openaiApiKey) {
+      throw new Error('OpenAI API key not configured');
+    }
+
+    // Fetch product details and similar products from the merchant's catalog
+    const { data: returnData, error: returnError } = await supabase
+      .from('returns')
+      .select(`
+        *,
+        return_items (
+          *
+        )
+      `)
+      .eq('id', returnId)
+      .single();
+
+    if (returnError) {
+      throw new Error(`Failed to fetch return data: ${returnError.message}`);
+    }
+
+    // Generate AI recommendation using OpenAI
     const prompt = `
-Customer Return Analysis:
-- Product: ${productName}
-- Return Reason: ${returnReason}
-- Order Value: $${orderValue}
-- Customer: ${customerEmail}
+As an e-commerce return specialist, analyze this return request and suggest the best exchange options:
 
-Task: Suggest a better product for exchange that would address the customer's concern.
+Return Details:
+- Product ID: ${productId}
+- Return Reason: ${reason || 'Not specified'}
+- Customer Email: ${customerEmail}
+- Order Value: $${orderValue || 'Unknown'}
 
-Requirements:
-1. Suggest ONE primary product for exchange
-2. Provide a confidence score (70-99%)
-3. Explain the reasoning in 1-2 sentences
-4. Consider the return reason when making suggestions
+Based on this information, provide:
+1. 3 specific exchange recommendations with reasoning
+2. Confidence score (0-1) for each recommendation
+3. Overall assessment of customer satisfaction potential
+4. Estimated revenue retention impact
 
-Return format:
-PRODUCT: [suggested product name]
-CONFIDENCE: [number between 70-99]
-REASONING: [brief explanation]
+Respond in JSON format:
+{
+  "recommendations": [
+    {
+      "productSuggestion": "Product name/description",
+      "reasoning": "Why this is a good exchange",
+      "confidenceScore": 0.85,
+      "estimatedValue": "$XX"
+    }
+  ],
+  "overallConfidence": 0.8,
+  "customerSatisfactionPotential": "high|medium|low",
+  "revenueRetentionEstimate": "$XX",
+  "additionalNotes": "Any special considerations"
+}
 `;
 
-    console.log('Making OpenAI API request...');
-    const response = await fetch('https://api.openai.com/v1/chat/completions', {
+    const openaiResponse = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${openAIApiKey}`,
+        'Authorization': `Bearer ${openaiApiKey}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'gpt-4o-mini',
+        model: 'gpt-3.5-turbo',
         messages: [
           {
             role: 'system',
-            content: 'You are an AI assistant specialized in e-commerce product recommendations for returns and exchanges. Provide helpful, accurate suggestions based on customer return reasons.'
+            content: 'You are an expert e-commerce return specialist focused on maximizing customer satisfaction and revenue retention through smart exchange recommendations.'
           },
           {
             role: 'user',
             content: prompt
           }
         ],
-        max_tokens: 500,
-        temperature: 0.7
+        max_tokens: 1000,
+        temperature: 0.7,
       }),
     });
 
-    if (!response.ok) {
-      console.error(`OpenAI API error: ${response.statusText}`);
-      throw new Error(`OpenAI API error: ${response.statusText}`);
+    if (!openaiResponse.ok) {
+      throw new Error(`OpenAI API error: ${openaiResponse.status}`);
     }
 
-    const data = await response.json();
-    const content = data.choices[0]?.message?.content || '';
-    console.log('OpenAI response received:', content.substring(0, 100) + '...');
+    const openaiData = await openaiResponse.json();
+    let aiSuggestion;
+    
+    try {
+      aiSuggestion = JSON.parse(openaiData.choices[0].message.content);
+    } catch (parseError) {
+      // Fallback if JSON parsing fails
+      aiSuggestion = {
+        recommendations: [{
+          productSuggestion: "Similar product in different size/color",
+          reasoning: "Based on return reason, this alternative may better meet customer needs",
+          confidenceScore: 0.7,
+          estimatedValue: orderValue || "$50"
+        }],
+        overallConfidence: 0.7,
+        customerSatisfactionPotential: "medium",
+        revenueRetentionEstimate: orderValue || "$50",
+        additionalNotes: "AI analysis generated fallback recommendation"
+      };
+    }
 
-    // Parse the AI response
-    const lines = content.split('\n');
-    let suggestedProduct = '';
-    let confidence = 85;
-    let reasoning = '';
+    // Store the AI suggestion in the database
+    const { data: suggestionData, error: suggestionError } = await supabase
+      .from('ai_suggestions')
+      .insert({
+        return_id: returnId,
+        suggestion_type: 'exchange_recommendation',
+        suggestion: JSON.stringify(aiSuggestion),
+        confidence_score: aiSuggestion.overallConfidence || 0.7,
+        metadata: {
+          productId,
+          reason,
+          customerEmail,
+          orderValue,
+          timestamp: new Date().toISOString()
+        }
+      })
+      .select()
+      .single();
 
-    lines.forEach(line => {
-      if (line.startsWith('PRODUCT:')) {
-        suggestedProduct = line.replace('PRODUCT:', '').trim();
-      } else if (line.startsWith('CONFIDENCE:')) {
-        const confMatch = line.match(/\d+/);
-        if (confMatch) confidence = parseInt(confMatch[0]);
-      } else if (line.startsWith('REASONING:')) {
-        reasoning = line.replace('REASONING:', '').trim();
+    if (suggestionError) {
+      console.error('Failed to store AI suggestion:', suggestionError);
+      // Continue anyway, don't fail the entire request
+    }
+
+    console.log('✅ Exchange recommendation generated successfully');
+
+    return new Response(
+      JSON.stringify({
+        success: true,
+        suggestion: aiSuggestion,
+        suggestionId: suggestionData?.id,
+        confidence: aiSuggestion.overallConfidence || 0.7
+      }),
+      {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       }
-    });
-
-    const result = {
-      success: true,
-      fallback: false,
-      data: {
-        suggestedProduct: suggestedProduct || 'Enhanced Version of Original Product',
-        confidence: Math.max(70, Math.min(99, confidence)),
-        reasoning: reasoning || 'Based on the return reason, this alternative should better meet customer needs.'
-      }
-    } as StandardResponse;
-
-    console.log('Sending successful response:', result.data);
-    return new Response(JSON.stringify(result), {
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    });
+    );
 
   } catch (error) {
-    console.error('Error in generate-exchange-recommendation function:', error);
+    console.error('❌ Error generating exchange recommendation:', error);
     
-    const fallbackProducts = [
-      'Premium Version',
-      'Enhanced Model',
-      'Alternative Style',
-      'Upgraded Version',
-      'Different Size Option'
-    ];
-
-    const randomProduct = fallbackProducts[Math.floor(Math.random() * fallbackProducts.length)];
-    
-    const fallbackResponse = {
-      success: false,
-      error: error.message,
-      fallback: true,
-      data: {
-        suggestedProduct: `${randomProduct} of the original product`,
-        confidence: 75,
-        reasoning: 'Fallback recommendation due to API error - based on common exchange patterns'
+    return new Response(
+      JSON.stringify({
+        success: false,
+        error: error.message,
+        fallbackSuggestion: {
+          recommendations: [{
+            productSuggestion: "Store credit or refund",
+            reasoning: "Unable to generate specific product recommendations at this time",
+            confidenceScore: 0.5,
+            estimatedValue: "Original order value"
+          }],
+          overallConfidence: 0.5,
+          customerSatisfactionPotential: "medium",
+          additionalNotes: "Fallback recommendation due to system error"
+        }
+      }),
+      {
+        status: 200, // Return 200 with error details for graceful degradation
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       }
-    } as StandardResponse;
-
-    return new Response(JSON.stringify(fallbackResponse), {
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      status: 200
-    });
+    );
   }
 });
