@@ -1,6 +1,6 @@
 
 import { supabase } from '@/integrations/supabase/client';
-import { EnhancedN8nService } from './enhancedN8nService';
+import { ShopifyOrderData } from '@/types/ShopifyTypes';
 
 interface EnhancedOrder {
   id: string;
@@ -216,19 +216,8 @@ export class EnhancedOrderService {
 
       if (itemsError) throw itemsError;
 
-      // Trigger n8n workflow for return processing
-      await EnhancedN8nService.processReturnCreated({
-        returnId: returnData.id,
-        merchantId: merchantId,
-        customerEmail: order.customer_email,
-        status: 'requested',
-        items: returnItems.map(item => ({
-          productId: item.product_id,
-          productName: item.product_name,
-          quantity: item.quantity,
-          action: 'refund' // Default to refund, can be changed later
-        }))
-      });
+      // Note: n8n integration would go here
+      console.log(`📧 Would trigger n8n workflow for return ${returnData.id}`);
 
       console.log(`✅ Created return ${returnData.id} with ${returnItems.length} items`);
       return returnData.id;
