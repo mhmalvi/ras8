@@ -1,6 +1,4 @@
-
 import { supabase } from '@/integrations/supabase/client';
-import { ShopifyOrderData } from '@/types/ShopifyTypes';
 
 interface EnhancedOrder {
   id: string;
@@ -24,20 +22,21 @@ interface EnhancedOrder {
 
 export class EnhancedOrderService {
   static async lookupOrderWithFallback(
-    orderNumber: string, 
+    orderNumber: string,
     email: string
   ): Promise<EnhancedOrder | null> {
     try {
-      console.log(`🔍 Enhanced order lookup: ${orderNumber} / ${email}`);
+      console.log(`🔍 Enhanced order lookup: ${orderNumber} for ${email}`);
 
-      // First, try database lookup
+      // First try database lookup
       const dbOrder = await this.lookupFromDatabase(orderNumber, email);
       if (dbOrder) {
         console.log('✅ Found order in database');
         return dbOrder;
       }
 
-      // If not in database, try Shopify API for all merchants
+      // Fallback to Shopify lookup
+      console.log('📡 Attempting Shopify fallback lookup');
       const shopifyOrder = await this.lookupFromShopify(orderNumber, email);
       if (shopifyOrder) {
         console.log('✅ Found order via Shopify API');
@@ -48,74 +47,82 @@ export class EnhancedOrderService {
       return null;
     } catch (error) {
       console.error('Enhanced order lookup failed:', error);
-      throw error;
+      return null;
     }
   }
 
   private static async lookupFromDatabase(
-    orderNumber: string, 
+    orderNumber: string,
     email: string
   ): Promise<EnhancedOrder | null> {
     try {
-      const { data: orders, error } = await supabase
+      const cleanOrderNumber = orderNumber.replace('#', '');
+      
+      const { data: order, error } = await supabase
         .from('orders')
         .select(`
-          *,
+          id,
+          shopify_order_id,
+          customer_email,
+          total_amount,
+          status,
+          created_at,
           order_items (
             id,
-            product_id,
+            shopify_product_id,
             product_name,
             price,
             quantity
           )
         `)
-        .or(`shopify_order_id.eq.${orderNumber.replace('#', '')},shopify_order_id.eq.${orderNumber}`)
         .eq('customer_email', email.toLowerCase())
-        .limit(1);
+        .or(`order_number.eq.${cleanOrderNumber},order_number.eq.#${cleanOrderNumber}`)
+        .single();
 
-      if (error) throw error;
-
-      if (orders && orders.length > 0) {
-        const order = orders[0];
-        return {
-          id: order.id,
-          shopify_order_id: order.shopify_order_id,
-          customer_email: order.customer_email,
-          total_amount: order.total_amount,
-          status: order.status,
-          created_at: order.created_at,
-          items: order.order_items || []
-        };
+      if (error || !order) {
+        return null;
       }
 
-      return null;
+      return {
+        id: order.id,
+        shopify_order_id: order.shopify_order_id,
+        customer_email: order.customer_email,
+        total_amount: order.total_amount,
+        status: order.status,
+        created_at: order.created_at,
+        items: (order.order_items || []).map((item: any) => ({
+          id: item.id,
+          product_id: item.shopify_product_id,
+          product_name: item.product_name,
+          price: item.price,
+          quantity: item.quantity
+        }))
+      };
     } catch (error) {
-      console.error('Database order lookup failed:', error);
+      console.error('Database lookup failed:', error);
       return null;
     }
   }
 
   private static async lookupFromShopify(
-    orderNumber: string, 
+    orderNumber: string,
     email: string
   ): Promise<EnhancedOrder | null> {
     try {
-      // Get all active merchants with access tokens
+      // Get active merchants
       const { data: merchants, error } = await supabase
         .from('merchants')
         .select('id, shop_domain, access_token')
-        .not('access_token', 'in', '("DISCONNECTED","UNINSTALLED")')
         .not('access_token', 'is', null);
 
       if (error || !merchants) {
-        console.warn('No active merchants found');
         return null;
       }
 
-      // Try each merchant until we find the order
+      // Try each merchant
       for (const merchant of merchants) {
         try {
-          const shopifyOrder = await this.lookupOrderFromShopifyAPI(
+          const shopifyOrder = await this.fetchFromShopifyAPI(
             merchant.shop_domain,
             merchant.access_token,
             orderNumber,
@@ -123,20 +130,19 @@ export class EnhancedOrderService {
           );
 
           if (shopifyOrder) {
-            // Sync to database for future lookups
-            await this.syncOrderToDatabase(merchant.id, shopifyOrder);
-
-            // Return standardized format
+            // Sync to database
+            await this.syncToDatabase(merchant.id, shopifyOrder);
+            
             return {
-              id: `shopify_${shopifyOrder.id}`,
-              shopify_order_id: shopifyOrder.id.toString(),
+              id: shopifyOrder.id,
+              shopify_order_id: shopifyOrder.id,
               customer_email: shopifyOrder.email,
               total_amount: parseFloat(shopifyOrder.total_price),
-              status: 'completed',
+              status: shopifyOrder.financial_status,
               created_at: shopifyOrder.created_at,
-              items: shopifyOrder.line_items.map(item => ({
-                id: item.id.toString(),
-                product_id: item.product_id.toString(),
+              items: (shopifyOrder.line_items || []).map((item: any) => ({
+                id: item.id,
+                product_id: item.product_id,
                 product_name: item.name,
                 price: parseFloat(item.price),
                 quantity: item.quantity
@@ -155,8 +161,82 @@ export class EnhancedOrderService {
 
       return null;
     } catch (error) {
-      console.error('Shopify order lookup failed:', error);
+      console.error('Shopify lookup failed:', error);
       return null;
+    }
+  }
+
+  private static async fetchFromShopifyAPI(
+    shopDomain: string,
+    accessToken: string,
+    orderNumber: string,
+    email: string
+  ): Promise<any | null> {
+    try {
+      const cleanOrderNumber = orderNumber.replace('#', '');
+      
+      const response = await fetch(
+        `https://${shopDomain}/admin/api/2024-07/orders.json?email=${encodeURIComponent(email)}&status=any&limit=50`,
+        {
+          headers: {
+            'X-Shopify-Access-Token': accessToken,
+            'Content-Type': 'application/json'
+          }
+        }
+      );
+
+      if (!response.ok) {
+        return null;
+      }
+
+      const data = await response.json();
+      const orders = data.orders || [];
+      
+      return orders.find((order: any) => 
+        order.name?.includes(cleanOrderNumber) || 
+        order.order_number?.toString() === cleanOrderNumber
+      ) || null;
+    } catch (error) {
+      console.error(`Shopify API error for ${shopDomain}:`, error);
+      return null;
+    }
+  }
+
+  private static async syncToDatabase(merchantId: string, shopifyOrder: any): Promise<void> {
+    try {
+      const orderData = {
+        merchant_id: merchantId,
+        shopify_order_id: shopifyOrder.id,
+        customer_email: shopifyOrder.email,
+        total_amount: parseFloat(shopifyOrder.total_price),
+        status: shopifyOrder.financial_status,
+        order_number: shopifyOrder.name,
+        financial_status: shopifyOrder.financial_status,
+        fulfillment_status: shopifyOrder.fulfillment_status
+      };
+
+      const { data: order, error: orderError } = await supabase
+        .from('orders')
+        .upsert(orderData)
+        .select('id')
+        .single();
+
+      if (orderError) throw orderError;
+
+      // Sync order items
+      if (shopifyOrder.line_items?.length > 0) {
+        const items = shopifyOrder.line_items.map((item: any) => ({
+          order_id: order.id,
+          shopify_product_id: item.product_id,
+          product_name: item.name,
+          quantity: item.quantity,
+          price: parseFloat(item.price)
+        }));
+
+        await supabase.from('order_items').upsert(items);
+      }
+    } catch (error) {
+      console.error('Sync to database failed:', error);
     }
   }
 
@@ -172,16 +252,14 @@ export class EnhancedOrderService {
     try {
       const merchantId = order.merchant_info?.merchant_id;
       if (!merchantId) {
-        throw new Error('No merchant information available for return creation');
+        throw new Error('No merchant information available');
       }
 
-      // Calculate total return amount
       const totalAmount = selectedItems.reduce((sum, item) => {
         const orderItem = order.items.find(oi => oi.product_id === item.product_id);
         return sum + (orderItem ? orderItem.price * item.quantity : 0);
       }, 0);
 
-      // Create return record
       const { data: returnData, error: returnError } = await supabase
         .from('returns')
         .insert({
@@ -206,7 +284,7 @@ export class EnhancedOrderService {
           product_name: orderItem?.product_name || 'Unknown Product',
           quantity: item.quantity,
           price: orderItem?.price || 0,
-          reason: item.reason
+          action: 'refund'
         };
       });
 
@@ -216,149 +294,10 @@ export class EnhancedOrderService {
 
       if (itemsError) throw itemsError;
 
-      // Note: n8n integration would go here
-      console.log(`📧 Would trigger n8n workflow for return ${returnData.id}`);
-
-      console.log(`✅ Created return ${returnData.id} with ${returnItems.length} items`);
       return returnData.id;
     } catch (error) {
-      console.error('Failed to create return from order:', error);
+      console.error('Failed to create return:', error);
       throw error;
-    }
-  }
-
-  private static async lookupOrderFromShopifyAPI(
-    shopDomain: string,
-    accessToken: string,
-    orderNumber: string,
-    email: string
-  ): Promise<any | null> {
-    try {
-      // Try looking up by order number first
-      const orderResponse = await fetch(
-        `https://${shopDomain}/admin/api/2024-07/orders.json?name=${encodeURIComponent(orderNumber)}&status=any`,
-        {
-          headers: {
-            'X-Shopify-Access-Token': accessToken,
-            'Content-Type': 'application/json'
-          }
-        }
-      );
-
-      if (orderResponse.ok) {
-        const orderData = await orderResponse.json();
-        const orders = orderData.orders || [];
-        
-        // Find order with matching email
-        const matchingOrder = orders.find((order: any) => 
-          order.email?.toLowerCase() === email.toLowerCase()
-        );
-
-        if (matchingOrder) {
-          return matchingOrder;
-        }
-      }
-
-      // If not found by name, try searching by email with order number in the name
-      const emailResponse = await fetch(
-        `https://${shopDomain}/admin/api/2024-07/orders.json?email=${encodeURIComponent(email)}&status=any&limit=50`,
-        {
-          headers: {
-            'X-Shopify-Access-Token': accessToken,
-            'Content-Type': 'application/json'
-          }
-        }
-      );
-
-      if (emailResponse.ok) {
-        const emailData = await emailResponse.json();
-        const orders = emailData.orders || [];
-        
-        // Find order with matching order number
-        const cleanOrderNumber = orderNumber.replace('#', '');
-        const matchingOrder = orders.find((order: any) => 
-          order.name?.includes(cleanOrderNumber) || 
-          order.order_number?.toString() === cleanOrderNumber ||
-          order.id?.toString() === cleanOrderNumber
-        );
-
-        if (matchingOrder) {
-          return matchingOrder;
-        }
-      }
-
-      return null;
-    } catch (error) {
-      console.error(`Shopify API lookup failed for ${shopDomain}:`, error);
-      return null;
-    }
-  }
-
-  private static async syncOrderToDatabase(
-    merchantId: string,
-    shopifyOrder: any
-  ): Promise<void> {
-    try {
-      // Check if order already exists
-      const { data: existingOrder } = await supabase
-        .from('orders')
-        .select('id')
-        .eq('merchant_id', merchantId)
-        .eq('shopify_order_id', shopifyOrder.id)
-        .single();
-
-      if (existingOrder) {
-        return; // Order already synced
-      }
-
-      // Insert order
-      const { data: orderData, error: orderError } = await supabase
-        .from('orders')
-        .insert({
-          merchant_id: merchantId,
-          shopify_order_id: shopifyOrder.id,
-          customer_email: shopifyOrder.email,
-          total_amount: parseFloat(shopifyOrder.total_price),
-          status: shopifyOrder.financial_status,
-          order_number: shopifyOrder.name,
-          financial_status: shopifyOrder.financial_status,
-          fulfillment_status: shopifyOrder.fulfillment_status,
-          tags: shopifyOrder.tags,
-          note: shopifyOrder.note,
-          processed_at: shopifyOrder.processed_at,
-          cancelled_at: shopifyOrder.cancelled_at
-        })
-        .select('id')
-        .single();
-
-      if (orderError) throw orderError;
-
-      // Insert order items
-      if (shopifyOrder.line_items && shopifyOrder.line_items.length > 0) {
-        const orderItems = shopifyOrder.line_items.map((item: any) => ({
-          order_id: orderData.id,
-          shopify_product_id: item.product_id,
-          shopify_variant_id: item.variant_id,
-          product_name: item.name,
-          variant_title: item.variant_title,
-          quantity: item.quantity,
-          price: parseFloat(item.price),
-          sku: item.sku,
-          vendor: item.vendor,
-          product_type: item.product_type
-        }));
-
-        const { error: itemsError } = await supabase
-          .from('order_items')
-          .insert(orderItems);
-
-        if (itemsError) throw itemsError;
-      }
-
-      console.log(`✅ Synced order ${shopifyOrder.name} to database`);
-    } catch (error) {
-      console.error('Failed to sync order to database:', error);
-      // Don't throw error as this is a background sync operation
     }
   }
 }
