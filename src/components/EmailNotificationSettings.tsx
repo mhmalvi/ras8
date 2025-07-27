@@ -70,7 +70,7 @@ const EmailNotificationSettings = () => {
         });
         setTestEmail('');
       } else {
-        throw new Error(result.error || 'Failed to send test email');
+        throw new Error(result.message || 'Failed to send test email');
       }
     } catch (error) {
       console.error('Test email failed:', error);
