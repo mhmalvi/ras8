@@ -44,7 +44,11 @@ serve(async (req) => {
   // Note: In production, implement proper rate limiting with Redis or similar
 
   try {
-    const { shopDomain, accessToken, testType = 'full' } = await req.json();
+    const body = await req.text()
+    const requestData = JSON.parse(body)
+    
+    // Basic validation
+    const { shopDomain, accessToken, testType = 'full' } = requestData;
     
     if (!shopDomain || !accessToken) {
       throw new Error('Shop domain and access token are required');

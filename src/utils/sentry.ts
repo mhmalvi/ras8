@@ -2,9 +2,11 @@ import * as Sentry from '@sentry/react';
 
 // Initialize Sentry for production error monitoring
 export const initSentry = () => {
-  if (import.meta.env.PROD) {
+  const sentryDsn = import.meta.env.VITE_SENTRY_DSN;
+  
+  if (import.meta.env.PROD && sentryDsn) {
     Sentry.init({
-      dsn: 'https://d8f9c98386b49e6066e113e26b5b800998e4509741791510920.ingest.us.sentry.io/4509741801340928',
+      dsn: sentryDsn,
       integrations: [
         Sentry.browserTracingIntegration(),
       ],

@@ -14,3 +14,9 @@ verify_jwt = false
 
 [functions.get-shopify-config]
 verify_jwt = false
+
+[functions.create-checkout]
+verify_jwt = true
+
+[functions.stripe-webhook-handler]
+verify_jwt = false
