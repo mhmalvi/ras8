@@ -1,5 +1,6 @@
 
 import React, { createContext, useContext, useEffect, useState } from 'react';
+import { supabase } from '@/integrations/supabase/client';
 
 interface AppBridgeContextType {
   app: any;
@@ -37,13 +38,27 @@ export const AppBridgeProvider: React.FC<AppBridgeProviderProps> = ({ children }
         if (host || shop) {
           setIsEmbedded(true);
           
+          // Get Shopify configuration from our edge function
+          let clientId = 'your-shopify-client-id'; // fallback
+          
+          try {
+            const { data: config } = await supabase.functions.invoke('get-shopify-config');
+            if (config?.clientId) {
+              clientId = config.clientId;
+              console.log('✅ Using configured Shopify Client ID');
+            } else {
+              console.warn('⚠️ Using fallback Shopify Client ID - configure SHOPIFY_CLIENT_ID in Supabase secrets');
+            }
+          } catch (configError) {
+            console.warn('⚠️ Could not fetch Shopify config, using fallback:', configError);
+          }
+          
           // Dynamically import App Bridge
           const { default: createApp } = await import('@shopify/app-bridge');
-          const { default: { Modal, TitleBar } } = await import('@shopify/app-bridge/actions');
           
           const appBridge = createApp({
-            apiKey: process.env.REACT_APP_SHOPIFY_CLIENT_ID || 'your-client-id',
-            host: host || btoa(shop + '/admin').replace(/=/g, ''),
+            apiKey: clientId,
+            host: host || btoa((shop || '') + '/admin').replace(/=/g, ''),
           });
 
           // Set up global error handling

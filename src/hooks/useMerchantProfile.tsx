@@ -51,6 +51,15 @@ export const useMerchantProfile = () => {
 
       if (profileError) {
         console.error('💥 Error fetching profile:', profileError);
+        
+        // If profile doesn't exist, it might be a new user
+        if (profileError.code === 'PGRST116') {
+          console.log('⚠️ Profile not found, user may need profile creation');
+          setError('Profile not found. Please contact support.');
+          setLoading(false);
+          return;
+        }
+        
         throw profileError;
       }
 
@@ -58,7 +67,7 @@ export const useMerchantProfile = () => {
       setProfile(profileData);
 
       // If user has a merchant_id, fetch merchant details
-      if (profileData.merchant_id) {
+      if (profileData?.merchant_id) {
         console.log('🏪 Fetching merchant details for:', profileData.merchant_id);
         
         const { data: merchantData, error: merchantError } = await supabase
@@ -69,11 +78,18 @@ export const useMerchantProfile = () => {
 
         if (merchantError) {
           console.error('💥 Error fetching merchant:', merchantError);
-          // Don't throw here, user might not have merchant assigned yet
+          if (merchantError.code === 'PGRST116') {
+            console.log('⚠️ Merchant not found, may have been deleted');
+            setError('Merchant not found. Please contact support.');
+          }
+          // Don't throw here, user profile still loaded successfully
         } else {
           console.log('✅ Merchant fetched:', merchantData);
           setMerchant(merchantData);
         }
+      } else {
+        console.log('ℹ️ User has no merchant assigned');
+        setMerchant(null);
       }
 
     } catch (err) {
