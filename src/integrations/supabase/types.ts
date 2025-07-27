@@ -544,6 +544,39 @@ export type Database = {
           },
         ]
       }
+      test_scenarios: {
+        Row: {
+          created_at: string | null
+          expected_result: Json | null
+          id: string
+          status: string | null
+          test_data: Json | null
+          test_name: string
+          test_type: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          expected_result?: Json | null
+          id?: string
+          status?: string | null
+          test_data?: Json | null
+          test_name: string
+          test_type: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          expected_result?: Json | null
+          id?: string
+          status?: string | null
+          test_data?: Json | null
+          test_name?: string
+          test_type?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       users: {
         Row: {
           created_at: string | null
@@ -626,6 +659,53 @@ export type Database = {
           },
         ]
       }
+      webhook_endpoints: {
+        Row: {
+          active: boolean | null
+          created_at: string | null
+          events: string[] | null
+          id: string
+          merchant_id: string | null
+          name: string
+          secret_key: string | null
+          updated_at: string | null
+          webhook_type: string
+          webhook_url: string
+        }
+        Insert: {
+          active?: boolean | null
+          created_at?: string | null
+          events?: string[] | null
+          id?: string
+          merchant_id?: string | null
+          name: string
+          secret_key?: string | null
+          updated_at?: string | null
+          webhook_type: string
+          webhook_url: string
+        }
+        Update: {
+          active?: boolean | null
+          created_at?: string | null
+          events?: string[] | null
+          id?: string
+          merchant_id?: string | null
+          name?: string
+          secret_key?: string | null
+          updated_at?: string | null
+          webhook_type?: string
+          webhook_url?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "webhook_endpoints_merchant_id_fkey"
+            columns: ["merchant_id"]
+            isOneToOne: false
+            referencedRelation: "merchants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
@@ -641,6 +721,10 @@ export type Database = {
           p_data?: Json
         }
         Returns: string
+      }
+      encrypt_existing_tokens: {
+        Args: Record<PropertyKey, never>
+        Returns: number
       }
       get_analytics_aggregated: {
         Args: {
@@ -661,6 +745,14 @@ export type Database = {
       }
       is_master_admin: {
         Args: Record<PropertyKey, never>
+        Returns: boolean
+      }
+      trigger_merchant_webhooks: {
+        Args: { p_merchant_id: string; p_event_type: string; p_payload: Json }
+        Returns: number
+      }
+      validate_token_security: {
+        Args: { merchant_id: string }
         Returns: boolean
       }
     }
