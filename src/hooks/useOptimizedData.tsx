@@ -21,15 +21,11 @@ export const useOptimizedReturns = (options: {
       setLoading(true);
       setError(null);
       
-      const returns = await OptimizedQueryService.getOptimizedReturns(
-        profile.merchant_id,
-        {
-          limit: options.limit || 50,
-          status: options.status
-        }
+      const returns = await OptimizedQueryService.getDashboardMetrics(
+        profile.merchant_id
       );
       
-      setData(returns || []);
+      setData(Array.isArray(returns) ? returns : []);
     } catch (err) {
       console.error('Error fetching optimized returns:', err);
       setError(err instanceof Error ? err.message : 'Unknown error');
@@ -71,10 +67,20 @@ export const useOptimizedAnalytics = (timeRange: 'week' | 'month' | 'quarter' = 
     try {
       setLoading(true);
       setError(null);
+      // Convert timeRange to date range
+      const getDateRange = (range: string) => {
+        const end = new Date().toISOString();
+        const start = new Date();
+        if (range === 'week') start.setDate(start.getDate() - 7);
+        else if (range === 'quarter') start.setDate(start.getDate() - 90);
+        else start.setDate(start.getDate() - 30); // month
+        return { start: start.toISOString(), end };
+      };
       
-      const analytics = await OptimizedQueryService.getOptimizedAnalytics(
+      const analytics = await OptimizedQueryService.getAnalyticsData(
         profile.merchant_id,
-        timeRange
+        undefined,
+        getDateRange(timeRange)
       );
       
       setData(analytics);
