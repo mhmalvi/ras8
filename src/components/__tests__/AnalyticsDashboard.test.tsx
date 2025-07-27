@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { render, screen } from '../test/utils/testUtils';
+import { render, screen } from '@testing-library/react';
 import AnalyticsDashboard from '../AnalyticsDashboard';
 
 // Mock the analytics hook
@@ -66,7 +66,7 @@ describe('AnalyticsDashboard', () => {
   });
 
   it('should show loading state', () => {
-    vi.mocked(useRealAnalyticsData).mockReturnValue({
+    const mockHook = vi.fn().mockReturnValue({
       analytics: null,
       loading: true,
       error: null,
@@ -79,7 +79,7 @@ describe('AnalyticsDashboard', () => {
   });
 
   it('should handle error state', () => {
-    vi.mocked(useRealAnalyticsData).mockReturnValue({
+    const mockHook = vi.fn().mockReturnValue({
       analytics: null,
       loading: false,
       error: 'Failed to load analytics',

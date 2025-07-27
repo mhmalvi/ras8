@@ -34,7 +34,7 @@ describe('useReturnsData', () => {
       })
     });
 
-    const { result } = renderHook(() => useReturnsData('merchant-123'));
+    const { result } = renderHook(() => useReturnsData());
 
     await waitFor(() => {
       expect(result.current.loading).toBe(false);
@@ -53,7 +53,7 @@ describe('useReturnsData', () => {
       })
     });
 
-    const { result } = renderHook(() => useReturnsData('merchant-123'));
+    const { result } = renderHook(() => useReturnsData());
 
     expect(result.current.loading).toBe(true);
     expect(result.current.returns).toEqual([]);
@@ -71,7 +71,7 @@ describe('useReturnsData', () => {
       })
     });
 
-    const { result } = renderHook(() => useReturnsData('merchant-123'));
+    const { result } = renderHook(() => useReturnsData());
 
     await waitFor(() => {
       expect(result.current.loading).toBe(false);

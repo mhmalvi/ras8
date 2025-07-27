@@ -49,7 +49,7 @@ describe('useRealDashboardMetrics', () => {
       }
     });
 
-    const { result } = renderHook(() => useRealDashboardMetrics('merchant-123'));
+    const { result } = renderHook(() => useRealDashboardMetrics());
 
     await waitFor(() => {
       expect(result.current.loading).toBe(false);
@@ -77,7 +77,7 @@ describe('useRealDashboardMetrics', () => {
       })
     });
 
-    const { result } = renderHook(() => useRealDashboardMetrics('merchant-123'));
+    const { result } = renderHook(() => useRealDashboardMetrics());
 
     await waitFor(() => {
       expect(result.current.loading).toBe(false);
