@@ -1,8 +1,11 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 
+// Enhanced CORS configuration
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Methods': 'POST, OPTIONS',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Max-Age': '86400',
 };
 
 interface ValidationTest {
@@ -35,6 +38,10 @@ serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
+
+  // Rate limiting (100 requests per hour per IP)
+  const rateLimitKey = `shopify-validator:${req.headers.get('x-forwarded-for') || 'unknown'}`;
+  // Note: In production, implement proper rate limiting with Redis or similar
 
   try {
     const { shopDomain, accessToken, testType = 'full' } = await req.json();

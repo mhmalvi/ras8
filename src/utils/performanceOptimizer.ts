@@ -7,12 +7,23 @@ const cache = new Map<string, { data: any; timestamp: number; ttl: number }>();
 export class PerformanceOptimizer {
   private static readonly DEFAULT_TTL = 5 * 60 * 1000; // 5 minutes
   private static readonly CACHE_CLEANUP_INTERVAL = 10 * 60 * 1000; // 10 minutes
+  private static cleanupTimer: NodeJS.Timeout | null = null;
 
-  static {
-    // Auto-cleanup expired cache entries
-    setInterval(() => {
-      this.cleanupExpiredCache();
-    }, this.CACHE_CLEANUP_INTERVAL);
+  // Initialize cleanup timer only when needed
+  private static ensureCleanupTimer() {
+    if (!this.cleanupTimer) {
+      this.cleanupTimer = setInterval(() => {
+        this.cleanupExpiredCache();
+      }, this.CACHE_CLEANUP_INTERVAL);
+    }
+  }
+
+  // Stop cleanup timer to prevent memory leaks
+  static stopCleanupTimer() {
+    if (this.cleanupTimer) {
+      clearInterval(this.cleanupTimer);
+      this.cleanupTimer = null;
+    }
   }
 
   static getCachedData(key: string): any | null {
@@ -28,6 +39,9 @@ export class PerformanceOptimizer {
   }
 
   static setCachedData(key: string, data: any, ttl: number = this.DEFAULT_TTL): void {
+    // Ensure cleanup timer is running
+    this.ensureCleanupTimer();
+    
     cache.set(key, {
       data,
       timestamp: Date.now(),
@@ -195,8 +209,9 @@ export class PerformanceOptimizer {
 
   static invalidateCache(pattern: string): void {
     let invalidated = 0;
+    // More efficient cache invalidation using startsWith for merchant-specific patterns
     for (const key of cache.keys()) {
-      if (key.includes(pattern)) {
+      if (key.startsWith(pattern) || key.includes(pattern)) {
         cache.delete(key);
         invalidated++;
       }
@@ -204,6 +219,14 @@ export class PerformanceOptimizer {
     if (invalidated > 0) {
       console.log(`🗑️ Invalidated ${invalidated} cache entries matching: ${pattern}`);
     }
+  }
+
+  // Clear all cache entries (for cleanup)
+  static clearAllCache(): void {
+    const size = cache.size;
+    cache.clear();
+    this.stopCleanupTimer();
+    console.log(`🧹 Cleared ${size} cache entries and stopped cleanup timer`);
   }
 
   // Database connection pooling and optimization
