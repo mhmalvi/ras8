@@ -1,6 +1,5 @@
 
 import { supabase } from '@/integrations/supabase/client';
-import { EnhancedShopifyService } from './enhancedShopifyService';
 import { EnhancedN8nService } from './enhancedN8nService';
 
 interface EnhancedOrder {
@@ -101,11 +100,12 @@ export class EnhancedOrderService {
     email: string
   ): Promise<EnhancedOrder | null> {
     try {
-      // Get all active merchants
+      // Get all active merchants with access tokens
       const { data: merchants, error } = await supabase
         .from('merchants')
-        .select('id, shop_domain')
-        .not('access_token', 'in', '("DISCONNECTED","UNINSTALLED")');
+        .select('id, shop_domain, access_token')
+        .not('access_token', 'in', '("DISCONNECTED","UNINSTALLED")')
+        .not('access_token', 'is', null);
 
       if (error || !merchants) {
         console.warn('No active merchants found');
@@ -115,16 +115,16 @@ export class EnhancedOrderService {
       // Try each merchant until we find the order
       for (const merchant of merchants) {
         try {
-          const shopifyOrder = await EnhancedShopifyService.lookupOrderByDetails(
-            merchant.id,
+          const shopifyOrder = await this.lookupOrderFromShopifyAPI(
             merchant.shop_domain,
+            merchant.access_token,
             orderNumber,
             email
           );
 
           if (shopifyOrder) {
             // Sync to database for future lookups
-            await EnhancedShopifyService.syncOrderToDatabase(merchant.id, shopifyOrder);
+            await this.syncOrderToDatabase(merchant.id, shopifyOrder);
 
             // Return standardized format
             return {
@@ -235,6 +235,141 @@ export class EnhancedOrderService {
     } catch (error) {
       console.error('Failed to create return from order:', error);
       throw error;
+    }
+  }
+
+  private static async lookupOrderFromShopifyAPI(
+    shopDomain: string,
+    accessToken: string,
+    orderNumber: string,
+    email: string
+  ): Promise<any | null> {
+    try {
+      // Try looking up by order number first
+      const orderResponse = await fetch(
+        `https://${shopDomain}/admin/api/2024-07/orders.json?name=${encodeURIComponent(orderNumber)}&status=any`,
+        {
+          headers: {
+            'X-Shopify-Access-Token': accessToken,
+            'Content-Type': 'application/json'
+          }
+        }
+      );
+
+      if (orderResponse.ok) {
+        const orderData = await orderResponse.json();
+        const orders = orderData.orders || [];
+        
+        // Find order with matching email
+        const matchingOrder = orders.find((order: any) => 
+          order.email?.toLowerCase() === email.toLowerCase()
+        );
+
+        if (matchingOrder) {
+          return matchingOrder;
+        }
+      }
+
+      // If not found by name, try searching by email with order number in the name
+      const emailResponse = await fetch(
+        `https://${shopDomain}/admin/api/2024-07/orders.json?email=${encodeURIComponent(email)}&status=any&limit=50`,
+        {
+          headers: {
+            'X-Shopify-Access-Token': accessToken,
+            'Content-Type': 'application/json'
+          }
+        }
+      );
+
+      if (emailResponse.ok) {
+        const emailData = await emailResponse.json();
+        const orders = emailData.orders || [];
+        
+        // Find order with matching order number
+        const cleanOrderNumber = orderNumber.replace('#', '');
+        const matchingOrder = orders.find((order: any) => 
+          order.name?.includes(cleanOrderNumber) || 
+          order.order_number?.toString() === cleanOrderNumber ||
+          order.id?.toString() === cleanOrderNumber
+        );
+
+        if (matchingOrder) {
+          return matchingOrder;
+        }
+      }
+
+      return null;
+    } catch (error) {
+      console.error(`Shopify API lookup failed for ${shopDomain}:`, error);
+      return null;
+    }
+  }
+
+  private static async syncOrderToDatabase(
+    merchantId: string,
+    shopifyOrder: any
+  ): Promise<void> {
+    try {
+      // Check if order already exists
+      const { data: existingOrder } = await supabase
+        .from('orders')
+        .select('id')
+        .eq('merchant_id', merchantId)
+        .eq('shopify_order_id', shopifyOrder.id)
+        .single();
+
+      if (existingOrder) {
+        return; // Order already synced
+      }
+
+      // Insert order
+      const { data: orderData, error: orderError } = await supabase
+        .from('orders')
+        .insert({
+          merchant_id: merchantId,
+          shopify_order_id: shopifyOrder.id,
+          customer_email: shopifyOrder.email,
+          total_amount: parseFloat(shopifyOrder.total_price),
+          status: shopifyOrder.financial_status,
+          order_number: shopifyOrder.name,
+          financial_status: shopifyOrder.financial_status,
+          fulfillment_status: shopifyOrder.fulfillment_status,
+          tags: shopifyOrder.tags,
+          note: shopifyOrder.note,
+          processed_at: shopifyOrder.processed_at,
+          cancelled_at: shopifyOrder.cancelled_at
+        })
+        .select('id')
+        .single();
+
+      if (orderError) throw orderError;
+
+      // Insert order items
+      if (shopifyOrder.line_items && shopifyOrder.line_items.length > 0) {
+        const orderItems = shopifyOrder.line_items.map((item: any) => ({
+          order_id: orderData.id,
+          shopify_product_id: item.product_id,
+          shopify_variant_id: item.variant_id,
+          product_name: item.name,
+          variant_title: item.variant_title,
+          quantity: item.quantity,
+          price: parseFloat(item.price),
+          sku: item.sku,
+          vendor: item.vendor,
+          product_type: item.product_type
+        }));
+
+        const { error: itemsError } = await supabase
+          .from('order_items')
+          .insert(orderItems);
+
+        if (itemsError) throw itemsError;
+      }
+
+      console.log(`✅ Synced order ${shopifyOrder.name} to database`);
+    } catch (error) {
+      console.error('Failed to sync order to database:', error);
+      // Don't throw error as this is a background sync operation
     }
   }
 }

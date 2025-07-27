@@ -1,264 +1,359 @@
-
 import { supabase } from '@/integrations/supabase/client';
-import { EnhancedN8nService } from './enhancedN8nService';
 
-interface ShopifyOrder {
-  id: number;
-  order_number: string;
-  email: string;
-  total_price: string;
-  created_at: string;
-  line_items: ShopifyLineItem[];
-  customer?: {
-    id: number;
-    email: string;
-    first_name: string;
-    last_name: string;
+export interface ShopifyIntegrationTest {
+  name: string;
+  description: string;
+  status: 'pending' | 'success' | 'failed' | 'warning';
+  details?: any;
+  errorMessage?: string;
+  duration?: number;
+}
+
+export interface ShopifyValidationResult {
+  success: boolean;
+  overallStatus: 'success' | 'warning' | 'failed';
+  shopDomain: string;
+  testType: string;
+  totalDuration: number;
+  timestamp: string;
+  tests: ShopifyIntegrationTest[];
+  summary: {
+    total: number;
+    passed: number;
+    warnings: number;
+    failed: number;
   };
 }
 
-interface ShopifyLineItem {
-  id: number;
-  product_id: number;
-  variant_id: number;
-  name: string;
-  price: string;
-  quantity: number;
+export interface ShopifyOrder {
+  id: string;
+  shopify_order_id: string;
+  customer_email: string;
+  total_amount: number;
+  status: string;
+  created_at: string;
+  items: Array<{
+    id: string;
+    product_name: string;
+    quantity: number;
+    price: number;
+  }>;
+}
+
+export interface ShopifyOrderLookupResult {
+  success: boolean;
+  order?: ShopifyOrder;
+  error?: string;
+  message?: string;
 }
 
 export class EnhancedShopifyService {
-  private static async getSecureAccessToken(merchantId: string): Promise<string | null> {
+  /**
+   * Test Shopify integration with comprehensive validation
+   */
+  static async validateIntegration(
+    shopDomain: string,
+    accessToken: string,
+    testType: string = 'full'
+  ): Promise<ShopifyValidationResult> {
     try {
-      const { data, error } = await supabase
-        .from('merchants')
-        .select('access_token, shop_domain')
-        .eq('id', merchantId)
-        .single();
-
-      if (error) {
-        console.error('Failed to get merchant data:', error);
-        return null;
-      }
+      console.log(`🔍 Testing Shopify integration for ${shopDomain} - Type: ${testType}`);
       
-      if (!data?.access_token || data.access_token === 'DISCONNECTED' || data.access_token === 'UNINSTALLED') {
-        console.warn('Invalid or disconnected access token for merchant:', merchantId);
-        return null;
-      }
-      
-      return data.access_token;
-    } catch (error) {
-      console.error('Error fetching access token:', error);
-      return null;
-    }
-  }
-
-  private static async makeAuthenticatedRequest(
-    merchantId: string, 
-    shopDomain: string, 
-    endpoint: string,
-    options: RequestInit = {}
-  ): Promise<any> {
-    const accessToken = await this.getSecureAccessToken(merchantId);
-    if (!accessToken) {
-      throw new Error('No valid access token available');
-    }
-
-    const url = `https://${shopDomain}.myshopify.com/admin/api/2023-10/${endpoint}`;
-    
-    try {
-      const response = await fetch(url, {
-        ...options,
-        headers: {
-          'X-Shopify-Access-Token': accessToken,
-          'Content-Type': 'application/json',
-          'Accept': 'application/json',
-          ...options.headers,
-        },
+      const { data, error } = await supabase.functions.invoke('shopify-integration-validator', {
+        body: {
+          shopDomain: shopDomain.replace('.myshopify.com', '') + '.myshopify.com',
+          accessToken,
+          testType
+        }
       });
 
-      if (!response.ok) {
-        const errorText = await response.text().catch(() => 'Unknown error');
-        throw new Error(`Shopify API error: ${response.status} ${response.statusText} - ${errorText}`);
+      if (error) {
+        throw new Error(`Validation failed: ${error.message}`);
       }
 
-      return response.json();
+      return data;
     } catch (error) {
-      console.error(`Shopify API request failed for ${endpoint}:`, error);
+      console.error('Shopify validation error:', error);
       throw error;
     }
   }
 
-  static async lookupOrderByDetails(
-    merchantId: string, 
-    shopDomain: string, 
-    orderNumber: string, 
-    email: string
-  ): Promise<ShopifyOrder | null> {
+  /**
+   * Look up a specific order using enhanced order lookup
+   */
+  static async lookupOrder(
+    orderNumber: string,
+    customerEmail: string,
+    shopDomain?: string,
+    accessToken?: string
+  ): Promise<ShopifyOrderLookupResult> {
     try {
-      console.log(`🔍 Looking up order ${orderNumber} for ${email} in ${shopDomain}`);
+      console.log(`🔍 Looking up order ${orderNumber} for ${customerEmail}`);
       
-      // Try multiple API endpoints to find the order
-      const searchQueries = [
-        `orders.json?name=${encodeURIComponent(orderNumber)}&email=${encodeURIComponent(email)}&limit=1`,
-        `orders.json?order_number=${encodeURIComponent(orderNumber.replace('#', ''))}&limit=50`,
-        `orders.json?email=${encodeURIComponent(email)}&limit=50`
-      ];
-
-      for (const query of searchQueries) {
-        try {
-          const data = await this.makeAuthenticatedRequest(merchantId, shopDomain, query);
-          
-          if (data.orders && data.orders.length > 0) {
-            // Find exact match
-            const exactMatch = data.orders.find((order: ShopifyOrder) => 
-              (order.order_number === orderNumber || `#${order.order_number}` === orderNumber) &&
-              order.email?.toLowerCase() === email.toLowerCase()
-            );
-            
-            if (exactMatch) {
-              console.log(`✅ Found exact order match: ${exactMatch.id}`);
-              return exactMatch;
-            }
-          }
-        } catch (searchError) {
-          console.warn(`Search query failed: ${query}`, searchError);
-          continue;
-        }
-      }
-
-      console.log(`❌ No order found for ${orderNumber} / ${email}`);
-      return null;
-    } catch (error) {
-      console.error('Order lookup failed:', error);
-      return null;
-    }
-  }
-
-  static async syncOrderToDatabase(merchantId: string, order: ShopifyOrder): Promise<boolean> {
-    try {
-      // First, upsert the order
-      const { data: orderData, error: orderError } = await supabase
-        .from('orders')
-        .upsert({
-          shopify_order_id: order.id.toString(),
-          customer_email: order.email,
-          total_amount: parseFloat(order.total_price),
-          status: 'completed',
-          created_at: order.created_at
-        }, {
-          onConflict: 'shopify_order_id',
-          ignoreDuplicates: false
-        })
-        .select('id')
-        .single();
-
-      if (orderError) {
-        console.error('Failed to sync order:', orderError);
-        return false;
-      }
-
-      // Then sync order items
-      if (orderData?.id && order.line_items?.length > 0) {
-        const orderItems = order.line_items.map(item => ({
-          order_id: orderData.id,
-          product_id: item.product_id.toString(),
-          product_name: item.name,
-          price: parseFloat(item.price),
-          quantity: item.quantity
-        }));
-
-        const { error: itemsError } = await supabase
-          .from('order_items')
-          .upsert(orderItems, {
-            onConflict: 'order_id,product_id',
-            ignoreDuplicates: false
-          });
-
-        if (itemsError) {
-          console.error('Failed to sync order items:', itemsError);
-          return false;
-        }
-      }
-
-      // Log successful sync
-      await supabase.from('analytics_events').insert({
-        merchant_id: merchantId,
-        event_type: 'order_synced',
-        event_data: {
-          shopify_order_id: order.id,
-          order_number: order.order_number,
-          total_amount: parseFloat(order.total_price)
+      const { data, error } = await supabase.functions.invoke('shopify-order-lookup', {
+        body: {
+          orderNumber: orderNumber.replace('#', ''),
+          customerEmail: customerEmail.toLowerCase(),
+          shopDomain: shopDomain ? shopDomain.replace('.myshopify.com', '') + '.myshopify.com' : undefined,
+          accessToken
         }
       });
 
-      console.log(`✅ Successfully synced order ${order.order_number}`);
-      return true;
+      if (error) {
+        throw new Error(`Order lookup failed: ${error.message}`);
+      }
+
+      return data;
     } catch (error) {
-      console.error('Database sync failed:', error);
-      return false;
+      console.error('Order lookup error:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Failed to lookup order'
+      };
     }
   }
 
-  static async processWebhookEvent(event: string, data: any, shopDomain: string): Promise<boolean> {
+  /**
+   * Sync orders from Shopify to local database
+   */
+  static async syncOrdersFromShopify(merchantId: string, limit: number = 50): Promise<{
+    success: boolean;
+    syncedCount: number;
+    error?: string;
+  }> {
     try {
-      // Find merchant by shop domain
-      const { data: merchant, error } = await supabase
+      console.log(`🔄 Syncing orders for merchant ${merchantId}`);
+      
+      // Get merchant's Shopify credentials
+      const { data: merchant, error: merchantError } = await supabase
         .from('merchants')
-        .select('id')
-        .eq('shop_domain', shopDomain)
+        .select('shop_domain, access_token')
+        .eq('id', merchantId)
         .single();
 
-      if (error || !merchant) {
-        console.error('Merchant not found for domain:', shopDomain);
-        return false;
+      if (merchantError || !merchant) {
+        throw new Error('Merchant not found or missing Shopify credentials');
       }
 
-      console.log(`📨 Processing Shopify webhook: ${event} for ${shopDomain}`);
-
-      switch (event) {
-        case 'orders/create':
-        case 'orders/updated':
-          await this.syncOrderToDatabase(merchant.id, data);
-          break;
-          
-        case 'app/uninstalled':
-          await supabase
-            .from('merchants')
-            .update({ 
-              access_token: 'UNINSTALLED',
-              updated_at: new Date().toISOString()
-            })
-            .eq('id', merchant.id);
-          break;
-      }
-
-      // Trigger n8n workflow with proper arguments
-      await EnhancedN8nService.sendWebhook(merchant.id, 'webhook/shopify-webhook', {
-        event: `shopify_${event.replace('/', '_')}`,
-        data: {
-          shopDomain,
-          merchantId: merchant.id,
-          webhookData: data
-        },
-        timestamp: new Date().toISOString(),
-        source: 'shopify_webhook'
+      // Use enhanced Shopify webhook function for syncing
+      const { data, error } = await supabase.functions.invoke('enhanced-shopify-webhook', {
+        body: {
+          action: 'sync_orders',
+          merchantId,
+          shopDomain: merchant.shop_domain,
+          accessToken: merchant.access_token,
+          limit
+        }
       });
 
-      return true;
+      if (error) {
+        throw new Error(`Order sync failed: ${error.message}`);
+      }
+
+      return data;
     } catch (error) {
-      console.error('Webhook processing failed:', error);
+      console.error('Order sync error:', error);
+      return {
+        success: false,
+        syncedCount: 0,
+        error: error instanceof Error ? error.message : 'Failed to sync orders'
+      };
+    }
+  }
+
+  /**
+   * Test webhook processing with real Shopify data
+   */
+  static async testWebhookProcessing(
+    shopDomain: string,
+    accessToken: string,
+    webhookTopic: string = 'orders/create'
+  ): Promise<{
+    success: boolean;
+    message: string;
+    details?: any;
+  }> {
+    try {
+      console.log(`🔗 Testing webhook processing for ${webhookTopic}`);
+      
+      const { data, error } = await supabase.functions.invoke('test-merchant-webhook', {
+        body: {
+          shopDomain: shopDomain.replace('.myshopify.com', '') + '.myshopify.com',
+          accessToken,
+          topic: webhookTopic
+        }
+      });
+
+      if (error) {
+        throw new Error(`Webhook test failed: ${error.message}`);
+      }
+
+      return data;
+    } catch (error) {
+      console.error('Webhook test error:', error);
+      return {
+        success: false,
+        message: error instanceof Error ? error.message : 'Webhook test failed'
+      };
+    }
+  }
+
+  /**
+   * Verify HMAC signature for webhook security
+   */
+  static async verifyWebhookSignature(
+    payload: string,
+    signature: string,
+    secret: string
+  ): Promise<boolean> {
+    try {
+      // This would typically be done server-side, but for testing we can simulate
+      const encoder = new TextEncoder();
+      const keyData = encoder.encode(secret);
+      
+      const key = await crypto.subtle.importKey(
+        'raw',
+        keyData,
+        { name: 'HMAC', hash: 'SHA-256' },
+        false,
+        ['verify']
+      );
+
+      const signatureData = encoder.encode(payload);
+      
+      // Extract the actual signature (remove "sha256=" prefix if present)
+      const cleanSignature = signature.replace('sha256=', '');
+      const signatureBytes = new Uint8Array(
+        cleanSignature.match(/.{2}/g)?.map(byte => parseInt(byte, 16)) || []
+      );
+
+      const isValid = await crypto.subtle.verify(
+        'HMAC',
+        key,
+        signatureBytes,
+        signatureData
+      );
+
+      return isValid;
+    } catch (error) {
+      console.error('HMAC verification error:', error);
       return false;
     }
   }
 
-  static async validateConnection(merchantId: string, shopDomain: string): Promise<{ valid: boolean; error?: string }> {
+  /**
+   * Get comprehensive integration status
+   */
+  static async getIntegrationStatus(merchantId: string): Promise<{
+    connected: boolean;
+    shopDomain?: string;
+    lastSync?: string;
+    webhooksConfigured: boolean;
+    issues: string[];
+  }> {
     try {
-      const data = await this.makeAuthenticatedRequest(merchantId, shopDomain, 'shop.json');
-      return { valid: true };
+      // Get merchant data
+      const { data: merchant, error: merchantError } = await supabase
+        .from('merchants')
+        .select('shop_domain, access_token, updated_at')
+        .eq('id', merchantId)
+        .single();
+
+      if (merchantError || !merchant) {
+        return {
+          connected: false,
+          webhooksConfigured: false,
+          issues: ['Merchant not found']
+        };
+      }
+
+      const issues: string[] = [];
+      
+      if (!merchant.access_token) {
+        issues.push('No access token configured');
+      }
+
+      if (!merchant.shop_domain) {
+        issues.push('No shop domain configured');
+      }
+
+      // Check for recent order activity
+      const { data: recentOrders } = await supabase
+        .from('orders')
+        .select('created_at')
+        .eq('merchant_id', merchantId)
+        .order('created_at', { ascending: false })
+        .limit(1);
+
+      const lastSync = recentOrders?.[0]?.created_at;
+      
+      if (!lastSync) {
+        issues.push('No recent order synchronization');
+      }
+
+      return {
+        connected: !!merchant.access_token && !!merchant.shop_domain,
+        shopDomain: merchant.shop_domain,
+        lastSync,
+        webhooksConfigured: issues.length === 0,
+        issues
+      };
     } catch (error) {
-      return { 
-        valid: false, 
-        error: error instanceof Error ? error.message : 'Connection failed' 
+      console.error('Integration status error:', error);
+      return {
+        connected: false,
+        webhooksConfigured: false,
+        issues: ['Failed to check integration status']
+      };
+    }
+  }
+
+  /**
+   * Test real store connection and permissions
+   */
+  static async testStoreConnection(
+    shopDomain: string,
+    accessToken: string
+  ): Promise<{
+    success: boolean;
+    storeInfo?: {
+      name: string;
+      domain: string;
+      email: string;
+      currency: string;
+      plan: string;
+    };
+    permissions?: string[];
+    error?: string;
+  }> {
+    try {
+      // Use the validator to test connection
+      const result = await this.validateIntegration(shopDomain, accessToken, 'api');
+      
+      const connectionTest = result.tests.find(t => t.name === 'Shopify API Connection');
+      
+      if (connectionTest?.status === 'success' && connectionTest.details) {
+        const details = connectionTest.details || {};
+        return {
+          success: true,
+          storeInfo: {
+            name: details.shopName || 'Unknown',
+            domain: details.domain || shopDomain,
+            email: details.email || 'Unknown',
+            currency: details.currency || 'USD',
+            plan: details.planName || 'Unknown'
+          }
+        };
+      } else {
+        return {
+          success: false,
+          error: connectionTest?.errorMessage || 'Connection test failed'
+        };
+      }
+    } catch (error) {
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Failed to test connection'
       };
     }
   }
