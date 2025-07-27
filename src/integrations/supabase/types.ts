@@ -642,9 +642,22 @@ export type Database = {
         }
         Returns: string
       }
+      get_analytics_aggregated: {
+        Args: {
+          p_merchant_id: string
+          p_event_type?: string
+          p_start_date?: string
+          p_end_date?: string
+        }
+        Returns: Json
+      }
       get_current_user_merchant_id: {
         Args: Record<PropertyKey, never>
         Returns: string
+      }
+      get_dashboard_metrics_optimized: {
+        Args: { p_merchant_id: string }
+        Returns: Json
       }
       is_master_admin: {
         Args: Record<PropertyKey, never>
