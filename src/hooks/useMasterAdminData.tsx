@@ -157,25 +157,45 @@ export const useMasterAdminData = () => {
   };
 
   const fetchSystemHealth = async () => {
-    // For now, we'll simulate system health data
-    // In a real implementation, this would query actual monitoring services
-    setSystemHealth({
-      database: {
-        status: 'healthy',
-        responseTime: '45ms',
-        uptime: '99.9%'
-      },
-      apiServices: {
-        status: 'healthy',
-        responseTime: '120ms',
-        uptime: '99.8%'
-      },
-      aiServices: {
-        status: 'healthy',
-        responseTime: '1.2s',
-        uptime: '99.5%'
+    try {
+      console.log('🔄 Fetching real system health data...');
+      
+      const { data, error } = await supabase.functions.invoke('system-health-check');
+
+      if (error) {
+        console.error('❌ Error fetching system health:', error);
+        // Fallback to indicate service unavailable
+        setSystemHealth({
+          database: {
+            status: 'error',
+            responseTime: 'N/A',
+            uptime: 'N/A'
+          },
+          apiServices: {
+            status: 'error',
+            responseTime: 'N/A', 
+            uptime: 'N/A'
+          },
+          aiServices: {
+            status: 'error',
+            responseTime: 'N/A',
+            uptime: 'N/A'
+          }
+        });
+        return;
       }
-    });
+
+      setSystemHealth(data);
+      console.log('✅ System health data fetched:', data);
+    } catch (err) {
+      console.error('❌ Error in fetchSystemHealth:', err);
+      // Set error state if health check fails
+      setSystemHealth({
+        database: { status: 'error', responseTime: 'N/A', uptime: 'N/A' },
+        apiServices: { status: 'error', responseTime: 'N/A', uptime: 'N/A' },
+        aiServices: { status: 'error', responseTime: 'N/A', uptime: 'N/A' }
+      });
+    }
   };
 
   const refreshData = async () => {
