@@ -93,7 +93,9 @@ export class OrderService {
       }
 
       if (!orderData) {
-        console.log('📝 Available orders for debugging:');
+        if (process.env.NODE_ENV === 'development') {
+          console.log('📝 Available orders for debugging:');
+        }
         const { data: allOrders } = await supabase
           .from('orders')
           .select('shopify_order_id, customer_email')

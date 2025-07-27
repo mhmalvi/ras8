@@ -1,1 +1,10 @@
 project_id = "pvadajelvewdazwmvppk"
+
+[functions.system-health-check]
+verify_jwt = false
+
+[functions.shopify-order-lookup]
+verify_jwt = false
+
+[functions.generate-exchange-recommendation]
+verify_jwt = false

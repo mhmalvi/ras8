@@ -220,8 +220,8 @@ class PerformanceMonitor {
 // Global performance monitor instance
 export const performanceMonitor = new PerformanceMonitor();
 
-// Add to window for debugging
-if (typeof window !== 'undefined') {
+// Add to window for development debugging
+if (typeof window !== 'undefined' && process.env.NODE_ENV === 'development') {
   (window as any).performanceMonitor = performanceMonitor;
 }
 

@@ -39,15 +39,17 @@ const BulkAIProcessor = () => {
   const allSelected = selectedReturns.length === processableReturns.length;
   const someSelected = selectedReturns.length > 0;
 
-  // Debug logging
+  // Production monitoring
   useEffect(() => {
-    console.log('📊 BulkAIProcessor - Returns data debug:', {
-      totalReturns: returns.length,
-      returnStatuses: returns.map(r => ({ id: r.id, status: r.status, email: r.customer_email })),
-      processableReturns: processableReturns.length,
-      selectedReturns: selectedReturns.length,
-      loading
-    });
+    if (process.env.NODE_ENV === 'development') {
+      console.log('📊 BulkAIProcessor - Returns data:', {
+        totalReturns: returns.length,
+        returnStatuses: returns.map(r => ({ id: r.id, status: r.status, email: r.customer_email })),
+        processableReturns: processableReturns.length,
+        selectedReturns: selectedReturns.length,
+        loading
+      });
+    }
   }, [returns, processableReturns.length, selectedReturns.length, loading]);
 
   const toggleSelectAll = () => {
@@ -353,7 +355,7 @@ const BulkAIProcessor = () => {
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
-          {/* Debug Information */}
+          {/* Return Information */}
           {returns.length === 0 ? (
             <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
               <div className="flex items-center gap-2">

@@ -327,8 +327,8 @@ export const aiCache = new CacheManager({
   enableMetrics: true
 });
 
-// Global cache manager with debugging capabilities
-if (typeof window !== 'undefined') {
+// Global cache manager with development debugging
+if (typeof window !== 'undefined' && process.env.NODE_ENV === 'development') {
   (window as any).cacheDebug = {
     api: apiCache,
     userData: userDataCache,

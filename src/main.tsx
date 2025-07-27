@@ -1,7 +1,7 @@
 
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
-import App from "./App.tsx";
+import AtomicAppRouter from "./components/AtomicAppRouter.tsx";
 import "./index.css";
 import { registerSW } from "./utils/serviceWorkerRegistration";
 import { initSentry } from "./utils/sentry";
@@ -28,6 +28,6 @@ if (!container) {
 const root = createRoot(container);
 root.render(
   <StrictMode>
-    <App />
+    <AtomicAppRouter />
   </StrictMode>
 );

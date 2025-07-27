@@ -24,7 +24,7 @@ const AtomicPublicRoute = ({ children }: AtomicPublicRouteProps) => {
 
   // If authenticated, redirect to dashboard (root)
   if (user) {
-    console.log('✅ User already authenticated, redirecting to dashboard');
+    // User already authenticated, redirect to dashboard
     return <Navigate to="/" replace />;
   }
 

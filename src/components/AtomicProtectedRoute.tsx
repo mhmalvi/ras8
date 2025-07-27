@@ -32,7 +32,7 @@ const AtomicProtectedRoute = ({ children }: AtomicProtectedRouteProps) => {
 
   // If not authenticated, redirect to auth page
   if (!user) {
-    console.log('🔒 Authentication required, redirecting to auth page');
+    // Authentication required, redirect to auth
     return <Navigate to="/auth" state={{ from: location }} replace />;
   }
 
@@ -47,12 +47,12 @@ const AtomicProtectedRoute = ({ children }: AtomicProtectedRouteProps) => {
   const isNotOnMasterAdmin = currentPath !== '/master-admin';
   
   if (isMasterAdmin && isOnRootOrDashboard && isNotOnMasterAdmin) {
-    console.log('🔄 Master admin detected, redirecting to master admin dashboard');
+    // Master admin role detected, redirect to admin dashboard
     return <Navigate to="/master-admin" replace />;
   }
 
   // User is authenticated, render the protected content
-  console.log('✅ User authenticated, rendering protected route');
+  // User authenticated, render protected content
   return <>{children}</>;
 };
 
