@@ -58,6 +58,48 @@ export type Database = {
           },
         ]
       }
+      alert_rules: {
+        Row: {
+          created_at: string | null
+          duration_minutes: number | null
+          enabled: boolean | null
+          id: string
+          last_triggered: string | null
+          metric_name: string
+          name: string
+          operator: string
+          severity: string | null
+          threshold: number
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          duration_minutes?: number | null
+          enabled?: boolean | null
+          id?: string
+          last_triggered?: string | null
+          metric_name: string
+          name: string
+          operator: string
+          severity?: string | null
+          threshold: number
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          duration_minutes?: number | null
+          enabled?: boolean | null
+          id?: string
+          last_triggered?: string | null
+          metric_name?: string
+          name?: string
+          operator?: string
+          severity?: string | null
+          threshold?: number
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       analytics_events: {
         Row: {
           created_at: string | null
@@ -169,6 +211,47 @@ export type Database = {
           updated_at?: string | null
         }
         Relationships: []
+      }
+      monitoring_metrics: {
+        Row: {
+          created_at: string | null
+          id: string
+          labels: Json | null
+          merchant_id: string | null
+          metric_name: string
+          metric_type: string | null
+          metric_value: number
+          timestamp: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          labels?: Json | null
+          merchant_id?: string | null
+          metric_name: string
+          metric_type?: string | null
+          metric_value: number
+          timestamp?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          labels?: Json | null
+          merchant_id?: string | null
+          metric_name?: string
+          metric_type?: string | null
+          metric_value?: number
+          timestamp?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "monitoring_metrics_merchant_id_fkey"
+            columns: ["merchant_id"]
+            isOneToOne: false
+            referencedRelation: "merchants"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       notifications: {
         Row: {
@@ -410,6 +493,53 @@ export type Database = {
             columns: ["merchant_id"]
             isOneToOne: false
             referencedRelation: "merchants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      system_alerts: {
+        Row: {
+          acknowledged_at: string | null
+          created_at: string | null
+          id: string
+          message: string
+          metric_value: number | null
+          resolved_at: string | null
+          rule_id: string | null
+          severity: string
+          status: string | null
+          triggered_at: string | null
+        }
+        Insert: {
+          acknowledged_at?: string | null
+          created_at?: string | null
+          id?: string
+          message: string
+          metric_value?: number | null
+          resolved_at?: string | null
+          rule_id?: string | null
+          severity: string
+          status?: string | null
+          triggered_at?: string | null
+        }
+        Update: {
+          acknowledged_at?: string | null
+          created_at?: string | null
+          id?: string
+          message?: string
+          metric_value?: number | null
+          resolved_at?: string | null
+          rule_id?: string | null
+          severity?: string
+          status?: string | null
+          triggered_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "system_alerts_rule_id_fkey"
+            columns: ["rule_id"]
+            isOneToOne: false
+            referencedRelation: "alert_rules"
             referencedColumns: ["id"]
           },
         ]
