@@ -2,7 +2,6 @@
 import { SidebarProvider, SidebarTrigger, SidebarInset } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/AppSidebar";
 import UserMenu from "@/components/UserMenu";
-import SampleDataManager from "@/components/SampleDataManager";
 import MerchantAssignment from "@/components/MerchantAssignment";
 import ProfileCreator from "@/components/ProfileCreator";
 
@@ -18,7 +17,7 @@ const TestData = () => {
                 <SidebarTrigger />
                 <div>
                   <h1 className="text-xl font-semibold text-slate-900">Test Data Management</h1>
-                  <p className="text-sm text-slate-500">Create sample data and assign test merchants</p>
+                  <p className="text-sm text-slate-500">Development and testing utilities</p>
                 </div>
               </div>
               <UserMenu />
@@ -31,11 +30,6 @@ const TestData = () => {
               {/* Profile Creation */}
               <div className="flex justify-center">
                 <ProfileCreator />
-              </div>
-              
-              {/* Sample Data Management */}
-              <div className="flex justify-center">
-                <SampleDataManager />
               </div>
 
               {/* Merchant Assignment */}

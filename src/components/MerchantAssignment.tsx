@@ -148,7 +148,7 @@ const MerchantAssignment = () => {
           <Alert>
             <AlertCircle className="h-4 w-4" />
             <AlertDescription>
-              No merchants found. Create sample data first to get test merchants.
+              No merchants found. Set up merchants through the admin interface.
             </AlertDescription>
           </Alert>
         ) : (

@@ -60,7 +60,7 @@ const Dashboard: React.FC = () => {
           <Alert>
             <Info className="h-4 w-4" />
             <AlertDescription>
-              Welcome! To get started, you can either assign yourself to an existing merchant or create sample data to explore the platform.
+              Welcome! To get started, assign yourself to an existing merchant to explore the platform.
             </AlertDescription>
           </Alert>
           
