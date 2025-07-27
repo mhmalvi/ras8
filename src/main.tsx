@@ -4,6 +4,10 @@ import { createRoot } from "react-dom/client";
 import App from "./App.tsx";
 import "./index.css";
 import { registerSW } from "./utils/serviceWorkerRegistration";
+import { initSentry } from "./utils/sentry";
+
+// Initialize Sentry for error monitoring
+initSentry();
 
 // Register service worker for caching
 registerSW({
