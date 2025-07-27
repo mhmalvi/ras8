@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AtomicAuthProvider } from '@/contexts/AtomicAuthContext';
 import { Toaster } from "@/components/ui/toaster";
 import { ErrorBoundary } from 'react-error-boundary';
@@ -56,8 +56,9 @@ const AtomicAppRouter = () => {
       }}
     >
       <AtomicAuthProvider>
-        <div className="min-h-screen bg-background">
-          <Routes>
+        <BrowserRouter>
+          <div className="min-h-screen bg-background">
+            <Routes>
             {/* Public Routes */}
             <Route path="/landing" element={<Index />} />
             <Route path="/return-portal" element={<CustomerPortal />} />
@@ -293,8 +294,9 @@ const AtomicAppRouter = () => {
             {/* Catch all - redirect to dashboard for authenticated users */}
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
-        </div>
-        <Toaster />
+          </div>
+          <Toaster />
+        </BrowserRouter>
       </AtomicAuthProvider>
     </ErrorBoundary>
   );
