@@ -88,7 +88,10 @@ export const useRealAnalyticsData = (merchantId?: string) => {
 
       // Calculate AI acceptance rate from analytics events
       const aiEvents = analyticsEvents.filter(e => e.event_type === 'ai_suggestion');
-      const acceptedAI = aiEvents.filter(e => e.event_data?.accepted === true).length;
+      const acceptedAI = aiEvents.filter(e => {
+        const data = e.event_data as Record<string, any>;
+        return data && typeof data === 'object' && data.accepted === true;
+      }).length;
       const aiAcceptanceRate = aiEvents.length > 0 ? (acceptedAI / aiEvents.length) * 100 : 0;
 
       // Calculate returns by status
