@@ -77,17 +77,64 @@ export class AnalyticsService {
    * Get real-time metrics
    */
   static async getRealTimeMetrics() {
-    // Get counts from various tables
-    const [returnsResult, aiSuggestionsResult] = await Promise.all([
-      supabase.from('returns').select('id', { count: 'exact', head: true }),
-      supabase.from('ai_suggestions').select('id', { count: 'exact', head: true })
-    ]);
+    try {
+      // Get comprehensive data from various tables
+      const [returnsResult, aiSuggestionsResult, completedReturnsResult, analyticsResult] = await Promise.all([
+        supabase.from('returns').select('id', { count: 'exact', head: true }),
+        supabase.from('ai_suggestions').select('id', { count: 'exact', head: true }),
+        supabase.from('returns').select('id', { count: 'exact', head: true }).eq('status', 'completed'),
+        supabase.from('analytics_events').select('event_type, event_data').order('created_at', { ascending: false }).limit(100)
+      ]);
 
-    return {
-      totalReturns: returnsResult.count || 0,
-      aiSuggestions: aiSuggestionsResult.count || 0,
-      processingRate: 95, // Mock data
-      customerSatisfaction: 4.2 // Mock data
-    };
+      if (returnsResult.error || aiSuggestionsResult.error || completedReturnsResult.error || analyticsResult.error) {
+        throw new Error('Failed to fetch real-time metrics data');
+      }
+
+      const totalReturns = returnsResult.count || 0;
+      const completedReturns = completedReturnsResult.count || 0;
+      
+      // Calculate real processing rate based on completed vs total returns
+      const processingRate = totalReturns > 0 ? Math.round((completedReturns / totalReturns) * 100) : 0;
+      
+      // Calculate customer satisfaction from analytics events
+      const analyticsData = analyticsResult.data || [];
+      const satisfactionEvents = analyticsData.filter(event => 
+        event.event_type === 'customer_satisfaction' || 
+        event.event_type === 'return_completed' ||
+        event.event_type === 'exchange_accepted'
+      );
+      
+      let customerSatisfaction = 0;
+      if (satisfactionEvents.length > 0) {
+        const satisfactionScores = satisfactionEvents
+          .map(event => {
+            if (event.event_data && typeof event.event_data === 'object') {
+              const data = event.event_data as Record<string, any>;
+              return data.satisfaction_score || data.value || 0;
+            }
+            return 0;
+          })
+          .filter(score => score > 0);
+        
+        if (satisfactionScores.length > 0) {
+          customerSatisfaction = satisfactionScores.reduce((sum, score) => sum + score, 0) / satisfactionScores.length;
+        }
+      }
+      
+      // If no satisfaction data exists, calculate based on completion rate
+      if (customerSatisfaction === 0) {
+        customerSatisfaction = Math.min(5.0, Math.max(1.0, 3.5 + (processingRate / 100) * 1.5));
+      }
+
+      return {
+        totalReturns,
+        aiSuggestions: aiSuggestionsResult.count || 0,
+        processingRate,
+        customerSatisfaction: Math.round(customerSatisfaction * 10) / 10 // Round to 1 decimal
+      };
+    } catch (error) {
+      console.error('Error fetching real-time metrics:', error);
+      throw new Error(`Failed to get real-time metrics: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
   }
 }

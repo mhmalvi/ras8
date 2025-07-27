@@ -103,13 +103,32 @@ export class MasterAdminService {
         };
       }) || [];
 
-      // Calculate system health metrics
-      const systemHealth = {
-        database_status: 'healthy' as const,
-        api_status: 'healthy' as const,
-        ai_service_status: 'healthy' as const,
-        uptime_percentage: 99.9
-      };
+      // Get real system health metrics via edge function
+      let systemHealth;
+      try {
+        const healthCheckResult = await supabase.functions.invoke('system-health-check');
+        if (healthCheckResult.data) {
+          const healthData = healthCheckResult.data;
+          systemHealth = {
+            database_status: healthData.database?.status || 'unknown' as const,
+            api_status: healthData.apiServices?.status || 'unknown' as const,
+            ai_service_status: healthData.aiServices?.status || 'unknown' as const,
+            uptime_percentage: parseFloat(healthData.database?.uptime?.replace('%', '') || '0')
+          };
+        } else {
+          throw new Error('Health check failed');
+        }
+      } catch (error) {
+        console.error('Failed to get real system health:', error);
+        // Only use computed health as absolute fallback
+        const dbHealthy = merchants && merchants.length >= 0; // DB is working if we got data
+        systemHealth = {
+          database_status: dbHealthy ? 'healthy' as const : 'unhealthy' as const,
+          api_status: 'degraded' as const, // Since health check failed
+          ai_service_status: 'unknown' as const,
+          uptime_percentage: 0
+        };
+      }
 
       const metrics: SystemMetrics = {
         total_merchants: merchants?.length || 0,

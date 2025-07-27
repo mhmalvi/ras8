@@ -229,13 +229,8 @@ export class MonitoringService {
       return data;
     } catch (err) {
       console.error('Error fetching dashboard metrics:', err);
-      return {
-        totalRequests: 0,
-        errorRate: 0,
-        avgResponseTime: 0,
-        activeAlerts: 0,
-        systemHealth: 'warning'
-      };
+      // Instead of returning mock data, throw the error to be handled by the component
+      throw new Error(`Dashboard metrics unavailable: ${err instanceof Error ? err.message : 'Unknown error'}`);
     }
   }
 }
