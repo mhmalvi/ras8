@@ -6,6 +6,7 @@ import { Separator } from "@/components/ui/separator";
 import { CreditCard, TrendingUp, Calendar, AlertTriangle, Loader2, ExternalLink, Crown, Zap, CheckCircle } from "lucide-react";
 import AppLayout from "@/components/AppLayout";
 import { useSubscription } from "@/hooks/useSubscription";
+import { useRealBillingData } from "@/hooks/useRealBillingData";
 import { useMerchantProfile } from "@/hooks/useMerchantProfile";
 import { useToast } from "@/hooks/use-toast";
 import { useState } from "react";
@@ -13,6 +14,7 @@ import { cn } from "@/lib/utils";
 
 const Billing = () => {
   const { subscriptionData, loading, openCustomerPortal, createCheckout } = useSubscription();
+  const { usageStats, loading: billingLoading, error: billingError } = useRealBillingData();
   const { profile } = useMerchantProfile();
   const { toast } = useToast();
   const [actionLoading, setActionLoading] = useState(false);
@@ -34,9 +36,9 @@ const Billing = () => {
   const currentPlan = subscriptionData?.plan_type || 'starter';
   const planDetails = getPlanDetails(currentPlan);
 
-  // Mock usage data - in real app, this would come from billing_records
-  const currentUsage = 87; // 87 returns this month
-  const usagePercentage = typeof planDetails.limit === 'number' ? (currentUsage / planDetails.limit) * 100 : 65;
+  // Use real usage data from billing_records
+  const currentUsage = usageStats?.current_usage || 0;
+  const usagePercentage = usageStats?.usage_percentage || 0;
 
   const handleUpdatePayment = async () => {
     setActionLoading(true);
@@ -68,13 +70,26 @@ const Billing = () => {
     }
   };
 
-  if (loading) {
+  if (loading || billingLoading) {
     return (
       <AppLayout>
         <div className="space-y-6">
           <div className="flex items-center justify-center py-12">
             <Loader2 className="h-8 w-8 animate-spin" />
             <span className="ml-2">Loading billing information...</span>
+          </div>
+        </div>
+      </AppLayout>
+    );
+  }
+
+  if (billingError) {
+    return (
+      <AppLayout>
+        <div className="max-w-4xl mx-auto space-y-6">
+          <div className="text-center p-6">
+            <h2 className="text-lg font-semibold text-red-600 mb-2">Error Loading Billing Data</h2>
+            <p className="text-muted-foreground">{billingError}</p>
           </div>
         </div>
       </AppLayout>
@@ -201,7 +216,9 @@ const Billing = () => {
                   <div className="text-3xl font-bold text-foreground mb-2">
                     {subscriptionData?.subscription_end 
                       ? new Date(subscriptionData.subscription_end).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
-                      : 'Dec 15'
+                      : usageStats?.period_end 
+                      ? new Date(usageStats.period_end).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+                      : 'N/A'
                     }
                   </div>
                   <p className="text-sm text-muted-foreground mb-3">Next payment due</p>
@@ -313,56 +330,41 @@ const Billing = () => {
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
-                  {/* Mock invoice data - in real app, this would come from Stripe/billing_records */}
-                  <div className={cn(
-                    "flex items-center justify-between p-4 border rounded-xl",
-                    "hover:bg-muted/30 transition-colors duration-200"
-                  )}>
-                    <div className="space-y-1">
-                      <p className="font-medium text-foreground">Invoice #INV-001</p>
-                      <p className="text-sm text-muted-foreground">
-                        {new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
-                      </p>
-                    </div>
-                    <div className="flex items-center space-x-4">
-                      <div className="text-right space-y-1">
-                        <p className="font-semibold text-foreground">{planDetails.price}</p>
-                        <Badge variant="secondary" className="text-green-600 bg-green-50 border-green-200">
-                          <CheckCircle className="h-3 w-3 mr-1" />
-                          Paid
-                        </Badge>
+                  {subscriptionData?.subscribed ? (
+                    <>
+                      <div className={cn(
+                        "flex items-center justify-between p-4 border rounded-xl",
+                        "hover:bg-muted/30 transition-colors duration-200"
+                      )}>
+                        <div className="space-y-1">
+                          <p className="font-medium text-foreground">Current Period</p>
+                          <p className="text-sm text-muted-foreground">
+                            {usageStats?.period_start 
+                              ? new Date(usageStats.period_start).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+                              : new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+                            }
+                          </p>
+                        </div>
+                        <div className="flex items-center space-x-4">
+                          <div className="text-right space-y-1">
+                            <p className="font-semibold text-foreground">{planDetails.price}</p>
+                            <Badge variant="secondary" className="text-green-600 bg-green-50 border-green-200">
+                              <CheckCircle className="h-3 w-3 mr-1" />
+                              Active
+                            </Badge>
+                          </div>
+                          <Button 
+                            variant="ghost" 
+                            size="sm" 
+                            className="hover:bg-primary/10"
+                            onClick={handleUpdatePayment}
+                          >
+                            <ExternalLink className="h-4 w-4" />
+                          </Button>
+                        </div>
                       </div>
-                      <Button variant="ghost" size="sm" className="hover:bg-primary/10">
-                        <ExternalLink className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </div>
-                  
-                  <div className={cn(
-                    "flex items-center justify-between p-4 border rounded-xl",
-                    "hover:bg-muted/30 transition-colors duration-200"
-                  )}>
-                    <div className="space-y-1">
-                      <p className="font-medium text-foreground">Invoice #INV-002</p>
-                      <p className="text-sm text-muted-foreground">
-                        {new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
-                      </p>
-                    </div>
-                    <div className="flex items-center space-x-4">
-                      <div className="text-right space-y-1">
-                        <p className="font-semibold text-foreground">{planDetails.price}</p>
-                        <Badge variant="secondary" className="text-green-600 bg-green-50 border-green-200">
-                          <CheckCircle className="h-3 w-3 mr-1" />
-                          Paid
-                        </Badge>
-                      </div>
-                      <Button variant="ghost" size="sm" className="hover:bg-primary/10">
-                        <ExternalLink className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </div>
-
-                  {!subscriptionData?.subscribed && (
+                    </>
+                  ) : (
                     <div className="text-center py-8 text-muted-foreground">
                       <div className="bg-muted/30 rounded-xl p-6">
                         <p className="font-medium">No billing history available</p>
