@@ -25,83 +25,101 @@ const Webhooks = () => {
 
   return (
     <AppLayout>
-      <div className="space-y-6">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-semibold text-foreground">Webhooks</h1>
-            <p className="text-sm text-muted-foreground mt-1">
-              Monitor webhook endpoints and delivery logs
-            </p>
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="space-y-8">
+          {/* Header Section */}
+          <div className="animate-fade-in">
+            <div className="flex items-center justify-between">
+              <div>
+                <h1 className="text-3xl font-bold bg-gradient-to-r from-primary to-blue-600 bg-clip-text text-transparent">
+                  Webhooks
+                </h1>
+                <p className="text-muted-foreground mt-2 text-lg">
+                  Monitor webhook endpoints and delivery logs
+                </p>
+              </div>
+              <Button className="transition-all duration-200 hover:shadow-lg">
+                <Plus className="mr-2 h-4 w-4" />
+                Add Webhook
+              </Button>
+            </div>
+            <Separator className="mt-4" />
           </div>
-          <Button>
-            <Plus className="mr-2 h-4 w-4" />
-            Add Webhook
-          </Button>
-        </div>
 
-        {/* Stats Cards */}
-        {stats && (
-          <div className="grid gap-4 md:grid-cols-4">
-            <Card>
-              <CardContent className="p-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-medium text-muted-foreground">Total Requests</p>
-                    <p className="text-2xl font-bold">{stats.total}</p>
-                  </div>
-                  <Activity className="h-8 w-8 text-muted-foreground" />
-                </div>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardContent className="p-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-medium text-muted-foreground">Successful</p>
-                    <p className="text-2xl font-bold text-green-600">{stats.successful}</p>
-                  </div>
-                  <div className="h-8 w-8 bg-green-100 rounded-full flex items-center justify-center">
-                    <Activity className="h-4 w-4 text-green-600" />
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardContent className="p-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-medium text-muted-foreground">Failed</p>
-                    <p className="text-2xl font-bold text-red-600">{stats.failed}</p>
-                  </div>
-                  <div className="h-8 w-8 bg-red-100 rounded-full flex items-center justify-center">
-                    <Activity className="h-4 w-4 text-red-600" />
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardContent className="p-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-medium text-muted-foreground">Avg Time</p>
-                    <p className="text-2xl font-bold">{Math.round(stats.averageProcessingTime)}ms</p>
-                  </div>
-                  <Webhook className="h-8 w-8 text-muted-foreground" />
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-        )}
+          {/* Stats Cards */}
+          <section className="animate-fade-in">
+            {stats && (
+              <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+                <Card className="shadow-sm hover:shadow-md transition-shadow duration-300">
+                  <CardContent className="p-6">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-sm font-medium text-muted-foreground">Total Requests</p>
+                        <p className="text-2xl font-bold">{stats.total}</p>
+                      </div>
+                      <div className="bg-primary/10 p-2 rounded-lg">
+                        <Activity className="h-5 w-5 text-primary" />
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+                <Card className="shadow-sm hover:shadow-md transition-shadow duration-300">
+                  <CardContent className="p-6">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-sm font-medium text-muted-foreground">Successful</p>
+                        <p className="text-2xl font-bold text-green-600">{stats.successful}</p>
+                      </div>
+                      <div className="bg-green-100 p-2 rounded-lg">
+                        <Activity className="h-5 w-5 text-green-600" />
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+                <Card className="shadow-sm hover:shadow-md transition-shadow duration-300">
+                  <CardContent className="p-6">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-sm font-medium text-muted-foreground">Failed</p>
+                        <p className="text-2xl font-bold text-red-600">{stats.failed}</p>
+                      </div>
+                      <div className="bg-red-100 p-2 rounded-lg">
+                        <Activity className="h-5 w-5 text-red-600" />
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+                <Card className="shadow-sm hover:shadow-md transition-shadow duration-300">
+                  <CardContent className="p-6">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-sm font-medium text-muted-foreground">Avg Time</p>
+                        <p className="text-2xl font-bold">{Math.round(stats.averageProcessingTime)}ms</p>
+                      </div>
+                      <div className="bg-primary/10 p-2 rounded-lg">
+                        <Webhook className="h-5 w-5 text-primary" />
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+            )}
+          </section>
 
-        {/* Webhook Activity */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center space-x-2">
-              <Activity className="h-5 w-5" />
-              <span>Recent Activity</span>
-            </CardTitle>
-            <CardDescription>Latest webhook delivery logs and responses</CardDescription>
-          </CardHeader>
+          {/* Webhook Activity */}
+          <section className="animate-fade-in">
+            <Card className="shadow-sm hover:shadow-md transition-shadow duration-300">
+              <CardHeader className="pb-4">
+                <CardTitle className="flex items-center space-x-2 text-foreground">
+                  <div className="bg-primary/10 p-2 rounded-lg">
+                    <Activity className="h-5 w-5 text-primary" />
+                  </div>
+                  <span>Recent Activity</span>
+                </CardTitle>
+                <CardDescription className="text-muted-foreground">
+                  Latest webhook delivery logs and responses
+                </CardDescription>
+              </CardHeader>
           <CardContent>
             {error ? (
               <div className="text-center py-8">
@@ -136,8 +154,10 @@ const Webhooks = () => {
                 ))}
               </div>
             )}
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
+          </section>
+        </div>
       </div>
     </AppLayout>
   );
