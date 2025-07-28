@@ -111,7 +111,11 @@ const SettingsTab = () => {
               </div>
               
               <div className="pt-4 border-t">
-                <Button>
+                <Button onClick={() => {
+                  console.log('💾 Saving general settings...');
+                  // Show feedback to user
+                  // In a real implementation, this would save to Supabase
+                }}>
                   <Save className="h-4 w-4 mr-2" />
                   Save Settings
                 </Button>
@@ -178,7 +182,11 @@ const SettingsTab = () => {
               </div>
               
               <div className="pt-4 border-t">
-                <Button>
+                <Button onClick={() => {
+                  console.log('🔐 Updating security settings...');
+                  // Show feedback to user
+                  // In a real implementation, this would save to Supabase
+                }}>
                   <Save className="h-4 w-4 mr-2" />
                   Update Security Settings
                 </Button>
@@ -211,7 +219,10 @@ const SettingsTab = () => {
                       <Badge className="text-green-600 bg-green-100">
                         {apiKey.status}
                       </Badge>
-                      <Button variant="outline" size="sm">
+                      <Button variant="outline" size="sm" onClick={() => {
+                        console.log(`🔑 Updating ${apiKey.name}...`);
+                        // Show modal for API key update
+                      }}>
                         Update
                       </Button>
                     </div>
@@ -326,11 +337,17 @@ const SettingsTab = () => {
               </div>
               
               <div className="pt-4 border-t flex gap-3">
-                <Button>
+                <Button onClick={() => {
+                  console.log('🗄️ Running manual backup...');
+                  // Show progress and feedback
+                }}>
                   <Database className="h-4 w-4 mr-2" />
                   Run Manual Backup
                 </Button>
-                <Button variant="outline">
+                <Button variant="outline" onClick={() => {
+                  console.log('📜 Viewing backup history...');
+                  // Show backup history modal or navigate to history page
+                }}>
                   View Backup History
                 </Button>
               </div>
