@@ -3,7 +3,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import MasterAdminLayout from "@/components/MasterAdminLayout";
+import AppLayout from "@/components/AppLayout";
 import { MessageSquare, Search, Clock, AlertTriangle, CheckCircle, Users, Mail, Phone, MessageCircle } from "lucide-react";
 
 const SupportCenterPage = () => {
@@ -65,11 +65,14 @@ const SupportCenterPage = () => {
   };
 
   return (
-    <MasterAdminLayout 
-      title="Support Center" 
-      description="Manage customer support tickets and communications across all merchants"
-    >
+    <AppLayout>
       <div className="space-y-6">
+        <div>
+          <h1 className="text-2xl font-semibold text-foreground">Support Center</h1>
+          <p className="text-sm text-muted-foreground mt-1">
+            Get help and manage support requests
+          </p>
+        </div>
         {/* Support Stats */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           <Card>
@@ -198,7 +201,7 @@ const SupportCenterPage = () => {
           </CardContent>
         </Card>
       </div>
-    </MasterAdminLayout>
+    </AppLayout>
   );
 };
 

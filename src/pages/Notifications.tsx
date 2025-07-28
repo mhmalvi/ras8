@@ -10,6 +10,7 @@ import { Separator } from '@/components/ui/separator';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useNotifications } from '@/hooks/useNotifications';
+import AppLayout from '@/components/AppLayout';
 
 const Notifications = () => {
   const { toast } = useToast();
@@ -91,12 +92,13 @@ const Notifications = () => {
   const unreadCount = counts.unread;
 
   return (
-    <div className="container mx-auto py-6 space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
+    <AppLayout>
+      <div className="space-y-6">
+        {/* Header */}
+        <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-slate-900">Notifications</h1>
-          <p className="text-slate-600 mt-1">
+          <h1 className="text-2xl font-semibold text-foreground">Notifications</h1>
+          <p className="text-sm text-muted-foreground mt-1">
             Stay updated with returns, AI suggestions, and system alerts
           </p>
         </div>
@@ -419,7 +421,8 @@ const Notifications = () => {
           </div>
         </CardContent>
       </Card>
-    </div>
+      </div>
+    </AppLayout>
   );
 };
 
