@@ -565,35 +565,35 @@ const CustomerReturnsPortal = () => {
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Progress indicator */}
         <div className="mb-8">
-          <div className="flex justify-center mb-4">
-            <div className="flex items-center space-x-2 sm:space-x-4">
-              {steps.map((stepItem, index) => {
-                const Icon = stepItem.icon;
-                const isActive = index <= currentStepIndex;
-                const isCurrent = index === currentStepIndex;
-                
-                return (
-                  <React.Fragment key={stepItem.key}>
-                    <div className={`flex items-center space-x-2 px-3 py-2 rounded-full text-sm font-medium transition-all duration-200 ${
-                      isActive 
-                        ? isCurrent 
-                          ? 'bg-primary text-primary-foreground shadow-sm'
-                          : 'bg-primary/10 text-primary'
-                        : 'bg-muted text-muted-foreground'
-                    }`}>
-                      <Icon className="h-4 w-4" />
-                      <span className="hidden sm:inline">{stepItem.label}</span>
+            <div className="flex justify-center mb-4">
+              <div className="flex items-center space-x-2 sm:space-x-4">
+                {steps.map((stepItem, index) => {
+                  const Icon = stepItem.icon;
+                  const isActive = index <= currentStepIndex;
+                  const isCurrent = index === currentStepIndex;
+                  
+                  return (
+                    <div key={stepItem.key} className="flex items-center space-x-2">
+                      <div className={`flex items-center space-x-2 px-3 py-2 rounded-full text-sm font-medium transition-all duration-200 ${
+                        isActive 
+                          ? isCurrent 
+                            ? 'bg-primary text-primary-foreground shadow-sm'
+                            : 'bg-primary/10 text-primary'
+                          : 'bg-muted text-muted-foreground'
+                      }`}>
+                        <Icon className="h-4 w-4" />
+                        <span className="hidden sm:inline">{stepItem.label}</span>
+                      </div>
+                      {index < steps.length - 1 && (
+                        <ArrowRight className={`h-4 w-4 transition-colors ${
+                          index < currentStepIndex ? 'text-primary' : 'text-muted-foreground'
+                        }`} />
+                      )}
                     </div>
-                    {index < steps.length - 1 && (
-                      <ArrowRight className={`h-4 w-4 transition-colors ${
-                        index < currentStepIndex ? 'text-primary' : 'text-muted-foreground'
-                      }`} />
-                    )}
-                  </React.Fragment>
-                );
-              })}
+                  );
+                })}
+              </div>
             </div>
-          </div>
           
           <div className="max-w-md mx-auto">
             <Progress value={progressValue} className="h-2" />

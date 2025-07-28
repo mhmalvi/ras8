@@ -173,31 +173,30 @@ export class EnhancedOrderService {
     email: string
   ): Promise<any | null> {
     try {
-      const cleanOrderNumber = orderNumber.replace('#', '');
+      console.log(`🔍 Looking up order via edge function for ${shopDomain}`);
       
-      const response = await fetch(
-        `https://${shopDomain}/admin/api/2024-07/orders.json?email=${encodeURIComponent(email)}&status=any&limit=50`,
-        {
-          headers: {
-            'X-Shopify-Access-Token': accessToken,
-            'Content-Type': 'application/json'
-          }
+      // Use the edge function instead of direct API call to avoid CORS
+      const { data, error } = await supabase.functions.invoke('shopify-order-lookup', {
+        body: {
+          shop_domain: shopDomain,
+          order_number: orderNumber,
+          customer_email: email
         }
-      );
+      });
 
-      if (!response.ok) {
+      if (error) {
+        console.error(`Edge function error for ${shopDomain}:`, error);
         return null;
       }
 
-      const data = await response.json();
-      const orders = data.orders || [];
-      
-      return orders.find((order: any) => 
-        order.name?.includes(cleanOrderNumber) || 
-        order.order_number?.toString() === cleanOrderNumber
-      ) || null;
+      if (data && data.order) {
+        console.log(`✅ Found order via edge function`);
+        return data.order;
+      }
+
+      return null;
     } catch (error) {
-      console.error(`Shopify API error for ${shopDomain}:`, error);
+      console.error(`Shopify lookup error for ${shopDomain}:`, error);
       return null;
     }
   }
