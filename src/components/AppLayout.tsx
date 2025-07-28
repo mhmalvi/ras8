@@ -5,7 +5,6 @@ import UserMenu from "@/components/UserMenu";
 import { useMerchantProfile } from "@/hooks/useMerchantProfile";
 import { useAtomicAuth } from "@/contexts/AtomicAuthContext";
 import ProfileCreator from "@/components/ProfileCreator";
-import NotificationCenter from "@/components/NotificationCenter";
 import { LoadingSpinner } from "@/components/LoadingStates";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { AlertCircle, RefreshCw } from "lucide-react";
@@ -13,11 +12,9 @@ import { Button } from "@/components/ui/button";
 
 interface AppLayoutProps {
   children: React.ReactNode;
-  title?: string;
-  description?: string;
 }
 
-const AppLayout = ({ children, title = "Dashboard", description }: AppLayoutProps) => {
+const AppLayout = ({ children }: AppLayoutProps) => {
   const { user, loading: authLoading } = useAtomicAuth();
   const { profile, loading: profileLoading, error: profileError, refetch } = useMerchantProfile();
 
@@ -73,7 +70,7 @@ const AppLayout = ({ children, title = "Dashboard", description }: AppLayoutProp
   // If no profile exists, show profile creator
   if (!profile) {
     return (
-      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
+      <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="max-w-2xl w-full mx-auto p-6">
           <ProfileCreator />
         </div>
@@ -84,38 +81,31 @@ const AppLayout = ({ children, title = "Dashboard", description }: AppLayoutProp
   // User is authenticated with profile - show main app layout
   return (
     <SidebarProvider>
-      <div className="min-h-screen flex w-full">
+      <div className="min-h-screen flex w-full bg-background">
         <AppSidebar />
         <div className="flex-1 flex flex-col">
           {/* Header */}
-          <header className="border-b bg-white px-6 py-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <h1 className="text-2xl font-bold text-slate-900">{title}</h1>
-                {description && (
-                  <p className="text-slate-500">{description}</p>
-                )}
-              </div>
-              <div className="flex items-center space-x-4">
-                <NotificationCenter />
-                <UserMenu />
-              </div>
+          <header className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 px-8 py-6">
+            <div className="flex items-center justify-end">
+              <UserMenu />
             </div>
           </header>
 
           {/* Main Content */}
-          <main className="flex-1 p-6">
-            {/* Show merchant assignment alert if needed */}
-            {!profile.merchant_id && (
-              <Alert className="mb-6">
-                <AlertCircle className="h-4 w-4" />
-                <AlertDescription>
-                  You need to assign yourself to a merchant to access full functionality. 
-                  Visit the main dashboard to set this up.
-                </AlertDescription>
-              </Alert>
-            )}
-            {children}
+          <main className="flex-1 px-8 py-8">
+            <div className="max-w-6xl mx-auto">
+              {/* Show merchant assignment alert if needed */}
+              {!profile.merchant_id && (
+                <Alert className="mb-8">
+                  <AlertCircle className="h-4 w-4" />
+                  <AlertDescription>
+                    You need to assign yourself to a merchant to access full functionality. 
+                    Visit the main dashboard to set this up.
+                  </AlertDescription>
+                </Alert>
+              )}
+              {children}
+            </div>
           </main>
         </div>
       </div>

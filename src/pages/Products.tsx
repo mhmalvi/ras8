@@ -105,154 +105,147 @@ const Products = () => {
     products.reduce((sum, p) => sum + p.returnRate, 0) / totalProducts : 0;
 
   return (
-    <AppLayout 
-      title="Products" 
-      description="Manage products and return eligibility settings"
-    >
-      <div className="space-y-6">
+    <AppLayout>
+      <div className="space-y-8">
+        <div>
+          <h1 className="text-2xl font-semibold text-foreground">Products</h1>
+          <p className="text-sm text-muted-foreground mt-1">
+            Manage products and return eligibility settings
+          </p>
+        </div>
+        
         {/* Stats Cards */}
         <div className="grid gap-4 md:grid-cols-4">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Products with Returns</CardTitle>
+          <div className="bg-background rounded-lg border p-4">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-sm font-medium text-muted-foreground">Products with Returns</span>
               <Package className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{totalProducts}</div>
-              <p className="text-xs text-muted-foreground">Have generated returns</p>
-            </CardContent>
-          </Card>
+            </div>
+            <div className="text-2xl font-semibold text-foreground">{totalProducts}</div>
+            <p className="text-xs text-muted-foreground mt-1">Have generated returns</p>
+          </div>
 
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">High Risk Products</CardTitle>
+          <div className="bg-background rounded-lg border p-4">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-sm font-medium text-muted-foreground">High Risk Products</span>
               <AlertTriangle className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{highRiskProducts}</div>
-              <p className="text-xs text-muted-foreground">&gt;15% return rate</p>
-            </CardContent>
-          </Card>
+            </div>
+            <div className="text-2xl font-semibold text-foreground">{highRiskProducts}</div>
+            <p className="text-xs text-muted-foreground mt-1">&gt;15% return rate</p>
+          </div>
 
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Return Value</CardTitle>
+          <div className="bg-background rounded-lg border p-4">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-sm font-medium text-muted-foreground">Return Value</span>
               <DollarSign className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">${totalReturnValue.toFixed(2)}</div>
-              <p className="text-xs text-muted-foreground">Total product returns</p>
-            </CardContent>
-          </Card>
+            </div>
+            <div className="text-2xl font-semibold text-foreground">${totalReturnValue.toFixed(2)}</div>
+            <p className="text-xs text-muted-foreground mt-1">Total product returns</p>
+          </div>
 
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Avg Return Rate</CardTitle>
+          <div className="bg-background rounded-lg border p-4">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-sm font-medium text-muted-foreground">Avg Return Rate</span>
               <TrendingDown className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{avgReturnRate.toFixed(1)}%</div>
-              <p className="text-xs text-muted-foreground">Across all products</p>
-            </CardContent>
-          </Card>
+            </div>
+            <div className="text-2xl font-semibold text-foreground">{avgReturnRate.toFixed(1)}%</div>
+            <p className="text-xs text-muted-foreground mt-1">Across all products</p>
+          </div>
         </div>
 
         {/* Product Management */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Product Return Analysis</CardTitle>
-            <CardDescription>
+        <div className="bg-background rounded-lg border p-6">
+          <div className="mb-6">
+            <h2 className="text-lg font-medium text-foreground">Product Return Analysis</h2>
+            <p className="text-sm text-muted-foreground mt-1">
               Configure product return policies and track return rates by product
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center space-x-2 mb-4">
-              <Search className="h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Search products by name or ID..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="max-w-sm"
-              />
+            </p>
+          </div>
+          
+          <div className="flex items-center gap-2 mb-6">
+            <Search className="h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Search products by name or ID..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="max-w-sm"
+            />
+          </div>
+
+          {loading ? (
+            <div className="text-center py-12">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
+              <p className="text-muted-foreground mt-4">Loading product data...</p>
             </div>
-
-            {loading ? (
-              <div className="text-center py-12">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
-                <p className="text-muted-foreground mt-4">Loading product data...</p>
-              </div>
-            ) : (
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Product</TableHead>
-                    <TableHead>Product ID</TableHead>
-                    <TableHead>Return Risk</TableHead>
-                    <TableHead>Total Returns</TableHead>
-                    <TableHead>Return Rate</TableHead>
-                    <TableHead>Return Value</TableHead>
-                    <TableHead>Avg Price</TableHead>
-                    <TableHead>Actions</TableHead>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="font-medium text-muted-foreground">Product</TableHead>
+                  <TableHead className="font-medium text-muted-foreground">Product ID</TableHead>
+                  <TableHead className="font-medium text-muted-foreground">Risk Level</TableHead>
+                  <TableHead className="font-medium text-muted-foreground">Returns</TableHead>
+                  <TableHead className="font-medium text-muted-foreground">Return Rate</TableHead>
+                  <TableHead className="font-medium text-muted-foreground">Value</TableHead>
+                  <TableHead className="font-medium text-muted-foreground">Avg Price</TableHead>
+                  <TableHead className="font-medium text-muted-foreground"></TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {filteredProducts.map((product) => (
+                  <TableRow key={product.product_id} className="hover:bg-muted/5">
+                    <TableCell className="font-medium">{product.product_name}</TableCell>
+                    <TableCell className="font-mono text-sm">{product.product_id}</TableCell>
+                    <TableCell>
+                      <Badge variant={getRiskColor(product.risk) as any}>
+                        {product.risk}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>{product.totalReturns}</TableCell>
+                    <TableCell>{product.returnRate.toFixed(1)}%</TableCell>
+                    <TableCell>${product.totalValue.toFixed(2)}</TableCell>
+                    <TableCell>${product.avgPrice.toFixed(2)}</TableCell>
+                    <TableCell>
+                      <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                        <Settings className="h-4 w-4" />
+                      </Button>
+                    </TableCell>
                   </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredProducts.map((product) => (
-                    <TableRow key={product.product_id}>
-                      <TableCell className="font-medium">{product.product_name}</TableCell>
-                      <TableCell className="font-mono text-sm">{product.product_id}</TableCell>
-                      <TableCell>
-                        <Badge variant={getRiskColor(product.risk) as any}>
-                          {product.risk} risk
-                        </Badge>
-                      </TableCell>
-                      <TableCell>{product.totalReturns}</TableCell>
-                      <TableCell>{product.returnRate.toFixed(1)}%</TableCell>
-                      <TableCell>${product.totalValue.toFixed(2)}</TableCell>
-                      <TableCell>${product.avgPrice.toFixed(2)}</TableCell>
-                      <TableCell>
-                        <Button variant="outline" size="sm">
-                          <Settings className="h-4 w-4 mr-1" />
-                          Manage
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            )}
+                ))}
+              </TableBody>
+            </Table>
+          )}
 
-            {!loading && filteredProducts.length === 0 && (
-              <div className="text-center py-12">
-                <p className="text-muted-foreground">
-                  {searchTerm ? 'No products found matching your search.' : 'No product return data available.'}
-                </p>
-              </div>
-            )}
-          </CardContent>
-        </Card>
+          {!loading && filteredProducts.length === 0 && (
+            <div className="text-center py-12">
+              <p className="text-muted-foreground">
+                {searchTerm ? 'No products found matching your search.' : 'No product return data available.'}
+              </p>
+            </div>
+          )}
+        </div>
 
         {/* Return Policy Settings */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Return Policy Settings</CardTitle>
-            <CardDescription>Configure global return policies and product-specific rules</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="grid gap-4 md:grid-cols-2">
-              <div>
-                <h4 className="font-medium mb-2">Default Return Window</h4>
-                <p className="text-sm text-muted-foreground mb-2">How long customers have to initiate returns</p>
-                <Input placeholder="30 days" className="w-full" />
-              </div>
-              <div>
-                <h4 className="font-medium mb-2">Automatic Approval Threshold</h4>
-                <p className="text-sm text-muted-foreground mb-2">Auto-approve returns under this amount</p>
-                <Input placeholder="$50.00" className="w-full" />
-              </div>
+        <div className="bg-background rounded-lg border p-6">
+          <div className="mb-6">
+            <h2 className="text-lg font-medium text-foreground">Return Policy Settings</h2>
+            <p className="text-sm text-muted-foreground mt-1">Configure global return policies and product-specific rules</p>
+          </div>
+          
+          <div className="grid gap-4 md:grid-cols-2">
+            <div>
+              <h4 className="font-medium mb-2 text-foreground">Default Return Window</h4>
+              <p className="text-sm text-muted-foreground mb-2">How long customers have to initiate returns</p>
+              <Input placeholder="30 days" className="w-full" />
             </div>
-            <Button className="mt-4">Save Policy Settings</Button>
-          </CardContent>
-        </Card>
+            <div>
+              <h4 className="font-medium mb-2 text-foreground">Automatic Approval Threshold</h4>
+              <p className="text-sm text-muted-foreground mb-2">Auto-approve returns under this amount</p>
+              <Input placeholder="$50.00" className="w-full" />
+            </div>
+          </div>
+          <Button className="mt-4">Save Policy Settings</Button>
+        </div>
       </div>
     </AppLayout>
   );

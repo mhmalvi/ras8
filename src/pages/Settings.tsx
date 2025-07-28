@@ -11,58 +11,56 @@ const Settings = () => {
   const [activeTab, setActiveTab] = useState('system');
 
   return (
-    <AppLayout 
-      title="Settings" 
-      description="Configure your store settings and preferences"
-    >
-      <div className="max-w-4xl mx-auto">
+    <AppLayout>
+      <div className="space-y-8">
+        <div>
+          <h1 className="text-2xl font-semibold text-foreground">Settings</h1>
+          <p className="text-sm text-muted-foreground mt-1">
+            Configure your store settings and preferences
+          </p>
+        </div>
+        
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className="grid w-full grid-cols-3">
-            <TabsTrigger value="system">System Setup</TabsTrigger>
-            <TabsTrigger value="subscription">Subscription</TabsTrigger>
+          <TabsList className="grid w-full grid-cols-3 max-w-md">
+            <TabsTrigger value="system">System</TabsTrigger>
+            <TabsTrigger value="subscription">Plan</TabsTrigger>
             <TabsTrigger value="notifications">Notifications</TabsTrigger>
           </TabsList>
           
-          <TabsContent value="system">
-            <Card>
-              <CardHeader>
-                <CardTitle>System Configuration</CardTitle>
-                <CardDescription>
+          <TabsContent value="system" className="space-y-0">
+            <div className="bg-background rounded-lg border p-6">
+              <div className="mb-6">
+                <h2 className="text-lg font-medium text-foreground">System Configuration</h2>
+                <p className="text-sm text-muted-foreground mt-1">
                   Configure your Shopify integration and system settings
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <SystemSetup />
-              </CardContent>
-            </Card>
+                </p>
+              </div>
+              <SystemSetup />
+            </div>
           </TabsContent>
           
-          <TabsContent value="subscription">
-            <Card>
-              <CardHeader>
-                <CardTitle>Subscription Management</CardTitle>
-                <CardDescription>
+          <TabsContent value="subscription" className="space-y-0">
+            <div className="bg-background rounded-lg border p-6">
+              <div className="mb-6">
+                <h2 className="text-lg font-medium text-foreground">Subscription Management</h2>
+                <p className="text-sm text-muted-foreground mt-1">
                   Manage your plan and billing information
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <SubscriptionStatus />
-              </CardContent>
-            </Card>
+                </p>
+              </div>
+              <SubscriptionStatus />
+            </div>
           </TabsContent>
           
-          <TabsContent value="notifications">
-            <Card>
-              <CardHeader>
-                <CardTitle>Notification Settings</CardTitle>
-                <CardDescription>
+          <TabsContent value="notifications" className="space-y-0">
+            <div className="bg-background rounded-lg border p-6">
+              <div className="mb-6">
+                <h2 className="text-lg font-medium text-foreground">Notification Settings</h2>
+                <p className="text-sm text-muted-foreground mt-1">
                   Configure email notifications and alerts
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <EmailNotificationSettings />
-              </CardContent>
-            </Card>
+                </p>
+              </div>
+              <EmailNotificationSettings />
+            </div>
           </TabsContent>
         </Tabs>
       </div>

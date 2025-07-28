@@ -52,10 +52,7 @@ const Dashboard: React.FC = () => {
   // If user doesn't have a merchant assigned, show setup screen
   if (!profile?.merchant_id) {
     return (
-      <AppLayout 
-        title="Welcome to Returns Automation" 
-        description="Let's get your account set up"
-      >
+      <AppLayout>
         <div className="max-w-4xl mx-auto space-y-6">
           <Alert>
             <Info className="h-4 w-4" />

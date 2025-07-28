@@ -96,136 +96,130 @@ const Customers = () => {
   const totalReturnValue = customers.reduce((sum, c) => sum + c.totalAmount, 0);
 
   return (
-    <AppLayout 
-      title="Customers" 
-      description="View and manage customer information and return history"
-    >
-      <div className="space-y-6">
+    <AppLayout>
+      <div className="space-y-8">
+        <div>
+          <h1 className="text-2xl font-semibold text-foreground">Customers</h1>
+          <p className="text-sm text-muted-foreground mt-1">
+            View and manage customer information and return history
+          </p>
+        </div>
+        
         {/* Stats Cards */}
         <div className="grid gap-4 md:grid-cols-4">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total Customers</CardTitle>
+          <div className="bg-background rounded-lg border p-4">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-sm font-medium text-muted-foreground">Total Customers</span>
               <User className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{totalCustomers}</div>
-              <p className="text-xs text-muted-foreground">Who have made returns</p>
-            </CardContent>
-          </Card>
+            </div>
+            <div className="text-2xl font-semibold text-foreground">{totalCustomers}</div>
+            <p className="text-xs text-muted-foreground mt-1">Who have made returns</p>
+          </div>
 
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Frequent Returners</CardTitle>
+          <div className="bg-background rounded-lg border p-4">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-sm font-medium text-muted-foreground">Frequent Returners</span>
               <TrendingUp className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{frequentCustomers}</div>
-              <p className="text-xs text-muted-foreground">5+ returns each</p>
-            </CardContent>
-          </Card>
+            </div>
+            <div className="text-2xl font-semibold text-foreground">{frequentCustomers}</div>
+            <p className="text-xs text-muted-foreground mt-1">5+ returns each</p>
+          </div>
 
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Return Value</CardTitle>
+          <div className="bg-background rounded-lg border p-4">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-sm font-medium text-muted-foreground">Return Value</span>
               <Calendar className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">${totalReturnValue.toFixed(2)}</div>
-              <p className="text-xs text-muted-foreground">Total across all customers</p>
-            </CardContent>
-          </Card>
+            </div>
+            <div className="text-2xl font-semibold text-foreground">${totalReturnValue.toFixed(2)}</div>
+            <p className="text-xs text-muted-foreground mt-1">Total across all customers</p>
+          </div>
 
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Avg Return Value</CardTitle>
+          <div className="bg-background rounded-lg border p-4">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-sm font-medium text-muted-foreground">Avg Return Value</span>
               <Mail className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">
-                ${totalCustomers > 0 ? (totalReturnValue / totalCustomers).toFixed(2) : '0.00'}
-              </div>
-              <p className="text-xs text-muted-foreground">Per customer</p>
-            </CardContent>
-          </Card>
+            </div>
+            <div className="text-2xl font-semibold text-foreground">
+              ${totalCustomers > 0 ? (totalReturnValue / totalCustomers).toFixed(2) : '0.00'}
+            </div>
+            <p className="text-xs text-muted-foreground mt-1">Per customer</p>
+          </div>
         </div>
 
-        {/* Search and Filters */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Customer Management</CardTitle>
-            <CardDescription>
+        {/* Customer Management */}
+        <div className="bg-background rounded-lg border p-6">
+          <div className="mb-6">
+            <h2 className="text-lg font-medium text-foreground">Customer Management</h2>
+            <p className="text-sm text-muted-foreground mt-1">
               Track customer return patterns and communication history
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center space-x-2 mb-4">
-              <Search className="h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Search customers by email..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="max-w-sm"
-              />
+            </p>
+          </div>
+          
+          <div className="flex items-center gap-2 mb-6">
+            <Search className="h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Search customers by email..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="max-w-sm"
+            />
+          </div>
+
+          {loading ? (
+            <div className="text-center py-12">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
+              <p className="text-muted-foreground mt-4">Loading customer data...</p>
             </div>
-
-            {loading ? (
-              <div className="text-center py-12">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
-                <p className="text-muted-foreground mt-4">Loading customer data...</p>
-              </div>
-            ) : (
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Customer Email</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Total Returns</TableHead>
-                    <TableHead>Return Value</TableHead>
-                    <TableHead>Last Return</TableHead>
-                    <TableHead>Actions</TableHead>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="font-medium text-muted-foreground">Customer Email</TableHead>
+                  <TableHead className="font-medium text-muted-foreground">Status</TableHead>
+                  <TableHead className="font-medium text-muted-foreground">Total Returns</TableHead>
+                  <TableHead className="font-medium text-muted-foreground">Return Value</TableHead>
+                  <TableHead className="font-medium text-muted-foreground">Last Return</TableHead>
+                  <TableHead className="font-medium text-muted-foreground"></TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {filteredCustomers.map((customer) => (
+                  <TableRow key={customer.email} className="hover:bg-muted/5">
+                    <TableCell className="font-medium">{customer.email}</TableCell>
+                    <TableCell>
+                      <Badge variant={getStatusColor(customer.status) as any}>
+                        {customer.status}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>{customer.totalReturns}</TableCell>
+                    <TableCell>${customer.totalAmount.toFixed(2)}</TableCell>
+                    <TableCell>{new Date(customer.lastReturn).toLocaleDateString()}</TableCell>
+                    <TableCell>
+                      <Button 
+                        variant="ghost" 
+                        size="sm"
+                        className="h-8 w-8 p-0"
+                        onClick={() => {
+                          console.log('View customer:', customer.email);
+                        }}
+                      >
+                        <Eye className="h-4 w-4" />
+                      </Button>
+                    </TableCell>
                   </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredCustomers.map((customer) => (
-                    <TableRow key={customer.email}>
-                      <TableCell className="font-medium">{customer.email}</TableCell>
-                      <TableCell>
-                        <Badge variant={getStatusColor(customer.status) as any}>
-                          {customer.status}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>{customer.totalReturns}</TableCell>
-                      <TableCell>${customer.totalAmount.toFixed(2)}</TableCell>
-                      <TableCell>{new Date(customer.lastReturn).toLocaleDateString()}</TableCell>
-                      <TableCell>
-                        <Button 
-                          variant="outline" 
-                          size="sm"
-                          onClick={() => {
-                            // Navigate to customer detail view or show modal
-                            console.log('View customer:', customer.email);
-                          }}
-                        >
-                          <Eye className="h-4 w-4 mr-1" />
-                          View
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            )}
+                ))}
+              </TableBody>
+            </Table>
+          )}
 
-            {!loading && filteredCustomers.length === 0 && (
-              <div className="text-center py-12">
-                <p className="text-muted-foreground">
-                  {searchTerm ? 'No customers found matching your search.' : 'No customer data available.'}
-                </p>
-              </div>
-            )}
-          </CardContent>
-        </Card>
+          {!loading && filteredCustomers.length === 0 && (
+            <div className="text-center py-12">
+              <p className="text-muted-foreground">
+                {searchTerm ? 'No customers found matching your search.' : 'No customer data available.'}
+              </p>
+            </div>
+          )}
+        </div>
       </div>
     </AppLayout>
   );

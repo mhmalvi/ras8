@@ -15,46 +15,51 @@ const Automations = () => {
   const { rules, loading, toggleRule, testRule } = useAutomationRules();
 
   return (
-    <AppLayout 
-      title="Automations" 
-      description="Configure automated workflows and rules for returns processing"
-    >
-      <Tabs defaultValue="rules" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-3">
-          <TabsTrigger value="rules">Automation Rules</TabsTrigger>
-          <TabsTrigger value="webhooks">Webhook Manager</TabsTrigger>
-          <TabsTrigger value="setup">n8n Setup</TabsTrigger>
-        </TabsList>
+    <AppLayout>
+      <div className="space-y-8">
+        <div>
+          <h1 className="text-2xl font-semibold text-foreground">Automations</h1>
+          <p className="text-sm text-muted-foreground mt-1">
+            Configure automated workflows and rules for returns processing
+          </p>
+        </div>
+        
+        <Tabs defaultValue="rules" className="space-y-6">
+          <TabsList className="grid w-full grid-cols-3 max-w-md">
+            <TabsTrigger value="rules">Rules</TabsTrigger>
+            <TabsTrigger value="webhooks">Webhooks</TabsTrigger>
+            <TabsTrigger value="setup">Setup</TabsTrigger>
+          </TabsList>
 
-        <TabsContent value="rules" className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Settings className="h-5 w-5" />
-                Automation Rules
-              </CardTitle>
-              <CardDescription>
-                Manage automated rules for return processing, approvals, and notifications
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
+          <TabsContent value="rules" className="space-y-0">
+            <div className="bg-background rounded-lg border p-6">
+              <div className="flex items-center gap-2 mb-6">
+                <Settings className="h-5 w-5 text-muted-foreground" />
+                <div>
+                  <h2 className="text-lg font-medium text-foreground">Automation Rules</h2>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    Manage automated rules for return processing and notifications
+                  </p>
+                </div>
+              </div>
+              
               {loading ? (
                 <div className="space-y-4">
                   {[1, 2, 3].map(i => (
                     <div key={i} className="animate-pulse">
-                      <div className="h-20 bg-muted rounded-lg"></div>
+                      <div className="h-20 bg-muted/50 rounded-lg"></div>
                     </div>
                   ))}
                 </div>
               ) : (
                 <div className="space-y-4">
                   {rules.map((rule) => (
-                    <div key={rule.id} className="border rounded-lg p-4">
+                    <div key={rule.id} className="border rounded-lg p-4 hover:bg-muted/5 transition-colors">
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-3">
                           <rule.icon className="h-5 w-5 text-primary" />
                           <div>
-                            <h3 className="font-medium">{rule.name}</h3>
+                            <h3 className="font-medium text-foreground">{rule.name}</h3>
                             <p className="text-sm text-muted-foreground">{rule.description}</p>
                             <div className="flex items-center gap-2 mt-1">
                               <Badge variant="outline">{rule.type}</Badge>
@@ -65,7 +70,7 @@ const Automations = () => {
                               )}
                               {rule.lastRun && (
                                 <span className="text-xs text-muted-foreground">
-                                  Last run: {rule.lastRun}
+                                  Last: {rule.lastRun}
                                 </span>
                               )}
                             </div>
@@ -74,9 +79,10 @@ const Automations = () => {
                         <div className="flex items-center gap-2">
                           <Button
                             size="sm"
-                            variant="outline"
+                            variant="ghost"
                             onClick={() => testRule(rule.id)}
                             disabled={!rule.active}
+                            className="h-8 w-8 p-0"
                           >
                             <TestTube className="h-4 w-4" />
                           </Button>
@@ -90,18 +96,18 @@ const Automations = () => {
                   ))}
                 </div>
               )}
-            </CardContent>
-          </Card>
-        </TabsContent>
+            </div>
+          </TabsContent>
 
-        <TabsContent value="webhooks">
-          <WebhookManager />
-        </TabsContent>
+          <TabsContent value="webhooks" className="space-y-0">
+            <WebhookManager />
+          </TabsContent>
 
-        <TabsContent value="setup">
-          <N8nConnectionSetup />
-        </TabsContent>
-      </Tabs>
+          <TabsContent value="setup" className="space-y-0">
+            <N8nConnectionSetup />
+          </TabsContent>
+        </Tabs>
+      </div>
     </AppLayout>
   );
 };
