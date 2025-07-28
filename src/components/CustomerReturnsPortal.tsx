@@ -4,14 +4,30 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Progress } from '@/components/ui/progress';
+import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 import { useCustomerPortal } from '@/hooks/useCustomerPortal';
-import { Search, Package, ArrowRight, RefreshCw, AlertCircle, CheckCircle } from 'lucide-react';
+import { 
+  Search, 
+  Package, 
+  ArrowRight, 
+  ArrowLeft,
+  RefreshCw, 
+  AlertCircle, 
+  CheckCircle, 
+  Sparkles,
+  Mail,
+  Receipt,
+  Clock,
+  Shield,
+  Heart
+} from 'lucide-react';
 
 const CustomerReturnsPortal = () => {
   const [step, setStep] = useState<'lookup' | 'select' | 'reason' | 'confirmation'>('lookup');
-  const [orderNumber, setOrderNumber] = useState('ORD-2024-2020');
-  const [email, setEmail] = useState('lisa.wong@startup.io');
+  const [orderNumber, setOrderNumber] = useState('');
+  const [email, setEmail] = useState('');
   const [selectedItems, setSelectedItems] = useState<string[]>([]);
   const [returnReasons, setReturnReasons] = useState<Record<string, string>>({});
   const { toast } = useToast();
@@ -29,18 +45,26 @@ const CustomerReturnsPortal = () => {
   } = useCustomerPortal();
 
   const returnReasonOptions = [
-    'Defective/Damaged item',
-    'Wrong size',
-    'Wrong item received',
-    'Not as described',
-    'Changed my mind',
-    'Quality issues',
-    'Other'
+    { value: 'defective', label: 'Defective or damaged', icon: AlertCircle },
+    { value: 'wrong_size', label: 'Wrong size', icon: Package },
+    { value: 'wrong_item', label: 'Wrong item received', icon: Package },
+    { value: 'not_described', label: 'Not as described', icon: AlertCircle },
+    { value: 'changed_mind', label: 'Changed my mind', icon: Heart },
+    { value: 'quality', label: 'Quality issues', icon: Shield },
+    { value: 'other', label: 'Other reason', icon: RefreshCw }
   ];
 
+  const steps = [
+    { key: 'lookup', label: 'Find Order', icon: Search },
+    { key: 'select', label: 'Select Items', icon: Package },
+    { key: 'reason', label: 'Return Reason', icon: AlertCircle },
+    { key: 'confirmation', label: 'Confirmation', icon: CheckCircle }
+  ];
+
+  const currentStepIndex = steps.findIndex(s => s.key === step);
+  const progressValue = ((currentStepIndex + 1) / steps.length) * 100;
+
   const handleOrderLookup = async () => {
-    console.log('🚀 Starting order lookup...', { orderNumber, email });
-    
     if (!orderNumber.trim() || !email.trim()) {
       toast({
         title: "Missing information",
@@ -52,20 +76,17 @@ const CustomerReturnsPortal = () => {
 
     try {
       clearError();
-      console.log('📞 Calling lookupOrder...');
       await lookupOrder(orderNumber, email);
-      console.log('🎉 Order lookup completed, setting step to select');
       setStep('select');
       
       toast({
-        title: "Order found!",
-        description: `Order ${orderNumber.toUpperCase()} has been located.`,
+        title: "Order found! ✨",
+        description: `Welcome back! We found your order ${orderNumber.toUpperCase()}.`,
       });
     } catch (error) {
-      console.error('💥 Order lookup error in component:', error);
       toast({
         title: "Order not found",
-        description: error instanceof Error ? error.message : "Please check your order number and email address.",
+        description: "Please double-check your order number and email address.",
         variant: "destructive",
       });
     }
@@ -79,18 +100,18 @@ const CustomerReturnsPortal = () => {
     );
   };
 
-  const handleReasonSelection = (itemId: string, reason: string) => {
+  const handleReasonSelection = (itemId: string, reasonValue: string) => {
     setReturnReasons(prev => ({
       ...prev,
-      [itemId]: reason
+      [itemId]: reasonValue
     }));
   };
 
   const handleContinueToReason = () => {
     if (selectedItems.length === 0) {
       toast({
-        title: "No items selected",
-        description: "Please select at least one item to return.",
+        title: "Select items to return",
+        description: "Please choose at least one item from your order.",
         variant: "destructive",
       });
       return;
@@ -130,8 +151,8 @@ const CustomerReturnsPortal = () => {
       setStep('confirmation');
       
       toast({
-        title: "Return request submitted!",
-        description: "We'll process your return within 1-2 business days.",
+        title: "Return submitted successfully! 🎉",
+        description: "Your return is being processed. You'll receive updates via email.",
       });
 
     } catch (error) {
@@ -155,53 +176,65 @@ const CustomerReturnsPortal = () => {
     switch (step) {
       case 'lookup':
         return (
-          <Card className="max-w-md mx-auto">
-            <CardHeader className="text-center">
-              <CardTitle className="flex items-center justify-center gap-2">
-                <Search className="h-5 w-5" />
-                Find Your Order
-              </CardTitle>
-              <CardDescription>
-                Enter your order details to start the return process
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
+          <div className="space-y-6 animate-fade-in">
+            <div className="text-center space-y-2">
+              <div className="inline-flex items-center justify-center w-16 h-16 bg-primary/10 rounded-full mb-4">
+                <Search className="h-8 w-8 text-primary" />
+              </div>
+              <h2 className="text-2xl font-bold">Find Your Order</h2>
+              <p className="text-muted-foreground max-w-md mx-auto">
+                Enter your order details to begin a hassle-free return process
+              </p>
+            </div>
+
+            <Card className="p-6 space-y-4 max-w-md mx-auto">
               {error && (
-                <Alert variant="destructive">
+                <Alert variant="destructive" className="animate-scale-in">
                   <AlertCircle className="h-4 w-4" />
                   <AlertDescription>{error}</AlertDescription>
                 </Alert>
               )}
               
-              <div>
-                <label htmlFor="order-number" className="block text-sm font-medium mb-2">
+              <div className="space-y-2">
+                <label htmlFor="order-number" className="text-sm font-medium">
                   Order Number
                 </label>
-                <Input
-                  id="order-number"
-                  value={orderNumber}
-                  onChange={(e) => setOrderNumber(e.target.value.toUpperCase())}
-                  placeholder="e.g. ORD-2024-2020"
-                  disabled={loading}
-                />
+                <div className="relative">
+                  <Receipt className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    id="order-number"
+                    value={orderNumber}
+                    onChange={(e) => setOrderNumber(e.target.value.toUpperCase())}
+                    placeholder="ORD-2024-2020"
+                    disabled={loading}
+                    className="pl-10"
+                  />
+                </div>
               </div>
-              <div>
-                <label htmlFor="email" className="block text-sm font-medium mb-2">
+              
+              <div className="space-y-2">
+                <label htmlFor="email" className="text-sm font-medium">
                   Email Address
                 </label>
-                <Input
-                  id="email"
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="lisa.wong@startup.io"
-                  disabled={loading}
-                />
+                <div className="relative">
+                  <Mail className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    id="email"
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="your.email@example.com"
+                    disabled={loading}
+                    className="pl-10"
+                  />
+                </div>
               </div>
+              
               <Button 
                 onClick={handleOrderLookup}
-                disabled={loading}
-                className="w-full"
+                disabled={loading || !orderNumber.trim() || !email.trim()}
+                className="w-full h-12 text-base font-medium"
+                size="lg"
               >
                 {loading ? (
                   <>
@@ -210,72 +243,114 @@ const CustomerReturnsPortal = () => {
                   </>
                 ) : (
                   <>
-                    Find Order
+                    Find My Order
                     <ArrowRight className="ml-2 h-4 w-4" />
                   </>
                 )}
               </Button>
-            </CardContent>
-          </Card>
+            </Card>
+          </div>
         );
 
       case 'select':
         return order && (
-          <div className="max-w-2xl mx-auto space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>Order #{order.shopify_order_id}</CardTitle>
-                <CardDescription>
-                  Placed on {new Date(order.created_at).toLocaleDateString()} • Total: ${order.total_amount.toFixed(2)}
-                </CardDescription>
+          <div className="space-y-6 animate-fade-in">
+            <div className="text-center space-y-2">
+              <h2 className="text-2xl font-bold">Select Items to Return</h2>
+              <p className="text-muted-foreground">
+                Choose the items you'd like to return from your order
+              </p>
+            </div>
+
+            <Card className="max-w-2xl mx-auto">
+              <CardHeader className="border-b">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle className="flex items-center gap-2">
+                      <Receipt className="h-5 w-5" />
+                      Order #{order.shopify_order_id}
+                    </CardTitle>
+                    <CardDescription className="flex items-center gap-4 mt-1">
+                      <span className="flex items-center gap-1">
+                        <Clock className="h-3 w-3" />
+                        {new Date(order.created_at).toLocaleDateString()}
+                      </span>
+                      <span>Total: ${order.total_amount.toFixed(2)}</span>
+                    </CardDescription>
+                  </div>
+                  <Badge variant="secondary" className="font-medium">
+                    {selectedItems.length} selected
+                  </Badge>
+                </div>
               </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  <p className="text-sm font-medium">Select items to return:</p>
+              <CardContent className="p-6">
+                <div className="space-y-3">
                   {order.items.length > 0 ? (
                     order.items.map((item) => (
                       <div 
                         key={item.id}
-                        className={`p-4 border rounded-lg cursor-pointer transition-colors ${
+                        className={`group p-4 rounded-lg border-2 cursor-pointer transition-all duration-200 hover:shadow-sm ${
                           selectedItems.includes(item.id)
-                            ? 'border-blue-500 bg-blue-50'
-                            : 'border-gray-200 hover:border-gray-300'
+                            ? 'border-primary bg-primary/5 shadow-sm'
+                            : 'border-border hover:border-primary/30'
                         }`}
                         onClick={() => handleItemSelection(item.id)}
                       >
                         <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-3">
-                            <div className="w-12 h-12 bg-gray-200 rounded flex items-center justify-center">
-                              <Package className="h-6 w-6 text-gray-400" />
+                          <div className="flex items-center gap-4">
+                            <div className={`w-12 h-12 rounded-lg flex items-center justify-center transition-colors ${
+                              selectedItems.includes(item.id) 
+                                ? 'bg-primary/10' 
+                                : 'bg-muted'
+                            }`}>
+                              <Package className={`h-5 w-5 ${
+                                selectedItems.includes(item.id) 
+                                  ? 'text-primary' 
+                                  : 'text-muted-foreground'
+                              }`} />
                             </div>
                             <div>
-                              <h4 className="font-medium">{item.product_name}</h4>
-                              <p className="text-sm text-gray-600">Qty: {item.quantity} • ${item.price.toFixed(2)}</p>
+                              <h4 className="font-medium group-hover:text-primary transition-colors">
+                                {item.product_name}
+                              </h4>
+                              <p className="text-sm text-muted-foreground">
+                                Qty: {item.quantity} • ${item.price.toFixed(2)}
+                              </p>
                             </div>
                           </div>
                           {selectedItems.includes(item.id) && (
-                            <Badge>Selected</Badge>
+                            <div className="flex items-center gap-2">
+                              <CheckCircle className="h-5 w-5 text-primary" />
+                              <Badge className="bg-primary/10 text-primary border-primary/20">
+                                Selected
+                              </Badge>
+                            </div>
                           )}
                         </div>
                       </div>
                     ))
                   ) : (
-                    <p className="text-gray-500 text-center py-4">No items found for this order</p>
+                    <div className="text-center py-8">
+                      <Package className="h-12 w-12 text-muted-foreground/50 mx-auto mb-3" />
+                      <p className="text-muted-foreground">No items found for this order</p>
+                    </div>
                   )}
                 </div>
               </CardContent>
             </Card>
 
-            <div className="flex justify-between">
-              <Button variant="outline" onClick={() => setStep('lookup')}>
+            <div className="flex justify-between max-w-2xl mx-auto">
+              <Button variant="outline" onClick={() => setStep('lookup')} className="flex items-center gap-2">
+                <ArrowLeft className="h-4 w-4" />
                 Back
               </Button>
               <Button 
                 onClick={handleContinueToReason}
                 disabled={selectedItems.length === 0}
+                className="flex items-center gap-2"
               >
-                Continue
-                <ArrowRight className="ml-2 h-4 w-4" />
+                Continue ({selectedItems.length} item{selectedItems.length !== 1 ? 's' : ''})
+                <ArrowRight className="h-4 w-4" />
               </Button>
             </div>
           </div>
@@ -283,50 +358,79 @@ const CustomerReturnsPortal = () => {
 
       case 'reason':
         return (
-          <div className="max-w-md mx-auto space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>Return Reasons</CardTitle>
-                <CardDescription>
-                  Please select a reason for each item you're returning
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                {selectedItems.map(itemId => {
-                  const item = order?.items.find(i => i.id === itemId);
-                  if (!item) return null;
-                  
-                  return (
-                    <div key={itemId} className="space-y-2">
-                      <h4 className="font-medium text-sm">{item.product_name}</h4>
-                      <div className="space-y-2">
-                        {returnReasonOptions.map((reason) => (
-                          <div
-                            key={reason}
-                            className={`p-3 border rounded cursor-pointer transition-colors ${
-                              returnReasons[itemId] === reason
-                                ? 'border-blue-500 bg-blue-50'
-                                : 'border-gray-200 hover:border-gray-300'
-                            }`}
-                            onClick={() => handleReasonSelection(itemId, reason)}
-                          >
-                            <p className="text-sm">{reason}</p>
-                          </div>
-                        ))}
+          <div className="space-y-6 animate-fade-in">
+            <div className="text-center space-y-2">
+              <h2 className="text-2xl font-bold">Why are you returning?</h2>
+              <p className="text-muted-foreground">
+                Help us understand the reason for each item return
+              </p>
+            </div>
+
+            <div className="max-w-lg mx-auto space-y-6">
+              {selectedItems.map(itemId => {
+                const item = order?.items.find(i => i.id === itemId);
+                if (!item) return null;
+                
+                return (
+                  <Card key={itemId} className="p-6">
+                    <div className="flex items-center gap-3 mb-4">
+                      <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center">
+                        <Package className="h-5 w-5 text-primary" />
+                      </div>
+                      <div>
+                        <h4 className="font-medium">{item.product_name}</h4>
+                        <p className="text-sm text-muted-foreground">
+                          ${item.price.toFixed(2)} • Qty: {item.quantity}
+                        </p>
                       </div>
                     </div>
-                  );
-                })}
-              </CardContent>
-            </Card>
+                    
+                    <div className="grid gap-2">
+                      {returnReasonOptions.map((reason) => {
+                        const Icon = reason.icon;
+                        const isSelected = returnReasons[itemId] === reason.value;
+                        
+                        return (
+                          <div
+                            key={reason.value}
+                            className={`p-3 rounded-lg border-2 cursor-pointer transition-all duration-200 hover:shadow-sm ${
+                              isSelected
+                                ? 'border-primary bg-primary/5 shadow-sm'
+                                : 'border-border hover:border-primary/30'
+                            }`}
+                            onClick={() => handleReasonSelection(itemId, reason.value)}
+                          >
+                            <div className="flex items-center gap-3">
+                              <Icon className={`h-4 w-4 ${
+                                isSelected ? 'text-primary' : 'text-muted-foreground'
+                              }`} />
+                              <span className={`text-sm font-medium ${
+                                isSelected ? 'text-primary' : 'text-foreground'
+                              }`}>
+                                {reason.label}
+                              </span>
+                              {isSelected && (
+                                <CheckCircle className="h-4 w-4 text-primary ml-auto" />
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </Card>
+                );
+              })}
+            </div>
 
-            <div className="flex justify-between">
-              <Button variant="outline" onClick={() => setStep('select')}>
+            <div className="flex justify-between max-w-lg mx-auto">
+              <Button variant="outline" onClick={() => setStep('select')} className="flex items-center gap-2">
+                <ArrowLeft className="h-4 w-4" />
                 Back
               </Button>
               <Button 
                 onClick={handleReturnSubmission}
                 disabled={loading || selectedItems.some(id => !returnReasons[id])}
+                className="flex items-center gap-2"
               >
                 {loading ? (
                   <>
@@ -346,32 +450,49 @@ const CustomerReturnsPortal = () => {
 
       case 'confirmation':
         return (
-          <div className="max-w-2xl mx-auto space-y-6">
-            <Alert>
-              <CheckCircle className="h-4 w-4" />
-              <AlertDescription>
-                Your return request has been submitted successfully! You'll receive an email confirmation shortly.
-              </AlertDescription>
-            </Alert>
+          <div className="space-y-6 animate-fade-in">
+            <div className="text-center space-y-4">
+              <div className="inline-flex items-center justify-center w-20 h-20 bg-green-100 rounded-full mb-4">
+                <CheckCircle className="h-10 w-10 text-green-600" />
+              </div>
+              <h2 className="text-2xl font-bold text-green-900">Return Submitted!</h2>
+              <p className="text-muted-foreground max-w-md mx-auto">
+                Your return request has been received. We'll send you email updates as we process your return.
+              </p>
+            </div>
+
+            <Card className="max-w-2xl mx-auto">
+              <CardContent className="p-6">
+                <Alert className="border-green-200 bg-green-50">
+                  <CheckCircle className="h-4 w-4 text-green-600" />
+                  <AlertDescription className="text-green-800">
+                    <strong>What's next?</strong> You'll receive an email confirmation shortly with your return shipping label and tracking information.
+                  </AlertDescription>
+                </Alert>
+              </CardContent>
+            </Card>
 
             {aiRecommendations.length > 0 && (
-              <Card>
+              <Card className="max-w-2xl mx-auto">
                 <CardHeader>
-                  <CardTitle>Exchange Suggestions</CardTitle>
+                  <CardTitle className="flex items-center gap-2">
+                    <Sparkles className="h-5 w-5 text-primary" />
+                    Smart Recommendations
+                  </CardTitle>
                   <CardDescription>
-                    Based on your return, we recommend these alternatives:
+                    Based on your return, here are some alternatives you might love:
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-3">
                     {aiRecommendations.map((suggestion, index) => (
-                      <div key={index} className="p-3 border rounded">
+                      <div key={index} className="p-4 rounded-lg border bg-gradient-to-r from-primary/5 to-transparent">
                         <div className="flex justify-between items-start">
-                          <div>
-                            <h4 className="font-medium">{suggestion.suggestedProduct}</h4>
-                            <p className="text-sm text-gray-600">{suggestion.reasoning}</p>
+                          <div className="space-y-1">
+                            <h4 className="font-medium text-primary">{suggestion.suggestedProduct}</h4>
+                            <p className="text-sm text-muted-foreground">{suggestion.reasoning}</p>
                           </div>
-                          <Badge variant="secondary">
+                          <Badge variant="secondary" className="bg-primary/10 text-primary">
                             {Math.round(suggestion.confidence)}% match
                           </Badge>
                         </div>
@@ -383,23 +504,26 @@ const CustomerReturnsPortal = () => {
             )}
 
             {returns.length > 0 && (
-              <Card>
+              <Card className="max-w-2xl mx-auto">
                 <CardHeader>
-                  <CardTitle>Your Return Requests</CardTitle>
+                  <CardTitle className="flex items-center gap-2">
+                    <Clock className="h-5 w-5" />
+                    Your Return History
+                  </CardTitle>
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-3">
                     {returns.map((returnRequest) => (
-                      <div key={returnRequest.id} className="p-3 border rounded">
+                      <div key={returnRequest.id} className="p-4 rounded-lg border">
                         <div className="flex justify-between items-start">
-                          <div>
+                          <div className="space-y-1">
                             <h4 className="font-medium">Return #{returnRequest.id.slice(0, 8)}</h4>
-                            <p className="text-sm text-gray-600">
-                              Status: <Badge variant="outline">{returnRequest.status}</Badge>
-                            </p>
-                            <p className="text-sm text-gray-600">Items: {returnRequest.items.length}</p>
+                            <div className="flex items-center gap-3 text-sm text-muted-foreground">
+                              <span>Status: <Badge variant="outline">{returnRequest.status}</Badge></span>
+                              <span>Items: {returnRequest.items.length}</span>
+                            </div>
                           </div>
-                          <p className="text-sm text-gray-500">
+                          <p className="text-sm text-muted-foreground">
                             {new Date(returnRequest.created_at).toLocaleDateString()}
                           </p>
                         </div>
@@ -411,7 +535,8 @@ const CustomerReturnsPortal = () => {
             )}
 
             <div className="text-center">
-              <Button onClick={resetForm}>
+              <Button onClick={resetForm} variant="outline" className="flex items-center gap-2">
+                <RefreshCw className="h-4 w-4" />
                 Start New Return
               </Button>
             </div>
@@ -424,34 +549,54 @@ const CustomerReturnsPortal = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 py-8">
-      <div className="max-w-4xl mx-auto px-4">
-        <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">
-            Return Request
-          </h1>
-          <p className="text-gray-600">
-            Easy returns with AI-powered exchange suggestions
-          </p>
+    <div className="min-h-screen bg-background">
+      {/* Header */}
+      <div className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 sticky top-0 z-50">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+          <div className="text-center space-y-2">
+            <h1 className="text-2xl font-bold">Return Request</h1>
+            <p className="text-sm text-muted-foreground">
+              Hassle-free returns with intelligent recommendations
+            </p>
+          </div>
         </div>
+      </div>
 
+      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Progress indicator */}
-        <div className="flex justify-center mb-8">
-          <div className="flex items-center space-x-2">
-            {['Order Lookup', 'Select Items', 'Reason', 'Confirmation'].map((label, index) => (
-              <React.Fragment key={label}>
-                <div className={`px-3 py-1 rounded text-sm ${
-                  ['lookup', 'select', 'reason', 'confirmation'].indexOf(step) >= index
-                    ? 'bg-blue-600 text-white'
-                    : 'bg-gray-200 text-gray-600'
-                }`}>
-                  {label}
-                </div>
-                {index < 3 && (
-                  <ArrowRight className="h-4 w-4 text-gray-400" />
-                )}
-              </React.Fragment>
-            ))}
+        <div className="mb-8">
+          <div className="flex justify-center mb-4">
+            <div className="flex items-center space-x-2 sm:space-x-4">
+              {steps.map((stepItem, index) => {
+                const Icon = stepItem.icon;
+                const isActive = index <= currentStepIndex;
+                const isCurrent = index === currentStepIndex;
+                
+                return (
+                  <React.Fragment key={stepItem.key}>
+                    <div className={`flex items-center space-x-2 px-3 py-2 rounded-full text-sm font-medium transition-all duration-200 ${
+                      isActive 
+                        ? isCurrent 
+                          ? 'bg-primary text-primary-foreground shadow-sm'
+                          : 'bg-primary/10 text-primary'
+                        : 'bg-muted text-muted-foreground'
+                    }`}>
+                      <Icon className="h-4 w-4" />
+                      <span className="hidden sm:inline">{stepItem.label}</span>
+                    </div>
+                    {index < steps.length - 1 && (
+                      <ArrowRight className={`h-4 w-4 transition-colors ${
+                        index < currentStepIndex ? 'text-primary' : 'text-muted-foreground'
+                      }`} />
+                    )}
+                  </React.Fragment>
+                );
+              })}
+            </div>
+          </div>
+          
+          <div className="max-w-md mx-auto">
+            <Progress value={progressValue} className="h-2" />
           </div>
         </div>
 
