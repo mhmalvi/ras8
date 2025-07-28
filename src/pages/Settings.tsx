@@ -182,8 +182,20 @@ const Settings = () => {
                   </div>
                   
                   <div className="flex items-center justify-between pt-2">
-                    <span className="text-sm font-medium text-primary">Configure</span>
-                    <ArrowRight className="h-4 w-4 text-primary" />
+                    <Button 
+                      variant="ghost" 
+                      size="sm"
+                      className="text-primary hover:text-primary-foreground hover:bg-primary p-2 h-auto"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        console.log('🖱️ Configure button clicked:', option.id, 'path:', option.path);
+                        handleCardClick(option.path);
+                      }}
+                    >
+                      <span className="text-sm font-medium">Configure</span>
+                      <ArrowRight className="h-4 w-4 ml-2" />
+                    </Button>
                   </div>
                 </div>
               </CardContent>
