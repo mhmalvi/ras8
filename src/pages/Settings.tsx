@@ -81,6 +81,7 @@ const Settings = () => {
   ];
 
   const handleCardClick = (path: string) => {
+    console.log('🔄 Navigating to:', path);
     navigate(path);
   };
 
