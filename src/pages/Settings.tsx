@@ -82,7 +82,11 @@ const Settings = () => {
 
   const handleCardClick = (path: string) => {
     console.log('🔄 Navigating to:', path);
-    navigate(path);
+    try {
+      navigate(path);
+    } catch (error) {
+      console.error('❌ Navigation error:', error);
+    }
   };
 
   return (
@@ -149,7 +153,12 @@ const Settings = () => {
             <Card 
               key={option.id}
               className={`cursor-pointer transition-all duration-300 hover:shadow-lg hover:scale-105 ${option.color}`}
-              onClick={() => handleCardClick(option.path)}
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                console.log('🖱️ Card clicked:', option.id, 'path:', option.path);
+                handleCardClick(option.path);
+              }}
             >
               <CardHeader className="pb-4">
                 <div className="flex items-center justify-between">
