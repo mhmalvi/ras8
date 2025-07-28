@@ -5,7 +5,9 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Search, User, Mail, Calendar, TrendingUp, Eye } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Separator } from "@/components/ui/separator";
+import { Search, User, Mail, Calendar, TrendingUp, Eye, Package, DollarSign } from "lucide-react";
 import AppLayout from "@/components/AppLayout";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -22,6 +24,9 @@ const Customers = () => {
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
+  const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
+  const [customerReturns, setCustomerReturns] = useState<any[]>([]);
+  const [returnsLoading, setReturnsLoading] = useState(false);
 
   useEffect(() => {
     fetchCustomers();
@@ -76,6 +81,35 @@ const Customers = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const fetchCustomerReturns = async (customerEmail: string) => {
+    setReturnsLoading(true);
+    try {
+      const { data: returns, error } = await supabase
+        .from('returns')
+        .select(`
+          *,
+          return_items (
+            *
+          )
+        `)
+        .eq('customer_email', customerEmail)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      setCustomerReturns(returns || []);
+    } catch (error) {
+      console.error('Error fetching customer returns:', error);
+      setCustomerReturns([]);
+    } finally {
+      setReturnsLoading(false);
+    }
+  };
+
+  const handleViewCustomer = async (customer: Customer) => {
+    setSelectedCustomer(customer);
+    await fetchCustomerReturns(customer.email);
   };
 
   const filteredCustomers = customers.filter(customer =>
@@ -195,16 +229,119 @@ const Customers = () => {
                     <TableCell>${customer.totalAmount.toFixed(2)}</TableCell>
                     <TableCell>{new Date(customer.lastReturn).toLocaleDateString()}</TableCell>
                     <TableCell>
-                      <Button 
-                        variant="ghost" 
-                        size="sm"
-                        className="h-8 w-8 p-0"
-                        onClick={() => {
-                          console.log('View customer:', customer.email);
-                        }}
-                      >
-                        <Eye className="h-4 w-4" />
-                      </Button>
+                      <Dialog>
+                        <DialogTrigger asChild>
+                          <Button 
+                            variant="ghost" 
+                            size="sm"
+                            className="h-8 w-8 p-0"
+                            onClick={() => handleViewCustomer(customer)}
+                          >
+                            <Eye className="h-4 w-4" />
+                          </Button>
+                        </DialogTrigger>
+                        <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+                          <DialogHeader>
+                            <DialogTitle className="flex items-center gap-2">
+                              <User className="h-5 w-5" />
+                              Customer Details: {customer.email}
+                            </DialogTitle>
+                          </DialogHeader>
+                          
+                          {selectedCustomer && selectedCustomer.email === customer.email && (
+                            <div className="space-y-6">
+                              {/* Customer Summary */}
+                              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                                <div className="bg-muted/30 rounded-lg p-4">
+                                  <div className="flex items-center gap-2 mb-2">
+                                    <Package className="h-4 w-4 text-muted-foreground" />
+                                    <span className="text-sm font-medium">Total Returns</span>
+                                  </div>
+                                  <p className="text-2xl font-semibold">{customer.totalReturns}</p>
+                                </div>
+                                
+                                <div className="bg-muted/30 rounded-lg p-4">
+                                  <div className="flex items-center gap-2 mb-2">
+                                    <DollarSign className="h-4 w-4 text-muted-foreground" />
+                                    <span className="text-sm font-medium">Total Value</span>
+                                  </div>
+                                  <p className="text-2xl font-semibold">${customer.totalAmount.toFixed(2)}</p>
+                                </div>
+                                
+                                <div className="bg-muted/30 rounded-lg p-4">
+                                  <div className="flex items-center gap-2 mb-2">
+                                    <Calendar className="h-4 w-4 text-muted-foreground" />
+                                    <span className="text-sm font-medium">Last Return</span>
+                                  </div>
+                                  <p className="text-lg font-medium">
+                                    {new Date(customer.lastReturn).toLocaleDateString()}
+                                  </p>
+                                </div>
+                                
+                                <div className="bg-muted/30 rounded-lg p-4">
+                                  <div className="flex items-center gap-2 mb-2">
+                                    <TrendingUp className="h-4 w-4 text-muted-foreground" />
+                                    <span className="text-sm font-medium">Status</span>
+                                  </div>
+                                  <Badge variant={getStatusColor(customer.status) as any}>
+                                    {customer.status}
+                                  </Badge>
+                                </div>
+                              </div>
+
+                              <Separator />
+
+                              {/* Return History */}
+                              <div>
+                                <h3 className="text-lg font-medium mb-4">Return History</h3>
+                                {returnsLoading ? (
+                                  <div className="text-center py-8">
+                                    <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary mx-auto"></div>
+                                    <p className="text-muted-foreground mt-2">Loading returns...</p>
+                                  </div>
+                                ) : customerReturns.length > 0 ? (
+                                  <div className="space-y-3">
+                                    {customerReturns.map((returnRecord) => (
+                                      <div key={returnRecord.id} className="border rounded-lg p-4">
+                                        <div className="flex items-center justify-between mb-2">
+                                          <h4 className="font-medium">Return #{returnRecord.id.slice(0, 8)}</h4>
+                                          <Badge variant={returnRecord.status === 'completed' ? 'default' : 'secondary'}>
+                                            {returnRecord.status}
+                                          </Badge>
+                                        </div>
+                                        <div className="grid grid-cols-2 gap-4 text-sm">
+                                          <div>
+                                            <span className="text-muted-foreground">Order ID:</span>
+                                            <p className="font-medium">{returnRecord.shopify_order_id}</p>
+                                          </div>
+                                          <div>
+                                            <span className="text-muted-foreground">Amount:</span>
+                                            <p className="font-medium">${returnRecord.total_amount}</p>
+                                          </div>
+                                          <div>
+                                            <span className="text-muted-foreground">Date:</span>
+                                            <p className="font-medium">
+                                              {new Date(returnRecord.created_at).toLocaleDateString()}
+                                            </p>
+                                          </div>
+                                          <div>
+                                            <span className="text-muted-foreground">Reason:</span>
+                                            <p className="font-medium">{returnRecord.reason || 'Not specified'}</p>
+                                          </div>
+                                        </div>
+                                      </div>
+                                    ))}
+                                  </div>
+                                ) : (
+                                  <p className="text-muted-foreground text-center py-8">
+                                    No detailed return data available.
+                                  </p>
+                                )}
+                              </div>
+                            </div>
+                          )}
+                        </DialogContent>
+                      </Dialog>
                     </TableCell>
                   </TableRow>
                 ))}
