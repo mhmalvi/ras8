@@ -2,6 +2,7 @@
 import { AppSidebar } from "@/components/AppSidebar";
 import { SidebarProvider } from "@/components/ui/sidebar";
 import UserMenu from "@/components/UserMenu";
+import { NotificationDropdown } from "@/components/NotificationDropdown";
 import { useMerchantProfile } from "@/hooks/useMerchantProfile";
 import { useAtomicAuth } from "@/contexts/AtomicAuthContext";
 import ProfileCreator from "@/components/ProfileCreator";
@@ -86,7 +87,8 @@ const AppLayout = ({ children }: AppLayoutProps) => {
         <div className="flex-1 flex flex-col">
           {/* Header */}
           <header className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 px-8 py-6">
-            <div className="flex items-center justify-end">
+            <div className="flex items-center justify-end space-x-4">
+              <NotificationDropdown />
               <UserMenu />
             </div>
           </header>

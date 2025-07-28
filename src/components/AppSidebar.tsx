@@ -2,6 +2,7 @@
 import { Calendar, Home, Inbox, Search, Settings, User, Package, BarChart, Activity, Webhook, TrendingUp, Users, Bell, CreditCard, HelpCircle } from "lucide-react"
 import { NavLink, useLocation } from "react-router-dom"
 import { cn } from "@/lib/utils"
+import { SubscriptionInfo } from "@/components/SubscriptionInfo"
 
 import {
   Sidebar,
@@ -93,9 +94,13 @@ export function AppSidebar() {
           </SidebarGroupContent>
         </SidebarGroup>
 
-        {/* Support Section at Bottom */}
+        {/* Subscription & Version Info + Support Section at Bottom */}
         <SidebarGroup className="mt-auto">
-          <SidebarGroupContent>
+          <SidebarGroupContent className="space-y-2">
+            {/* Subscription and Version Info */}
+            <SubscriptionInfo isCollapsed={isCollapsed} />
+            
+            {/* Support Menu */}
             <SidebarMenu>
               {supportItems.map((item) => (
                 <SidebarMenuItem key={item.title}>
