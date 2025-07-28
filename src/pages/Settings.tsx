@@ -11,7 +11,7 @@ import {
   Users,
   Zap
 } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import AppLayout from "@/components/AppLayout";
 import { useRealBillingData } from "@/hooks/useRealBillingData";
 import { useSubscription } from "@/hooks/useSubscription";
@@ -176,20 +176,13 @@ const Settings = () => {
                   </div>
                   
                   <div className="flex items-center justify-between pt-2">
-                    <Button 
-                      variant="ghost" 
-                      size="sm"
-                      className="text-primary hover:text-primary-foreground hover:bg-primary p-2 h-auto"
-                      onClick={(e) => {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        console.log('🖱️ Configure button clicked:', option.id, 'path:', option.path);
-                        handleCardClick(option.path);
-                      }}
+                    <Link 
+                      to={option.path}
+                      className="inline-flex items-center text-primary hover:text-primary-foreground hover:bg-primary p-2 h-auto rounded-md transition-colors"
                     >
                       <span className="text-sm font-medium">Configure</span>
                       <ArrowRight className="h-4 w-4 ml-2" />
-                    </Button>
+                    </Link>
                   </div>
                 </div>
               </CardContent>
