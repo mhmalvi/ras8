@@ -46,8 +46,7 @@ export const useMerchantProfile = () => {
       const { data: profileData, error: profileError } = await supabase
         .from('profiles')
         .select('*')
-        .eq('id', user.id)
-        .single();
+        .eq('id', user.id);
 
       if (profileError) {
         console.error('💥 Error fetching profile:', profileError);
@@ -63,17 +62,27 @@ export const useMerchantProfile = () => {
         throw profileError;
       }
 
-      console.log('✅ Profile fetched:', profileData);
-      setProfile(profileData);
+      // Handle both single object and array responses
+      const profile = Array.isArray(profileData) ? profileData[0] : profileData;
+      
+      if (!profile) {
+        console.log('⚠️ No profile data found');
+        setError('Profile not found. Please contact support.');
+        setLoading(false);
+        return;
+      }
+
+      console.log('✅ Profile fetched:', profile);
+      setProfile(profile);
 
       // If user has a merchant_id, fetch merchant details
-      if (profileData?.merchant_id) {
-        console.log('🏪 Fetching merchant details for:', profileData.merchant_id);
+      if (profile?.merchant_id) {
+        console.log('🏪 Fetching merchant details for:', profile.merchant_id);
         
         const { data: merchantData, error: merchantError } = await supabase
           .from('merchants')
           .select('*')
-          .eq('id', profileData.merchant_id)
+          .eq('id', profile.merchant_id)
           .single();
 
         if (merchantError) {
