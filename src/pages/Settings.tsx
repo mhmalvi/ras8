@@ -25,7 +25,7 @@ import { Plus, Activity } from "lucide-react";
 import { useWebhookMonitoring } from "@/hooks/useWebhookMonitoring";
 
 const Settings = () => {
-  const [activeTab, setActiveTab] = useState('system');
+  const [activeTab, setActiveTab] = useState('billing');
   const { toast } = useToast();
 
   // Billing-related hooks
@@ -451,14 +451,7 @@ const Settings = () => {
           {/* Settings Tabs */}
           <section className="animate-fade-in">
             <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-8">
-              <TabsList className="grid w-full grid-cols-4 max-w-lg h-12">
-                <TabsTrigger 
-                  value="system" 
-                  className="flex items-center space-x-2 transition-all duration-200"
-                >
-                  <Shield className="h-4 w-4" />
-                  <span className="hidden sm:block">System</span>
-                </TabsTrigger>
+              <TabsList className="grid w-full grid-cols-3 max-w-lg h-12">
                 <TabsTrigger 
                   value="billing" 
                   className="flex items-center space-x-2 transition-all duration-200"
@@ -474,32 +467,13 @@ const Settings = () => {
                   <span className="hidden sm:block">Webhooks</span>
                 </TabsTrigger>
                 <TabsTrigger 
-                  value="notifications"
+                  value="integrations"
                   className="flex items-center space-x-2 transition-all duration-200"
                 >
-                  <Bell className="h-4 w-4" />
-                  <span className="hidden sm:block">Notifications</span>
+                  <Shield className="h-4 w-4" />
+                  <span className="hidden sm:block">Integrations</span>
                 </TabsTrigger>
               </TabsList>
-              
-              <TabsContent value="system" className="space-y-0">
-                <Card className="shadow-sm hover:shadow-md transition-shadow duration-300">
-                  <CardHeader className="pb-4">
-                    <CardTitle className="flex items-center space-x-2 text-foreground">
-                      <div className="bg-primary/10 p-2 rounded-lg">
-                        <Shield className="h-5 w-5 text-primary" />
-                      </div>
-                      <span>System Configuration</span>
-                    </CardTitle>
-                    <CardDescription className="text-muted-foreground">
-                      Configure your Shopify integration and system settings
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <SystemSetup />
-                  </CardContent>
-                </Card>
-              </TabsContent>
               
               <TabsContent value="billing" className="space-y-0">
                 <BillingTabContent />
@@ -509,21 +483,24 @@ const Settings = () => {
                 <WebhooksTabContent />
               </TabsContent>
               
-              <TabsContent value="notifications" className="space-y-0">
+              <TabsContent value="integrations" className="space-y-0">
                 <Card className="shadow-sm hover:shadow-md transition-shadow duration-300">
                   <CardHeader className="pb-4">
                     <CardTitle className="flex items-center space-x-2 text-foreground">
                       <div className="bg-primary/10 p-2 rounded-lg">
-                        <Bell className="h-5 w-5 text-primary" />
+                        <Shield className="h-5 w-5 text-primary" />
                       </div>
-                      <span>Notification Settings</span>
+                      <span>Integrations & Security</span>
                     </CardTitle>
                     <CardDescription className="text-muted-foreground">
-                      Configure email notifications and alerts
+                      Manage system integrations and security settings
                     </CardDescription>
                   </CardHeader>
                   <CardContent>
-                    <EmailNotificationSettings />
+                    <div className="space-y-6">
+                      <SystemSetup />
+                      <EmailNotificationSettings />
+                    </div>
                   </CardContent>
                 </Card>
               </TabsContent>

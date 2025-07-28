@@ -33,9 +33,19 @@ const mainItems = [
     icon: BarChart,
   },
   {
-    title: "Performance",
-    url: "/performance",
+    title: "AI Insights",
+    url: "/ai-insights",
     icon: TrendingUp,
+  },
+  {
+    title: "Products",
+    url: "/products",
+    icon: Inbox,
+  },
+  {
+    title: "Automations",
+    url: "/automations",
+    icon: Activity,
   },
   {
     title: "Customers",
