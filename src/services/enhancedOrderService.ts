@@ -70,7 +70,7 @@ export class EnhancedOrderService {
           created_at,
           order_items (
             id,
-            shopify_product_id,
+            product_id,
             product_name,
             price,
             quantity
@@ -99,7 +99,7 @@ export class EnhancedOrderService {
         created_at: order.created_at,
         items: (order.order_items || []).map((item: any) => ({
           id: item.id,
-          product_id: item.shopify_product_id,
+          product_id: item.product_id,
           product_name: item.product_name,
           price: item.price,
           quantity: item.quantity
@@ -254,7 +254,7 @@ export class EnhancedOrderService {
       if (shopifyOrder.line_items?.length > 0 && order?.id) {
         const items = shopifyOrder.line_items.map((item: any) => ({
           order_id: order.id,
-          shopify_product_id: item.product_id?.toString() || item.id?.toString(),
+          product_id: item.product_id?.toString() || item.id?.toString(),
           product_name: item.name,
           quantity: item.quantity,
           price: parseFloat(item.price)
