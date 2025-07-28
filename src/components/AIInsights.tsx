@@ -1,11 +1,16 @@
 
+import { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
-import { Brain, TrendingUp, AlertCircle, Lightbulb, Star, ThumbsUp } from "lucide-react";
+import { Brain, TrendingUp, AlertCircle, Lightbulb, Star, ThumbsUp, Loader2 } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
 
 const AIInsights = () => {
+  const [actionLoading, setActionLoading] = useState<string | null>(null);
+  const { toast } = useToast();
+
   const insights = [
     {
       type: "performance",
@@ -68,6 +73,27 @@ const AIInsights = () => {
       case "trend": return TrendingUp;
       case "opportunity": return Lightbulb;
       default: return AlertCircle;
+    }
+  };
+
+  const handleInsightAction = async (action: string, type: string) => {
+    setActionLoading(action);
+    try {
+      // Simulate API call
+      await new Promise(resolve => setTimeout(resolve, 1500));
+      
+      toast({
+        title: "Action Applied",
+        description: `${action} has been implemented successfully.`,
+      });
+    } catch (error) {
+      toast({
+        title: "Action Failed",
+        description: "Failed to apply the action. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setActionLoading(null);
     }
   };
 
@@ -160,8 +186,20 @@ const AIInsights = () => {
                         {insight.confidence}% confidence
                       </div>
                     </div>
-                    <Button variant="outline" size="sm">
-                      {insight.action}
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      onClick={() => handleInsightAction(insight.action, insight.type)}
+                      disabled={actionLoading === insight.action}
+                    >
+                      {actionLoading === insight.action ? (
+                        <>
+                          <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                          Applying...
+                        </>
+                      ) : (
+                        insight.action
+                      )}
                     </Button>
                   </div>
                 </div>

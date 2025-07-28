@@ -323,11 +323,15 @@ const EnhancedWebhookManager = () => {
                     </div>
                     
                     <div className="flex items-center gap-2">
-                      <WebhookTestDialog
-                        webhook={webhook}
-                        onTest={(w) => testWebhook(w)}
-                        isLoading={loading}
-                      />
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => testWebhook(webhook)}
+                        disabled={loading}
+                      >
+                        <TestTube className="h-4 w-4 mr-1" />
+                        Test
+                      </Button>
                       <Switch
                         checked={webhook.active}
                         onCheckedChange={(checked) => toggleWebhook(webhook.id, checked)}

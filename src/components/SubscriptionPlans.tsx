@@ -1,12 +1,16 @@
 
+import { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Check, Crown, Zap, Rocket } from "lucide-react";
+import { Check, Crown, Zap, Rocket, Loader2 } from "lucide-react";
 import { useSubscription } from "@/hooks/useSubscription";
+import { useToast } from "@/hooks/use-toast";
 
 const SubscriptionPlans = () => {
+  const [actionLoading, setActionLoading] = useState<string | null>(null);
   const { subscriptionData, createCheckout, loading } = useSubscription();
+  const { toast } = useToast();
 
   const plans = [
     {
@@ -59,8 +63,19 @@ const SubscriptionPlans = () => {
     }
   ];
 
-  const handleSelectPlan = (planId: string) => {
-    createCheckout(planId);
+  const handleSelectPlan = async (planId: string) => {
+    setActionLoading(planId);
+    try {
+      await createCheckout(planId);
+    } catch (error) {
+      toast({
+        title: "Checkout Failed",
+        description: "Failed to create checkout session. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setActionLoading(null);
+    }
   };
 
   return (
@@ -116,16 +131,22 @@ const SubscriptionPlans = () => {
               
               <Button
                 onClick={() => handleSelectPlan(plan.id)}
-                disabled={loading || isCurrentPlan}
+                disabled={loading || isCurrentPlan || actionLoading === plan.id}
                 className="w-full mt-6"
                 variant={isCurrentPlan ? "outline" : (plan.popular ? "default" : "outline")}
               >
-                {isCurrentPlan 
-                  ? 'Current Plan' 
-                  : isTrialing 
-                    ? 'Trialing' 
-                    : `Start ${plan.name} Plan`
-                }
+                {actionLoading === plan.id ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Creating checkout...
+                  </>
+                ) : isCurrentPlan ? (
+                  'Current Plan'
+                ) : isTrialing ? (
+                  'Trialing'
+                ) : (
+                  `Start ${plan.name} Plan`
+                )}
               </Button>
               
               {!isCurrentPlan && !isTrialing && (
