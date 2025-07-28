@@ -131,7 +131,7 @@ const AIInsightsDashboard = () => {
       ];
       
       setInsights(fallbackInsights);
-      console.log('✅ Fallback insights generated from real data');
+      // console.log('✅ Fallback insights generated from real data'); // Development logging
     } catch (fallbackError) {
       console.error('❌ Failed to generate fallback insights:', fallbackError);
       setInsights([]);

@@ -79,19 +79,19 @@ export const useAIIntegration = () => {
         if (aiResponse.success && !aiResponse.fallback) {
           edgeFunctionsActive = true;
           apiKeyConfigured = true;
-          console.log('✅ AI functions working with real OpenAI data');
+          // console.log('✅ AI functions working with real OpenAI data'); // Development logging
         } else if (aiResponse.fallback) {
           edgeFunctionsActive = true;
           apiKeyConfigured = false;
           lastError = aiResponse.error || 'Using fallback responses - API key may not be configured';
-          console.log('⚠️ AI functions working but using fallback data');
+          // console.log('⚠️ AI functions working but using fallback data'); // Development logging
         } else {
           lastError = aiResponse.error || 'AI function returned unsuccessful response';
-          console.log('❌ AI functions not working properly');
+          // console.log('❌ AI functions not working properly'); // Development logging
         }
       } else {
         lastError = testError?.message || 'Failed to invoke AI function';
-        console.log('💥 Error invoking AI function:', testError);
+        // console.log('💥 Error invoking AI function:', testError); // Development logging
       }
 
       // Get AI performance metrics from actual data
