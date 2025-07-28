@@ -4,9 +4,11 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
+import { Separator } from "@/components/ui/separator";
 import AppLayout from "@/components/AppLayout";
-import { MessageSquare, Mail, Phone, Send, ExternalLink, HelpCircle, FileText, Video } from "lucide-react";
+import { MessageSquare, Mail, Phone, Send, ExternalLink, HelpCircle, FileText, Video, Clock, CheckCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { cn } from "@/lib/utils";
 
 const SupportCenter = () => {
   const { toast } = useToast();
@@ -116,138 +118,236 @@ const SupportCenter = () => {
 
   return (
     <AppLayout>
-      <div className="space-y-6">
-        <div>
-          <h1 className="text-2xl font-semibold text-foreground">Support Center</h1>
-          <p className="text-sm text-muted-foreground mt-1">
-            Get help and support for your return automation platform
-          </p>
-        </div>
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="space-y-8">
+          {/* Header Section */}
+          <div className="animate-fade-in">
+            <h1 className="text-3xl font-bold bg-gradient-to-r from-primary to-blue-600 bg-clip-text text-transparent">
+              Support Center
+            </h1>
+            <p className="text-muted-foreground mt-2 text-lg">
+              Get help and support for your return automation platform
+            </p>
+            <Separator className="mt-4" />
+          </div>
 
-        {/* Support Channels */}
-        <div className="grid gap-4 md:grid-cols-3">
-          {supportChannels.map((channel, index) => (
-            <Card key={index}>
-              <CardContent className="p-6">
-                <div className="flex items-start space-x-4">
-                  <div className="bg-blue-100 p-3 rounded-lg">
-                    {channel.icon}
+          {/* Support Channels */}
+          <section className="animate-fade-in">
+            <div className="mb-6">
+              <h2 className="text-xl font-semibold text-foreground mb-2">Contact Support</h2>
+              <p className="text-muted-foreground">Choose your preferred way to get in touch with our team</p>
+            </div>
+            
+            <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+              {supportChannels.map((channel, index) => (
+                <Card 
+                  key={index} 
+                  className={cn(
+                    "transition-all duration-300 hover:shadow-lg hover:scale-105 cursor-pointer group",
+                    "border-border hover:border-primary/50"
+                  )}
+                >
+                  <CardContent className="p-6">
+                    <div className="flex items-start space-x-4">
+                      <div className="bg-primary/10 p-3 rounded-xl group-hover:bg-primary/20 transition-colors">
+                        <div className="text-primary">
+                          {channel.icon}
+                        </div>
+                      </div>
+                      <div className="flex-1 space-y-2">
+                        <h3 className="font-semibold text-foreground group-hover:text-primary transition-colors">
+                          {channel.title}
+                        </h3>
+                        <p className="text-sm text-muted-foreground">{channel.description}</p>
+                        <p className="text-sm font-medium text-primary">{channel.action}</p>
+                        <div className="flex items-center space-x-2">
+                          <Clock className="h-3 w-3 text-muted-foreground" />
+                          <Badge variant="secondary" className="text-xs">
+                            {channel.available}
+                          </Badge>
+                        </div>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          </section>
+
+          {/* Support Form & Resources */}
+          <section className="animate-fade-in">
+            <div className="grid gap-8 lg:grid-cols-2">
+              {/* Contact Form */}
+              <Card className="shadow-sm hover:shadow-md transition-shadow duration-300">
+                <CardHeader className="pb-4">
+                  <CardTitle className="flex items-center space-x-2 text-foreground">
+                    <div className="bg-primary/10 p-2 rounded-lg">
+                      <Send className="h-5 w-5 text-primary" />
+                    </div>
+                    <span>Submit Support Ticket</span>
+                  </CardTitle>
+                  <CardDescription className="text-muted-foreground">
+                    Describe your issue and we'll get back to you promptly
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <form onSubmit={handleSubmit} className="space-y-6">
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium text-foreground">Subject *</label>
+                      <Input
+                        className="transition-all duration-200 focus:ring-2 focus:ring-primary/20"
+                        placeholder="Brief description of your issue"
+                        value={formData.subject}
+                        onChange={(e) => handleInputChange('subject', e.target.value)}
+                        required
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium text-foreground">Email *</label>
+                      <Input
+                        type="email"
+                        className="transition-all duration-200 focus:ring-2 focus:ring-primary/20"
+                        placeholder="your.email@company.com"
+                        value={formData.email}
+                        onChange={(e) => handleInputChange('email', e.target.value)}
+                        required
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium text-foreground">Message *</label>
+                      <Textarea
+                        className="transition-all duration-200 focus:ring-2 focus:ring-primary/20 resize-none"
+                        placeholder="Provide detailed information about your issue..."
+                        rows={4}
+                        value={formData.message}
+                        onChange={(e) => handleInputChange('message', e.target.value)}
+                        required
+                      />
+                    </div>
+                    <Button 
+                      type="submit" 
+                      disabled={isSubmitting} 
+                      className="w-full transition-all duration-200 hover:shadow-lg"
+                    >
+                      {isSubmitting ? (
+                        <div className="flex items-center space-x-2">
+                          <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div>
+                          <span>Submitting...</span>
+                        </div>
+                      ) : (
+                        <div className="flex items-center space-x-2">
+                          <Send className="h-4 w-4" />
+                          <span>Submit Ticket</span>
+                        </div>
+                      )}
+                    </Button>
+                  </form>
+                </CardContent>
+              </Card>
+
+              {/* Resources */}
+              <Card className="shadow-sm hover:shadow-md transition-shadow duration-300">
+                <CardHeader className="pb-4">
+                  <CardTitle className="flex items-center space-x-2 text-foreground">
+                    <div className="bg-primary/10 p-2 rounded-lg">
+                      <HelpCircle className="h-5 w-5 text-primary" />
+                    </div>
+                    <span>Help Resources</span>
+                  </CardTitle>
+                  <CardDescription className="text-muted-foreground">
+                    Find answers and learn more about the platform
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  {resources.map((resource, index) => (
+                    <div 
+                      key={index} 
+                      className={cn(
+                        "flex items-center justify-between p-4 border rounded-xl",
+                        "hover:bg-muted/50 hover:border-primary/30 cursor-pointer transition-all duration-200",
+                        "group hover:shadow-sm"
+                      )}
+                    >
+                      <div className="flex items-center space-x-4">
+                        <div className="bg-primary/10 p-3 rounded-lg group-hover:bg-primary/20 transition-colors">
+                          <div className="text-primary">
+                            {resource.icon}
+                          </div>
+                        </div>
+                        <div className="space-y-1">
+                          <p className="font-medium text-foreground group-hover:text-primary transition-colors">
+                            {resource.title}
+                          </p>
+                          <p className="text-sm text-muted-foreground">{resource.description}</p>
+                        </div>
+                      </div>
+                      <ExternalLink className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors" />
+                    </div>
+                  ))}
+                </CardContent>
+              </Card>
+            </div>
+          </section>
+
+          {/* FAQ */}
+          <section className="animate-fade-in">
+            <Card className="shadow-sm hover:shadow-md transition-shadow duration-300">
+              <CardHeader className="pb-4">
+                <CardTitle className="flex items-center space-x-2 text-foreground">
+                  <div className="bg-primary/10 p-2 rounded-lg">
+                    <HelpCircle className="h-5 w-5 text-primary" />
                   </div>
-                  <div className="flex-1">
-                    <h3 className="font-semibold">{channel.title}</h3>
-                    <p className="text-sm text-muted-foreground mb-2">{channel.description}</p>
-                    <p className="text-sm font-medium text-blue-600">{channel.action}</p>
-                    <Badge variant="outline" className="mt-2 text-xs">
-                      {channel.available}
-                    </Badge>
+                  <span>Frequently Asked Questions</span>
+                </CardTitle>
+                <CardDescription className="text-muted-foreground">
+                  Quick answers to common questions
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-6">
+                  {faqItems.map((item, index) => (
+                    <div 
+                      key={index} 
+                      className={cn(
+                        "border-b last:border-b-0 pb-6 last:pb-0",
+                        "hover:bg-muted/30 p-4 rounded-lg transition-colors duration-200 -mx-4"
+                      )}
+                    >
+                      <div className="flex items-start justify-between mb-3">
+                        <h4 className="font-semibold text-foreground text-base leading-relaxed pr-4">
+                          {item.question}
+                        </h4>
+                        <Badge variant="secondary" className="text-xs shrink-0">
+                          {item.category}
+                        </Badge>
+                      </div>
+                      <p className="text-muted-foreground leading-relaxed">{item.answer}</p>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          </section>
+
+          {/* Success Message Section */}
+          <section className="animate-fade-in">
+            <Card className="bg-primary/5 border-primary/20">
+              <CardContent className="p-6">
+                <div className="flex items-center space-x-4">
+                  <div className="bg-primary/10 p-3 rounded-full">
+                    <CheckCircle className="h-6 w-6 text-primary" />
+                  </div>
+                  <div>
+                    <h3 className="font-semibold text-foreground">Still need help?</h3>
+                    <p className="text-muted-foreground text-sm mt-1">
+                      Our support team typically responds within 2-4 hours during business hours.
+                    </p>
                   </div>
                 </div>
               </CardContent>
             </Card>
-          ))}
+          </section>
         </div>
-
-        <div className="grid gap-6 lg:grid-cols-2">
-          {/* Contact Form */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center space-x-2">
-                <Send className="h-5 w-5" />
-                <span>Submit Support Ticket</span>
-              </CardTitle>
-              <CardDescription>
-                Describe your issue and we'll get back to you promptly
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <form onSubmit={handleSubmit} className="space-y-4">
-                <div>
-                  <label className="text-sm font-medium">Subject</label>
-                  <Input
-                    placeholder="Brief description of your issue"
-                    value={formData.subject}
-                    onChange={(e) => handleInputChange('subject', e.target.value)}
-                    required
-                  />
-                </div>
-                <div>
-                  <label className="text-sm font-medium">Email</label>
-                  <Input
-                    type="email"
-                    placeholder="your.email@company.com"
-                    value={formData.email}
-                    onChange={(e) => handleInputChange('email', e.target.value)}
-                    required
-                  />
-                </div>
-                <div>
-                  <label className="text-sm font-medium">Message</label>
-                  <Textarea
-                    placeholder="Provide detailed information about your issue..."
-                    rows={4}
-                    value={formData.message}
-                    onChange={(e) => handleInputChange('message', e.target.value)}
-                    required
-                  />
-                </div>
-                <Button type="submit" disabled={isSubmitting} className="w-full">
-                  {isSubmitting ? "Submitting..." : "Submit Ticket"}
-                </Button>
-              </form>
-            </CardContent>
-          </Card>
-
-          {/* Resources */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Help Resources</CardTitle>
-              <CardDescription>
-                Find answers and learn more about the platform
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {resources.map((resource, index) => (
-                <div key={index} className="flex items-center justify-between p-3 border rounded-lg hover:bg-muted/50 cursor-pointer">
-                  <div className="flex items-center space-x-3">
-                    <div className="bg-blue-100 p-2 rounded">
-                      {resource.icon}
-                    </div>
-                    <div>
-                      <p className="font-medium">{resource.title}</p>
-                      <p className="text-sm text-muted-foreground">{resource.description}</p>
-                    </div>
-                  </div>
-                  <ExternalLink className="h-4 w-4 text-muted-foreground" />
-                </div>
-              ))}
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* FAQ */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Frequently Asked Questions</CardTitle>
-            <CardDescription>
-              Quick answers to common questions
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              {faqItems.map((item, index) => (
-                <div key={index} className="border-b last:border-b-0 pb-4 last:pb-0">
-                  <div className="flex items-start justify-between mb-2">
-                    <h4 className="font-medium">{item.question}</h4>
-                    <Badge variant="outline" className="text-xs">
-                      {item.category}
-                    </Badge>
-                  </div>
-                  <p className="text-sm text-muted-foreground">{item.answer}</p>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
       </div>
     </AppLayout>
   );
