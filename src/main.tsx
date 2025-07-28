@@ -5,9 +5,13 @@ import AtomicAppRouter from "./components/AtomicAppRouter.tsx";
 import "./index.css";
 import { registerSW } from "./utils/serviceWorkerRegistration";
 import { initSentry } from "./utils/sentry";
+import { initializeInteractivityFixes } from "./utils/interactivityFix";
 
 // Initialize Sentry for error monitoring
 initSentry();
+
+// Initialize UI interactivity fixes
+initializeInteractivityFixes();
 
 // Register service worker for caching
 registerSW({

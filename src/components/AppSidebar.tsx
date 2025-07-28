@@ -1,6 +1,7 @@
 
 import { Calendar, Home, Inbox, Search, Settings, User, Package, BarChart, Activity, Webhook, TrendingUp, Users, Bell, CreditCard, HelpCircle } from "lucide-react"
 import { NavLink, useLocation } from "react-router-dom"
+import { cn } from "@/lib/utils"
 
 import {
   Sidebar,
@@ -91,8 +92,15 @@ export function AppSidebar() {
               {items.map((item) => (
                 <SidebarMenuItem key={item.title}>
                   <SidebarMenuButton asChild>
-                    <NavLink to={item.url} end className={getNavCls}>
-                      <item.icon className="mr-2 h-4 w-4" />
+                    <NavLink 
+                      to={item.url} 
+                      end 
+                      className={({ isActive }) => cn(
+                        "flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-all hover:text-primary cursor-pointer",
+                        isActive ? "bg-muted text-primary font-medium" : "hover:bg-muted/50"
+                      )}
+                    >
+                      <item.icon className="h-4 w-4" />
                       {!isCollapsed && <span>{item.title}</span>}
                     </NavLink>
                   </SidebarMenuButton>
