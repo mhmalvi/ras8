@@ -1,7 +1,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAtomicAuth } from '@/contexts/AtomicAuthContext';
 import { useToast } from '@/hooks/use-toast';
 
 interface SubscriptionData {
@@ -13,7 +13,7 @@ interface SubscriptionData {
 }
 
 export const useSubscription = () => {
-  const { user } = useAuth();
+  const { user } = useAtomicAuth();
   const { toast } = useToast();
   const [subscriptionData, setSubscriptionData] = useState<SubscriptionData>({
     subscribed: false,
