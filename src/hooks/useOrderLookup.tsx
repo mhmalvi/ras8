@@ -1,6 +1,7 @@
 
 import { useState } from 'react';
 import { EnhancedOrderService } from '@/services/enhancedOrderService';
+import { OptimizedOrderService, type OptimizedOrder } from '@/services/optimizedOrderService';
 import { MonitoringService } from '@/utils/monitoringService';
 
 interface Order {
@@ -11,6 +12,10 @@ interface Order {
   status: string;
   created_at: string;
   items: any[];
+  merchant_info?: {
+    merchant_id: string;
+    shop_domain?: string;
+  };
 }
 
 export const useOrderLookup = () => {
@@ -29,16 +34,31 @@ export const useOrderLookup = () => {
     setOrder(null);
     
     try {
-      const orderData = await MonitoringService.monitorApiCall(
+      // Try optimized service first
+      const orderData: OptimizedOrder | null = await MonitoringService.monitorApiCall(
         'order_lookup',
-        () => EnhancedOrderService.lookupOrderWithFallback(orderNumber, email),
+        () => OptimizedOrderService.lookupOrder(orderNumber, email),
         { orderNumber, email }
       );
 
       if (orderData) {
-        setOrder(orderData);
+        // Convert to expected format
+        const formattedOrder: Order = {
+          id: orderData.id,
+          shopify_order_id: orderData.shopify_order_id,
+          customer_email: orderData.customer_email,
+          total_amount: orderData.total_amount,
+          status: orderData.status,
+          created_at: orderData.created_at,
+          items: orderData.items,
+          merchant_info: {
+            merchant_id: orderData.merchant_id
+          }
+        };
+        
+        setOrder(formattedOrder);
         MonitoringService.info('Order lookup successful', { orderId: orderData.id });
-        return orderData;
+        return formattedOrder;
       } else {
         const errorMessage = 'Order not found with provided details';
         setError(errorMessage);
