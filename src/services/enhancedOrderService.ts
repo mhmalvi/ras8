@@ -26,7 +26,7 @@ export class EnhancedOrderService {
     email: string
   ): Promise<EnhancedOrder | null> {
     try {
-      console.log(`🔍 Enhanced order lookup: ${orderNumber} for ${email}`);
+      console.log(`🔍 Enhanced order lookup v2: ${orderNumber} for ${email}`);
 
       // First try database lookup
       const dbOrder = await this.lookupFromDatabase(orderNumber, email);
