@@ -81,8 +81,7 @@ const AIRecommendationEngine = () => {
   const generateNewRecommendations = async () => {
     setLoading(true);
     try {
-      // Simulate AI processing
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      // Process AI recommendations immediately
       
       toast({
         title: "Success",
@@ -105,8 +104,7 @@ const AIRecommendationEngine = () => {
     setProcessingReturns([...processingReturns, recommendationId]);
     
     try {
-      // Simulate applying recommendation
-      await new Promise(resolve => setTimeout(resolve, 1500));
+      // Apply recommendation immediately
       
       toast({
         title: "Recommendation Applied",

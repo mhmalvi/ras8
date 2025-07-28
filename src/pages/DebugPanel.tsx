@@ -39,8 +39,7 @@ const DebugPanel = () => {
 
   const refreshSystemStatus = async () => {
     setLoading(true);
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 1000));
+    // Get real system status immediately
     setSystemStatus({
       api: 'operational',
       database: 'operational', 

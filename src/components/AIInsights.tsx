@@ -79,8 +79,7 @@ const AIInsights = () => {
   const handleInsightAction = async (action: string, type: string) => {
     setActionLoading(action);
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1500));
+      // Apply action immediately - no artificial delay needed
       
       toast({
         title: "Action Applied",

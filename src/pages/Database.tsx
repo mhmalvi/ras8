@@ -42,8 +42,8 @@ const DatabasePage = () => {
 
   const handleBackup = async () => {
     setLoading(true);
-    // Simulate backup process
-    await new Promise(resolve => setTimeout(resolve, 2000));
+    // In real implementation, this would call a backup service
+    // For now, just complete immediately
     setLoading(false);
   };
 
