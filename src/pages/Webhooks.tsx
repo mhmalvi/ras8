@@ -1,9 +1,11 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Webhook, Plus, Settings, Activity, Loader2 } from "lucide-react";
+import { Separator } from "@/components/ui/separator";
+import { Webhook, Plus, Settings, Activity, Loader2, Zap } from "lucide-react";
 import AppLayout from "@/components/AppLayout";
 import { useWebhookMonitoring } from "@/hooks/useWebhookMonitoring";
+import { cn } from "@/lib/utils";
 
 const Webhooks = () => {
   const { activities, stats, loading, error } = useWebhookMonitoring();

@@ -2,12 +2,14 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
-import { CreditCard, TrendingUp, Calendar, AlertTriangle, Loader2, ExternalLink } from "lucide-react";
+import { Separator } from "@/components/ui/separator";
+import { CreditCard, TrendingUp, Calendar, AlertTriangle, Loader2, ExternalLink, Crown, Zap, CheckCircle } from "lucide-react";
 import AppLayout from "@/components/AppLayout";
 import { useSubscription } from "@/hooks/useSubscription";
 import { useMerchantProfile } from "@/hooks/useMerchantProfile";
 import { useToast } from "@/hooks/use-toast";
 import { useState } from "react";
+import { cn } from "@/lib/utils";
 
 const Billing = () => {
   const { subscriptionData, loading, openCustomerPortal, createCheckout } = useSubscription();
@@ -81,202 +83,298 @@ const Billing = () => {
 
   return (
     <AppLayout>
-      <div className="space-y-6">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-semibold text-foreground">Billing & Subscription</h1>
-            <p className="text-sm text-muted-foreground mt-1">
-              Manage your subscription and billing information
-            </p>
-          </div>
-          <Button onClick={handleUpdatePayment} disabled={actionLoading} variant="outline">
-            {actionLoading ? (
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-            ) : (
-              <CreditCard className="mr-2 h-4 w-4" />
-            )}
-            Manage Billing
-          </Button>
-        </div>
-
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-          {/* Current Plan */}
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Current Plan</CardTitle>
-              <Badge variant="default" className="capitalize">
-                {currentPlan}
-              </Badge>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{planDetails.price}/month</div>
-              <p className="text-xs text-muted-foreground mb-4">
-                {planDetails.limit === 'Unlimited' ? 'Unlimited returns processing' : `Up to ${planDetails.limit} returns/month`}
-              </p>
-              <div className="space-y-2">
-                {planDetails.features.map((feature, index) => (
-                  <div key={index} className="flex items-center text-xs">
-                    <div className="w-1 h-1 bg-green-600 rounded-full mr-2" />
-                    {feature}
-                  </div>
-                ))}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="space-y-8">
+          {/* Header Section */}
+          <div className="animate-fade-in">
+            <div className="flex items-center justify-between">
+              <div>
+                <h1 className="text-3xl font-bold bg-gradient-to-r from-primary to-blue-600 bg-clip-text text-transparent">
+                  Billing & Subscription
+                </h1>
+                <p className="text-muted-foreground mt-2 text-lg">
+                  Manage your subscription and billing information
+                </p>
               </div>
-            </CardContent>
-          </Card>
+              <Button 
+                onClick={handleUpdatePayment} 
+                disabled={actionLoading} 
+                variant="outline"
+                className="transition-all duration-200 hover:shadow-lg"
+              >
+                {actionLoading ? (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : (
+                  <CreditCard className="mr-2 h-4 w-4" />
+                )}
+                Manage Billing
+              </Button>
+            </div>
+            <Separator className="mt-4" />
+          </div>
 
-          {/* Usage This Month */}
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Usage This Month</CardTitle>
-              <TrendingUp className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{currentUsage}</div>
-              <p className="text-xs text-muted-foreground mb-3">
-                {planDetails.limit === 'Unlimited' ? 'returns processed' : `of ${planDetails.limit} returns used`}
-              </p>
-              {planDetails.limit !== 'Unlimited' && (
-                <div className="space-y-2">
-                  <div className="flex justify-between text-xs">
-                    <span>Usage</span>
-                    <span>{Math.round(usagePercentage)}%</span>
+          {/* Metrics Cards */}
+          <section className="animate-fade-in">
+            <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+              {/* Current Plan */}
+              <Card className={cn(
+                "shadow-sm hover:shadow-md transition-all duration-300",
+                "border-border hover:border-primary/50"
+              )}>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
+                  <CardTitle className="text-sm font-medium text-foreground">Current Plan</CardTitle>
+                  <div className="flex items-center space-x-2">
+                    {currentPlan === 'pro' && <Crown className="h-4 w-4 text-yellow-500" />}
+                    {currentPlan === 'growth' && <Zap className="h-4 w-4 text-blue-500" />}
+                    <Badge 
+                      variant={currentPlan === 'pro' ? 'default' : 'secondary'} 
+                      className="capitalize"
+                    >
+                      {currentPlan}
+                    </Badge>
                   </div>
-                  <Progress 
-                    value={usagePercentage} 
-                    className={`h-2 ${usagePercentage > 90 ? '[&>div]:bg-red-500' : usagePercentage > 75 ? '[&>div]:bg-yellow-500' : '[&>div]:bg-green-500'}`}
-                  />
-                  {usagePercentage > 90 && (
-                    <p className="text-xs text-red-600 mt-1">⚠️ Approaching plan limit</p>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-3xl font-bold text-foreground mb-2">{planDetails.price}/month</div>
+                  <p className="text-sm text-muted-foreground mb-4">
+                    {planDetails.limit === 'Unlimited' ? 'Unlimited returns processing' : `Up to ${planDetails.limit} returns/month`}
+                  </p>
+                  <div className="space-y-3">
+                    {planDetails.features.map((feature, index) => (
+                      <div key={index} className="flex items-center text-sm">
+                        <CheckCircle className="h-4 w-4 text-green-500 mr-3 shrink-0" />
+                        <span className="text-foreground">{feature}</span>
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Usage This Month */}
+              <Card className="shadow-sm hover:shadow-md transition-all duration-300">
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
+                  <CardTitle className="text-sm font-medium text-foreground">Usage This Month</CardTitle>
+                  <div className="bg-primary/10 p-2 rounded-lg">
+                    <TrendingUp className="h-4 w-4 text-primary" />
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-3xl font-bold text-foreground mb-2">{currentUsage}</div>
+                  <p className="text-sm text-muted-foreground mb-4">
+                    {planDetails.limit === 'Unlimited' ? 'returns processed' : `of ${planDetails.limit} returns used`}
+                  </p>
+                  {planDetails.limit !== 'Unlimited' && (
+                    <div className="space-y-3">
+                      <div className="flex justify-between text-sm">
+                        <span className="text-muted-foreground">Usage</span>
+                        <span className="font-medium text-foreground">{Math.round(usagePercentage)}%</span>
+                      </div>
+                      <Progress 
+                        value={usagePercentage} 
+                        className={cn(
+                          "h-3 transition-all duration-300",
+                          usagePercentage > 90 ? '[&>div]:bg-red-500' : 
+                          usagePercentage > 75 ? '[&>div]:bg-yellow-500' : 
+                          '[&>div]:bg-green-500'
+                        )}
+                      />
+                      {usagePercentage > 90 && (
+                        <div className="flex items-center space-x-2 mt-2">
+                          <AlertTriangle className="h-4 w-4 text-red-500" />
+                          <p className="text-sm text-red-600 font-medium">Approaching plan limit</p>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+
+              {/* Next Billing */}
+              <Card className="shadow-sm hover:shadow-md transition-all duration-300">
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
+                  <CardTitle className="text-sm font-medium text-foreground">Next Billing</CardTitle>
+                  <div className="bg-primary/10 p-2 rounded-lg">
+                    <Calendar className="h-4 w-4 text-primary" />
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-3xl font-bold text-foreground mb-2">
+                    {subscriptionData?.subscription_end 
+                      ? new Date(subscriptionData.subscription_end).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+                      : 'Dec 15'
+                    }
+                  </div>
+                  <p className="text-sm text-muted-foreground mb-3">Next payment due</p>
+                  {subscriptionData?.trial_active && (
+                    <Badge variant="secondary" className="bg-blue-100 text-blue-700 border-blue-200">
+                      <CheckCircle className="h-3 w-3 mr-1" />
+                      Trial Active
+                    </Badge>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
+          </section>
+
+          {/* Plan Upgrade Options */}
+          {currentPlan !== 'pro' && (
+            <section className="animate-fade-in">
+              <Card className="shadow-sm hover:shadow-md transition-shadow duration-300">
+                <CardHeader className="pb-4">
+                  <CardTitle className="flex items-center space-x-2 text-foreground">
+                    <div className="bg-primary/10 p-2 rounded-lg">
+                      <Crown className="h-5 w-5 text-primary" />
+                    </div>
+                    <span>Upgrade Your Plan</span>
+                  </CardTitle>
+                  <CardDescription className="text-muted-foreground">
+                    Get more features and higher limits with an upgraded plan
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid gap-6 sm:grid-cols-1 md:grid-cols-2">
+                    {currentPlan === 'starter' && (
+                      <div className={cn(
+                        "border rounded-xl p-6 transition-all duration-300",
+                        "hover:border-primary/50 hover:shadow-lg hover:scale-105 cursor-pointer group"
+                      )}>
+                        <div className="flex items-center justify-between mb-4">
+                          <h3 className="font-semibold text-lg text-foreground group-hover:text-primary transition-colors">
+                            Growth Plan
+                          </h3>
+                          <Badge variant="secondary" className="bg-blue-100 text-blue-700">
+                            <Zap className="h-3 w-3 mr-1" />
+                            Popular
+                          </Badge>
+                        </div>
+                        <p className="text-3xl font-bold text-foreground mb-2">$79/month</p>
+                        <p className="text-muted-foreground mb-6">Up to 500 returns/month</p>
+                        <Button 
+                          onClick={() => handleUpgradePlan('growth')} 
+                          disabled={actionLoading}
+                          className="w-full transition-all duration-200 hover:shadow-lg"
+                        >
+                          {actionLoading ? (
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          ) : (
+                            <Zap className="mr-2 h-4 w-4" />
+                          )}
+                          Upgrade to Growth
+                        </Button>
+                      </div>
+                    )}
+                    <div className={cn(
+                      "border rounded-xl p-6 transition-all duration-300",
+                      "hover:border-primary/50 hover:shadow-lg hover:scale-105 cursor-pointer group"
+                    )}>
+                      <div className="flex items-center justify-between mb-4">
+                        <h3 className="font-semibold text-lg text-foreground group-hover:text-primary transition-colors">
+                          Pro Plan
+                        </h3>
+                        <Badge variant="default" className="bg-gradient-to-r from-yellow-500 to-orange-500 text-white">
+                          <Crown className="h-3 w-3 mr-1" />
+                          Best Value
+                        </Badge>
+                      </div>
+                      <p className="text-3xl font-bold text-foreground mb-2">$149/month</p>
+                      <p className="text-muted-foreground mb-6">Unlimited returns processing</p>
+                      <Button 
+                        onClick={() => handleUpgradePlan('pro')} 
+                        disabled={actionLoading}
+                        className="w-full transition-all duration-200 hover:shadow-lg"
+                      >
+                        {actionLoading ? (
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        ) : (
+                          <Crown className="mr-2 h-4 w-4" />
+                        )}
+                        Upgrade to Pro
+                      </Button>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </section>
+          )}
+
+          {/* Billing History */}
+          <section className="animate-fade-in">
+            <Card className="shadow-sm hover:shadow-md transition-shadow duration-300">
+              <CardHeader className="pb-4">
+                <CardTitle className="flex items-center space-x-2 text-foreground">
+                  <div className="bg-primary/10 p-2 rounded-lg">
+                    <ExternalLink className="h-5 w-5 text-primary" />
+                  </div>
+                  <span>Recent Invoices</span>
+                </CardTitle>
+                <CardDescription className="text-muted-foreground">
+                  Your billing history and payment records
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  {/* Mock invoice data - in real app, this would come from Stripe/billing_records */}
+                  <div className={cn(
+                    "flex items-center justify-between p-4 border rounded-xl",
+                    "hover:bg-muted/30 transition-colors duration-200"
+                  )}>
+                    <div className="space-y-1">
+                      <p className="font-medium text-foreground">Invoice #INV-001</p>
+                      <p className="text-sm text-muted-foreground">
+                        {new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                      </p>
+                    </div>
+                    <div className="flex items-center space-x-4">
+                      <div className="text-right space-y-1">
+                        <p className="font-semibold text-foreground">{planDetails.price}</p>
+                        <Badge variant="secondary" className="text-green-600 bg-green-50 border-green-200">
+                          <CheckCircle className="h-3 w-3 mr-1" />
+                          Paid
+                        </Badge>
+                      </div>
+                      <Button variant="ghost" size="sm" className="hover:bg-primary/10">
+                        <ExternalLink className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+                  
+                  <div className={cn(
+                    "flex items-center justify-between p-4 border rounded-xl",
+                    "hover:bg-muted/30 transition-colors duration-200"
+                  )}>
+                    <div className="space-y-1">
+                      <p className="font-medium text-foreground">Invoice #INV-002</p>
+                      <p className="text-sm text-muted-foreground">
+                        {new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                      </p>
+                    </div>
+                    <div className="flex items-center space-x-4">
+                      <div className="text-right space-y-1">
+                        <p className="font-semibold text-foreground">{planDetails.price}</p>
+                        <Badge variant="secondary" className="text-green-600 bg-green-50 border-green-200">
+                          <CheckCircle className="h-3 w-3 mr-1" />
+                          Paid
+                        </Badge>
+                      </div>
+                      <Button variant="ghost" size="sm" className="hover:bg-primary/10">
+                        <ExternalLink className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+
+                  {!subscriptionData?.subscribed && (
+                    <div className="text-center py-8 text-muted-foreground">
+                      <div className="bg-muted/30 rounded-xl p-6">
+                        <p className="font-medium">No billing history available</p>
+                        <p className="text-sm mt-1">Invoices will appear here after your first payment</p>
+                      </div>
+                    </div>
                   )}
                 </div>
-              )}
-            </CardContent>
-          </Card>
-
-          {/* Next Billing */}
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Next Billing</CardTitle>
-              <Calendar className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">
-                {subscriptionData?.subscription_end 
-                  ? new Date(subscriptionData.subscription_end).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
-                  : 'Dec 15'
-                }
-              </div>
-              <p className="text-xs text-muted-foreground">Next payment due</p>
-              {subscriptionData?.trial_active && (
-                <Badge variant="outline" className="mt-2 bg-blue-100 text-blue-700">
-                  Trial Active
-                </Badge>
-              )}
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
+          </section>
         </div>
-
-        {/* Plan Upgrade Options */}
-        {currentPlan !== 'pro' && (
-          <Card>
-            <CardHeader>
-              <CardTitle>Upgrade Your Plan</CardTitle>
-              <CardDescription>
-                Get more features and higher limits with an upgraded plan
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="grid gap-4 md:grid-cols-2">
-                {currentPlan === 'starter' && (
-                  <div className="border rounded-lg p-4">
-                    <div className="flex items-center justify-between mb-2">
-                      <h3 className="font-semibold">Growth Plan</h3>
-                      <Badge variant="outline">Popular</Badge>
-                    </div>
-                    <p className="text-2xl font-bold mb-2">$79/month</p>
-                    <p className="text-sm text-muted-foreground mb-4">Up to 500 returns/month</p>
-                    <Button 
-                      onClick={() => handleUpgradePlan('growth')} 
-                      disabled={actionLoading}
-                      className="w-full"
-                    >
-                      Upgrade to Growth
-                    </Button>
-                  </div>
-                )}
-                <div className="border rounded-lg p-4">
-                  <div className="flex items-center justify-between mb-2">
-                    <h3 className="font-semibold">Pro Plan</h3>
-                    <Badge variant="outline">Best Value</Badge>
-                  </div>
-                  <p className="text-2xl font-bold mb-2">$149/month</p>
-                  <p className="text-sm text-muted-foreground mb-4">Unlimited returns processing</p>
-                  <Button 
-                    onClick={() => handleUpgradePlan('pro')} 
-                    disabled={actionLoading}
-                    className="w-full"
-                  >
-                    Upgrade to Pro
-                  </Button>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Billing History */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Recent Invoices</CardTitle>
-            <CardDescription>Your billing history and payment records</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              {/* Mock invoice data - in real app, this would come from Stripe/billing_records */}
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="font-medium">Invoice #INV-001</p>
-                  <p className="text-sm text-muted-foreground">
-                    {new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
-                  </p>
-                </div>
-                <div className="flex items-center space-x-3">
-                  <div className="text-right">
-                    <p className="font-medium">{planDetails.price}</p>
-                    <Badge variant="outline" className="text-green-600">Paid</Badge>
-                  </div>
-                  <Button variant="ghost" size="sm">
-                    <ExternalLink className="h-4 w-4" />
-                  </Button>
-                </div>
-              </div>
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="font-medium">Invoice #INV-002</p>
-                  <p className="text-sm text-muted-foreground">
-                    {new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
-                  </p>
-                </div>
-                <div className="flex items-center space-x-3">
-                  <div className="text-right">
-                    <p className="font-medium">{planDetails.price}</p>
-                    <Badge variant="outline" className="text-green-600">Paid</Badge>
-                  </div>
-                  <Button variant="ghost" size="sm">
-                    <ExternalLink className="h-4 w-4" />
-                  </Button>
-                </div>
-              </div>
-
-              {!subscriptionData?.subscribed && (
-                <div className="text-center py-4 text-muted-foreground">
-                  <p>No billing history available</p>
-                  <p className="text-sm">Invoices will appear here after your first payment</p>
-                </div>
-              )}
-            </div>
-          </CardContent>
-        </Card>
       </div>
     </AppLayout>
   );

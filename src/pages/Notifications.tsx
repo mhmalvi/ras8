@@ -11,6 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Skeleton } from '@/components/ui/skeleton';
 import { useNotifications } from '@/hooks/useNotifications';
 import AppLayout from '@/components/AppLayout';
+import { cn } from "@/lib/utils";
 
 const Notifications = () => {
   const { toast } = useToast();
@@ -93,31 +94,38 @@ const Notifications = () => {
 
   return (
     <AppLayout>
-      <div className="space-y-6">
-        {/* Header */}
-        <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-semibold text-foreground">Notifications</h1>
-          <p className="text-sm text-muted-foreground mt-1">
-            Stay updated with returns, AI suggestions, and system alerts
-          </p>
-        </div>
-        <div className="flex items-center gap-3">
-          {unreadCount > 0 && (
-            <Badge variant="destructive" className="px-3 py-1">
-              {unreadCount} unread
-            </Badge>
-          )}
-          <Button
-            onClick={() => markAllAsRead()}
-            variant="outline"
-            disabled={unreadCount === 0 || loading}
-          >
-            <CheckCheck className="h-4 w-4 mr-2" />
-            Mark All Read
-          </Button>
-        </div>
-      </div>
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="space-y-8">
+          {/* Header Section */}
+          <div className="animate-fade-in">
+            <div className="flex items-center justify-between">
+              <div>
+                <h1 className="text-3xl font-bold bg-gradient-to-r from-primary to-blue-600 bg-clip-text text-transparent">
+                  Notifications
+                </h1>
+                <p className="text-muted-foreground mt-2 text-lg">
+                  Stay updated with returns, AI suggestions, and system alerts
+                </p>
+              </div>
+              <div className="flex items-center gap-3">
+                {unreadCount > 0 && (
+                  <Badge variant="destructive" className="px-3 py-1">
+                    {unreadCount} unread
+                  </Badge>
+                )}
+                <Button
+                  onClick={() => markAllAsRead()}
+                  variant="outline"
+                  disabled={unreadCount === 0 || loading}
+                  className="transition-all duration-200 hover:shadow-lg"
+                >
+                  <CheckCheck className="h-4 w-4 mr-2" />
+                  Mark All Read
+                </Button>
+              </div>
+            </div>
+            <Separator className="mt-4" />
+          </div>
 
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
@@ -421,6 +429,7 @@ const Notifications = () => {
           </div>
         </CardContent>
       </Card>
+        </div>
       </div>
     </AppLayout>
   );

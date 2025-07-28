@@ -3,10 +3,12 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
+import { Separator } from "@/components/ui/separator";
 import AppLayout from "@/components/AppLayout";
 import { LoadingSpinner } from "@/components/LoadingStates";
 import { usePerformanceData } from "@/hooks/usePerformanceData";
-import { TrendingUp, TrendingDown, RefreshCw, Clock, Users, ArrowRightLeft, Cpu } from "lucide-react";
+import { TrendingUp, TrendingDown, RefreshCw, Clock, Users, ArrowRightLeft, Cpu, Zap } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 const Performance = () => {
   const { performanceData, loading, error, refetch } = usePerformanceData();
@@ -117,19 +119,30 @@ const Performance = () => {
 
   return (
     <AppLayout>
-      <div className="space-y-6">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-semibold text-foreground">Performance</h1>
-            <p className="text-sm text-muted-foreground mt-1">
-              Monitor return processing performance and optimization metrics
-            </p>
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="space-y-8">
+          {/* Header Section */}
+          <div className="animate-fade-in">
+            <div className="flex items-center justify-between">
+              <div>
+                <h1 className="text-3xl font-bold bg-gradient-to-r from-primary to-blue-600 bg-clip-text text-transparent">
+                  Performance
+                </h1>
+                <p className="text-muted-foreground mt-2 text-lg">
+                  Monitor return processing performance and optimization metrics
+                </p>
+              </div>
+              <Button 
+                onClick={refetch} 
+                variant="outline"
+                className="transition-all duration-200 hover:shadow-lg"
+              >
+                <RefreshCw className="mr-2 h-4 w-4" />
+                Refresh
+              </Button>
+            </div>
+            <Separator className="mt-4" />
           </div>
-          <Button onClick={refetch} variant="outline">
-            <RefreshCw className="mr-2 h-4 w-4" />
-            Refresh
-          </Button>
-        </div>
 
         {/* Performance Metrics Grid */}
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
@@ -189,6 +202,7 @@ const Performance = () => {
             )}
           </CardContent>
         </Card>
+        </div>
       </div>
     </AppLayout>
   );
