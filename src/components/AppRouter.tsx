@@ -8,6 +8,8 @@ import Index from '@/pages/Index';
 import Dashboard from '@/pages/Dashboard';
 import Returns from '@/pages/Returns';
 import Analytics from '@/pages/Analytics';
+import AIInsights from '@/pages/AIInsights';
+import Products from '@/pages/Products';
 import Settings from '@/pages/Settings';
 import Auth from '@/pages/Auth';
 import CustomerPortal from '@/pages/CustomerPortal';
@@ -27,6 +29,7 @@ import ApiMonitor from '@/pages/ApiMonitor';
 import UserManagement from '@/pages/UserManagement';
 import SystemReports from '@/pages/SystemReports';
 import SupportCenter from '@/pages/SupportCenter';
+import Support from '@/pages/Support';
 
 const AppRouter = () => {
   return (
@@ -111,6 +114,22 @@ const AppRouter = () => {
             } 
           />
           <Route 
+            path="/ai-insights" 
+            element={
+              <ProtectedRoute>
+                <AIInsights />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/products" 
+            element={
+              <ProtectedRoute>
+                <Products />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
             path="/automations" 
             element={
               <ProtectedRoute>
@@ -186,7 +205,7 @@ const AppRouter = () => {
             path="/support" 
             element={
               <ProtectedRoute>
-                <SupportCenter />
+                <Support />
               </ProtectedRoute>
             } 
           />

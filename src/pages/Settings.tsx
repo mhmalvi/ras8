@@ -6,9 +6,9 @@ import { Settings as SettingsIcon, CreditCard, Bell, Webhook, Shield } from "luc
 import AppLayout from "@/components/AppLayout";
 import { cn } from "@/lib/utils";
 
-// Import existing components
-import SystemSetup from "@/components/SystemSetup";
-import EmailNotificationSettings from "@/components/EmailNotificationSettings";
+// Import components
+import SystemPreferences from "@/components/SystemPreferences";
+import IntegrationsManager from "@/components/IntegrationsManager";
 
 // Import billing content from the existing Billing page
 import { Badge } from "@/components/ui/badge";
@@ -454,7 +454,7 @@ const Settings = () => {
           {/* Settings Tabs */}
           <section className="animate-fade-in">
             <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-8">
-              <TabsList className="grid w-full grid-cols-4 max-w-2xl h-12">
+              <TabsList className="grid w-full grid-cols-5 max-w-3xl h-12">
                 <TabsTrigger 
                   value="billing" 
                   className="flex items-center space-x-2 transition-all duration-200"
@@ -483,6 +483,13 @@ const Settings = () => {
                   <Activity className="h-4 w-4" />
                   <span className="hidden sm:block">Automation</span>
                 </TabsTrigger>
+                <TabsTrigger 
+                  value="system"
+                  className="flex items-center space-x-2 transition-all duration-200"
+                >
+                  <SettingsIcon className="h-4 w-4" />
+                  <span className="hidden sm:block">System</span>
+                </TabsTrigger>
               </TabsList>
               
               <TabsContent value="billing" className="space-y-0">
@@ -494,25 +501,7 @@ const Settings = () => {
               </TabsContent>
               
               <TabsContent value="integrations" className="space-y-0">
-                <Card className="shadow-sm hover:shadow-md transition-shadow duration-300">
-                  <CardHeader className="pb-4">
-                    <CardTitle className="flex items-center space-x-2 text-foreground">
-                      <div className="bg-primary/10 p-2 rounded-lg">
-                        <Shield className="h-5 w-5 text-primary" />
-                      </div>
-                      <span>Integrations & Security</span>
-                    </CardTitle>
-                    <CardDescription className="text-muted-foreground">
-                      Manage system integrations and security settings
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-6">
-                      <SystemSetup />
-                      <EmailNotificationSettings />
-                    </div>
-                  </CardContent>
-                </Card>
+                <IntegrationsManager />
               </TabsContent>
 
               <TabsContent value="automation" className="space-y-0">
@@ -534,6 +523,10 @@ const Settings = () => {
                     </div>
                   </CardContent>
                 </Card>
+              </TabsContent>
+
+              <TabsContent value="system" className="space-y-0">
+                <SystemPreferences />
               </TabsContent>
             </Tabs>
           </section>
