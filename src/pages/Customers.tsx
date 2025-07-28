@@ -7,9 +7,10 @@ import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Separator } from "@/components/ui/separator";
-import { Search, User, Mail, Calendar, TrendingUp, Eye, Package, DollarSign } from "lucide-react";
+import { Search, User, Mail, Calendar, TrendingUp, Eye, Package, DollarSign, Users } from "lucide-react";
 import AppLayout from "@/components/AppLayout";
 import { supabase } from "@/integrations/supabase/client";
+import { cn } from "@/lib/utils";
 
 interface Customer {
   email: string;
@@ -131,13 +132,18 @@ const Customers = () => {
 
   return (
     <AppLayout>
-      <div className="space-y-8">
-        <div>
-          <h1 className="text-2xl font-semibold text-foreground">Customers</h1>
-          <p className="text-sm text-muted-foreground mt-1">
-            View and manage customer information and return history
-          </p>
-        </div>
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="space-y-8">
+          {/* Header Section */}
+          <div className="animate-fade-in">
+            <h1 className="text-3xl font-bold bg-gradient-to-r from-primary to-blue-600 bg-clip-text text-transparent">
+              Customers
+            </h1>
+            <p className="text-muted-foreground mt-2 text-lg">
+              View and manage customer information and return history
+            </p>
+            <Separator className="mt-4" />
+          </div>
         
         {/* Stats Cards */}
         <div className="grid gap-4 md:grid-cols-4">
@@ -356,6 +362,7 @@ const Customers = () => {
               </p>
             </div>
           )}
+        </div>
         </div>
       </div>
     </AppLayout>
