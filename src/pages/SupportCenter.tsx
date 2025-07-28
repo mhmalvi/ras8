@@ -1,68 +1,118 @@
-
+import { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Badge } from "@/components/ui/badge";
 import AppLayout from "@/components/AppLayout";
-import { MessageSquare, Search, Clock, AlertTriangle, CheckCircle, Users, Mail, Phone, MessageCircle } from "lucide-react";
+import { MessageSquare, Mail, Phone, Send, ExternalLink, HelpCircle, FileText, Video } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
 
-const SupportCenterPage = () => {
-  const tickets = [
+const SupportCenter = () => {
+  const { toast } = useToast();
+  const [formData, setFormData] = useState({
+    subject: '',
+    email: '',
+    message: ''
+  });
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSubmitting(true);
+
+    try {
+      // Simulate form submission - in real app, this would call a support ticket API
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      toast({
+        title: "Support ticket submitted",
+        description: "We'll get back to you within 24 hours via email.",
+      });
+      
+      setFormData({ subject: '', email: '', message: '' });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to submit support ticket. Please try again.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleInputChange = (field: string, value: string) => {
+    setFormData(prev => ({ ...prev, [field]: value }));
+  };
+
+  const faqItems = [
     {
-      id: "SUP-001",
-      subject: "Integration Issues with Shopify",
-      customer: "Sarah Johnson (Bloom & Co)",
-      priority: "high",
-      status: "open",
-      lastActivity: "2 hours ago",
-      assignee: "Admin Team"
+      question: "How do I set up Shopify integration?",
+      answer: "Navigate to Settings > Integrations and follow the OAuth flow to connect your Shopify store.",
+      category: "Integration"
     },
     {
-      id: "SUP-002", 
-      subject: "Billing Questions - Pro Plan",
-      customer: "Mike Chen (TechWear)",
-      priority: "medium",
-      status: "pending",
-      lastActivity: "1 day ago",
-      assignee: "Billing Team"
+      question: "How does AI return processing work?",
+      answer: "Our AI analyzes return requests and suggests optimal outcomes like exchanges or refunds based on product data and customer history.",
+      category: "AI Features"
     },
     {
-      id: "SUP-003",
-      subject: "Feature Request - Custom Branding",
-      customer: "Emma Wilson (Lifestyle Store)",
-      priority: "low",
-      status: "closed",
-      lastActivity: "3 days ago",
-      assignee: "Product Team"
+      question: "Can I customize return reasons?",
+      answer: "Yes, you can add custom return reasons in Settings > Return Management to match your business needs.",
+      category: "Customization"
     },
     {
-      id: "SUP-004",
-      subject: "API Rate Limiting Issues",
-      customer: "David Rodriguez (Fashion Hub)",
-      priority: "high",
-      status: "open",
-      lastActivity: "30 minutes ago",
-      assignee: "Technical Team"
+      question: "How do I upgrade my subscription plan?",
+      answer: "Go to Billing in your dashboard and click 'Upgrade Plan' to see available options and pricing.",
+      category: "Billing"
     }
   ];
 
-  const getStatusBadge = (status: string) => {
-    const variants = {
-      open: "bg-red-100 text-red-800",
-      pending: "bg-yellow-100 text-yellow-800",
-      closed: "bg-green-100 text-green-800"
-    };
-    return <Badge className={variants[status as keyof typeof variants]}>{status}</Badge>;
-  };
+  const supportChannels = [
+    {
+      icon: <Mail className="h-5 w-5" />,
+      title: "Email Support",
+      description: "Get help via email within 24 hours",
+      action: "support@returnautomation.com",
+      available: "24/7"
+    },
+    {
+      icon: <MessageSquare className="h-5 w-5" />,
+      title: "Live Chat",
+      description: "Chat with our support team",
+      action: "Start Chat",
+      available: "Mon-Fri 9AM-6PM EST"
+    },
+    {
+      icon: <Phone className="h-5 w-5" />,
+      title: "Phone Support",
+      description: "Speak directly with our team",
+      action: "+1 (555) 123-4567",
+      available: "Mon-Fri 9AM-6PM EST"
+    }
+  ];
 
-  const getPriorityBadge = (priority: string) => {
-    const variants = {
-      high: "bg-red-100 text-red-800",
-      medium: "bg-yellow-100 text-yellow-800", 
-      low: "bg-blue-100 text-blue-800"
-    };
-    return <Badge variant="outline" className={variants[priority as keyof typeof variants]}>{priority}</Badge>;
-  };
+  const resources = [
+    {
+      icon: <FileText className="h-5 w-5" />,
+      title: "Documentation",
+      description: "Comprehensive guides and API docs",
+      link: "#"
+    },
+    {
+      icon: <Video className="h-5 w-5" />,
+      title: "Video Tutorials",
+      description: "Step-by-step video walkthroughs",
+      link: "#"
+    },
+    {
+      icon: <HelpCircle className="h-5 w-5" />,
+      title: "Community Forum",
+      description: "Connect with other merchants",
+      link: "#"
+    }
+  ];
 
   return (
     <AppLayout>
@@ -70,131 +120,129 @@ const SupportCenterPage = () => {
         <div>
           <h1 className="text-2xl font-semibold text-foreground">Support Center</h1>
           <p className="text-sm text-muted-foreground mt-1">
-            Get help and manage support requests
+            Get help and support for your return automation platform
           </p>
         </div>
-        {/* Support Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+
+        {/* Support Channels */}
+        <div className="grid gap-4 md:grid-cols-3">
+          {supportChannels.map((channel, index) => (
+            <Card key={index}>
+              <CardContent className="p-6">
+                <div className="flex items-start space-x-4">
+                  <div className="bg-blue-100 p-3 rounded-lg">
+                    {channel.icon}
+                  </div>
+                  <div className="flex-1">
+                    <h3 className="font-semibold">{channel.title}</h3>
+                    <p className="text-sm text-muted-foreground mb-2">{channel.description}</p>
+                    <p className="text-sm font-medium text-blue-600">{channel.action}</p>
+                    <Badge variant="outline" className="mt-2 text-xs">
+                      {channel.available}
+                    </Badge>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+
+        <div className="grid gap-6 lg:grid-cols-2">
+          {/* Contact Form */}
           <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Open Tickets</CardTitle>
-              <MessageSquare className="h-4 w-4 text-muted-foreground" />
+            <CardHeader>
+              <CardTitle className="flex items-center space-x-2">
+                <Send className="h-5 w-5" />
+                <span>Submit Support Ticket</span>
+              </CardTitle>
+              <CardDescription>
+                Describe your issue and we'll get back to you promptly
+              </CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">23</div>
-              <p className="text-xs text-muted-foreground">5 high priority</p>
+              <form onSubmit={handleSubmit} className="space-y-4">
+                <div>
+                  <label className="text-sm font-medium">Subject</label>
+                  <Input
+                    placeholder="Brief description of your issue"
+                    value={formData.subject}
+                    onChange={(e) => handleInputChange('subject', e.target.value)}
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="text-sm font-medium">Email</label>
+                  <Input
+                    type="email"
+                    placeholder="your.email@company.com"
+                    value={formData.email}
+                    onChange={(e) => handleInputChange('email', e.target.value)}
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="text-sm font-medium">Message</label>
+                  <Textarea
+                    placeholder="Provide detailed information about your issue..."
+                    rows={4}
+                    value={formData.message}
+                    onChange={(e) => handleInputChange('message', e.target.value)}
+                    required
+                  />
+                </div>
+                <Button type="submit" disabled={isSubmitting} className="w-full">
+                  {isSubmitting ? "Submitting..." : "Submit Ticket"}
+                </Button>
+              </form>
             </CardContent>
           </Card>
-          
+
+          {/* Resources */}
           <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Avg Response Time</CardTitle>
-              <Clock className="h-4 w-4 text-muted-foreground" />
+            <CardHeader>
+              <CardTitle>Help Resources</CardTitle>
+              <CardDescription>
+                Find answers and learn more about the platform
+              </CardDescription>
             </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">2.4h</div>
-              <p className="text-xs text-muted-foreground">-30min from last week</p>
-            </CardContent>
-          </Card>
-          
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Resolution Rate</CardTitle>
-              <CheckCircle className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">94.2%</div>
-              <p className="text-xs text-muted-foreground">+2.1% this month</p>
-            </CardContent>
-          </Card>
-          
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Active Merchants</CardTitle>
-              <Users className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">248</div>
-              <p className="text-xs text-muted-foreground">Across all support channels</p>
+            <CardContent className="space-y-4">
+              {resources.map((resource, index) => (
+                <div key={index} className="flex items-center justify-between p-3 border rounded-lg hover:bg-muted/50 cursor-pointer">
+                  <div className="flex items-center space-x-3">
+                    <div className="bg-blue-100 p-2 rounded">
+                      {resource.icon}
+                    </div>
+                    <div>
+                      <p className="font-medium">{resource.title}</p>
+                      <p className="text-sm text-muted-foreground">{resource.description}</p>
+                    </div>
+                  </div>
+                  <ExternalLink className="h-4 w-4 text-muted-foreground" />
+                </div>
+              ))}
             </CardContent>
           </Card>
         </div>
 
-        {/* Quick Actions */}
+        {/* FAQ */}
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <MessageCircle className="h-5 w-5" />
-              Quick Actions
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <Button className="h-16 flex flex-col gap-2">
-                <Mail className="h-5 w-5" />
-                <span>Send Broadcast</span>
-              </Button>
-              <Button variant="outline" className="h-16 flex flex-col gap-2">
-                <Phone className="h-5 w-5" />
-                <span>Schedule Call</span>
-              </Button>
-              <Button variant="outline" className="h-16 flex flex-col gap-2">
-                <Users className="h-5 w-5" />
-                <span>Merchant Portal</span>
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Support Tickets */}
-        <Card>
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <div>
-                <CardTitle className="flex items-center gap-2">
-                  <MessageSquare className="h-5 w-5" />
-                  Support Tickets
-                </CardTitle>
-                <CardDescription>
-                  Monitor and manage customer support requests
-                </CardDescription>
-              </div>
-              <div className="flex items-center gap-2">
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                  <Input 
-                    placeholder="Search tickets..." 
-                    className="pl-10 w-64"
-                  />
-                </div>
-                <Button>New Ticket</Button>
-              </div>
-            </div>
+            <CardTitle>Frequently Asked Questions</CardTitle>
+            <CardDescription>
+              Quick answers to common questions
+            </CardDescription>
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              {tickets.map((ticket) => (
-                <div key={ticket.id} className="flex items-center justify-between p-4 border rounded-lg hover:bg-muted/50 cursor-pointer">
-                  <div className="flex items-center gap-4">
-                    <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
-                      <MessageSquare className="h-5 w-5 text-blue-600" />
-                    </div>
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2 mb-1">
-                        <p className="font-medium">{ticket.subject}</p>
-                        <span className="text-sm text-muted-foreground">#{ticket.id}</span>
-                      </div>
-                      <p className="text-sm text-muted-foreground">{ticket.customer}</p>
-                      <p className="text-xs text-muted-foreground">Assigned to {ticket.assignee} • {ticket.lastActivity}</p>
-                    </div>
+              {faqItems.map((item, index) => (
+                <div key={index} className="border-b last:border-b-0 pb-4 last:pb-0">
+                  <div className="flex items-start justify-between mb-2">
+                    <h4 className="font-medium">{item.question}</h4>
+                    <Badge variant="outline" className="text-xs">
+                      {item.category}
+                    </Badge>
                   </div>
-                  <div className="flex items-center gap-3">
-                    {getPriorityBadge(ticket.priority)}
-                    {getStatusBadge(ticket.status)}
-                    <Button variant="ghost" size="sm">
-                      View
-                    </Button>
-                  </div>
+                  <p className="text-sm text-muted-foreground">{item.answer}</p>
                 </div>
               ))}
             </div>
@@ -205,4 +253,4 @@ const SupportCenterPage = () => {
   );
 };
 
-export default SupportCenterPage;
+export default SupportCenter;
