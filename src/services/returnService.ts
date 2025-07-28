@@ -70,6 +70,12 @@ export class ReturnService {
       0
     );
 
+    // Get merchant_id from the order's merchant information
+    const merchantId = order.merchant_info?.merchant_id;
+    if (!merchantId) {
+      throw new Error('Unable to determine merchant for this order');
+    }
+
     // Create the return record
     const { data: returnRecord, error: returnError } = await supabase
       .from('returns')
@@ -79,7 +85,7 @@ export class ReturnService {
         reason: Object.values(returnData.returnReasons).join(', '),
         total_amount: totalAmount,
         status: 'requested',
-        merchant_id: null
+        merchant_id: merchantId
       })
       .select()
       .single();
