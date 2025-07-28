@@ -1,13 +1,15 @@
 
 import { useAtomicAuth } from '@/contexts/AtomicAuthContext';
 import { Button } from '@/components/ui/button';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { LogOut, User } from 'lucide-react';
+import { LogOut, User, Settings } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 
 const UserMenu = () => {
   const { user, signOut } = useAtomicAuth();
+  const navigate = useNavigate();
 
   const handleSignOut = async () => {
     try {
@@ -36,10 +38,16 @@ const UserMenu = () => {
           <User className="mr-2 h-4 w-4" />
           <div className="flex flex-col space-y-1">
             <span className="text-sm font-medium">Account</span>
-            <span className="text-xs text-slate-500">{user.email}</span>
+            <span className="text-xs text-muted-foreground">{user.email}</span>
           </div>
         </DropdownMenuItem>
-        <DropdownMenuItem onClick={handleSignOut} className="text-red-600">
+        <DropdownMenuSeparator />
+        <DropdownMenuItem onClick={() => navigate('/settings')} className="flex items-center">
+          <Settings className="mr-2 h-4 w-4" />
+          <span>Settings</span>
+        </DropdownMenuItem>
+        <DropdownMenuSeparator />
+        <DropdownMenuItem onClick={handleSignOut} className="text-destructive">
           <LogOut className="mr-2 h-4 w-4" />
           Sign out
         </DropdownMenuItem>

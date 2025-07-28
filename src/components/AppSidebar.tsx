@@ -15,7 +15,7 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar"
 
-const items = [
+const mainItems = [
   {
     title: "Dashboard",
     url: "/dashboard",
@@ -32,11 +32,6 @@ const items = [
     icon: BarChart,
   },
   {
-    title: "Webhooks",
-    url: "/webhook-dashboard",
-    icon: Webhook,
-  },
-  {
     title: "Performance",
     url: "/performance",
     icon: TrendingUp,
@@ -46,21 +41,9 @@ const items = [
     url: "/customers",
     icon: Users,
   },
-  {
-    title: "Notifications",
-    url: "/notifications",
-    icon: Bell,
-  },
-  {
-    title: "Billing",
-    url: "/billing",
-    icon: CreditCard,
-  },
-  {
-    title: "Settings",
-    url: "/settings",
-    icon: Settings,
-  },
+]
+
+const supportItems = [
   {
     title: "Support",
     url: "/support",
@@ -89,7 +72,32 @@ export function AppSidebar() {
 
           <SidebarGroupContent>
             <SidebarMenu>
-              {items.map((item) => (
+              {mainItems.map((item) => (
+                <SidebarMenuItem key={item.title}>
+                  <SidebarMenuButton asChild>
+                    <NavLink 
+                      to={item.url} 
+                      end 
+                      className={({ isActive }) => cn(
+                        "flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-all hover:text-primary cursor-pointer",
+                        isActive ? "bg-muted text-primary font-medium" : "hover:bg-muted/50"
+                      )}
+                    >
+                      <item.icon className="h-4 w-4" />
+                      {!isCollapsed && <span>{item.title}</span>}
+                    </NavLink>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              ))}
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+
+        {/* Support Section at Bottom */}
+        <SidebarGroup className="mt-auto">
+          <SidebarGroupContent>
+            <SidebarMenu>
+              {supportItems.map((item) => (
                 <SidebarMenuItem key={item.title}>
                   <SidebarMenuButton asChild>
                     <NavLink 

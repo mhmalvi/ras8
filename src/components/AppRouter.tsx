@@ -16,6 +16,7 @@ import Notifications from '@/pages/Notifications';
 import Customers from '@/pages/Customers';
 import Integrations from '@/pages/Integrations';
 import Webhooks from '@/pages/Webhooks';
+import Billing from '@/pages/Billing';
 import Security from '@/pages/Security';
 import Performance from '@/pages/Performance';
 import MasterAdmin from '@/pages/MasterAdmin';
@@ -74,10 +75,6 @@ const AppRouter = () => {
           <Route 
             path="/system-reports" 
             element={<SystemReports />}
-          />
-          <Route 
-            path="/support" 
-            element={<SupportCenter />}
           />
           
           {/* Protected Merchant Routes - isolated from master admin */}
@@ -154,6 +151,14 @@ const AppRouter = () => {
             } 
           />
           <Route 
+            path="/billing" 
+            element={
+              <ProtectedRoute>
+                <Billing />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
             path="/security" 
             element={
               <ProtectedRoute>
@@ -174,6 +179,14 @@ const AppRouter = () => {
             element={
               <ProtectedRoute>
                 <Settings />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/support" 
+            element={
+              <ProtectedRoute>
+                <SupportCenter />
               </ProtectedRoute>
             } 
           />
