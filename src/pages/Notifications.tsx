@@ -245,7 +245,13 @@ const Notifications = () => {
             </CardContent>
           </Card>
         ) : (
-          filteredNotifications.map((notification) => (
+          <>
+            {/* Force show notifications for debugging */}
+            <div className="text-sm bg-yellow-50 p-3 mb-4 rounded">
+              Showing {filteredNotifications.length} notifications. Raw data:
+              <pre className="text-xs mt-2">{JSON.stringify(filteredNotifications.slice(0, 2), null, 2)}</pre>
+            </div>
+            {filteredNotifications.map((notification) => (
             <Card 
               key={notification.id} 
               className={`transition-colors hover:shadow-md ${
@@ -313,7 +319,8 @@ const Notifications = () => {
                 </div>
               </CardContent>
             </Card>
-          ))
+            ))}
+          </>
         )}
       </div>
 
