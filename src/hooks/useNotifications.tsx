@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useMerchantProfile } from '@/hooks/useMerchantProfile';
 import { NotificationService, type Notification, type NotificationFilters } from '@/services/notificationService';
 import { supabase } from '@/integrations/supabase/client';
@@ -19,6 +19,9 @@ export const useNotifications = (filters: NotificationFilters = {}) => {
 
   const merchantId = profile?.merchant_id;
 
+  // Memoize filters to prevent unnecessary re-renders
+  const memoizedFilters = useMemo(() => filters, [JSON.stringify(filters)]);
+
   // Load notifications from the database
   const loadNotifications = useCallback(async () => {
     if (!merchantId) {
@@ -32,7 +35,7 @@ export const useNotifications = (filters: NotificationFilters = {}) => {
 
       // Load notifications and counts in parallel
       const [notificationsData, countsData] = await Promise.all([
-        NotificationService.getNotifications(merchantId, filters),
+        NotificationService.getNotifications(merchantId, memoizedFilters),
         NotificationService.getNotificationCounts(merchantId)
       ]);
 
@@ -47,7 +50,7 @@ export const useNotifications = (filters: NotificationFilters = {}) => {
     } finally {
       setLoading(false);
     }
-  }, [merchantId, filters]);
+  }, [merchantId, memoizedFilters]);
 
   // Mark notification as read
   const markAsRead = useCallback(async (notificationId: string) => {

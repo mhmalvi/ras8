@@ -203,10 +203,6 @@ const Notifications = () => {
 
       {/* Notifications List */}
       <div className="space-y-4">
-        {/* Debug info */}
-        <div className="text-xs text-slate-500 p-2 bg-slate-50 rounded">
-          Debug: {notifications.length} notifications, Filter: {filter}, Loading: {loading ? 'yes' : 'no'}
-        </div>
         {loading ? (
           <div className="space-y-4">
             {[...Array(3)].map((_, i) => (
@@ -245,13 +241,7 @@ const Notifications = () => {
             </CardContent>
           </Card>
         ) : (
-          <>
-            {/* Force show notifications for debugging */}
-            <div className="text-sm bg-yellow-50 p-3 mb-4 rounded">
-              Showing {filteredNotifications.length} notifications. Raw data:
-              <pre className="text-xs mt-2">{JSON.stringify(filteredNotifications.slice(0, 2), null, 2)}</pre>
-            </div>
-            {filteredNotifications.map((notification) => (
+          filteredNotifications.map((notification) => (
             <Card 
               key={notification.id} 
               className={`transition-colors hover:shadow-md ${
@@ -319,8 +309,7 @@ const Notifications = () => {
                 </div>
               </CardContent>
             </Card>
-            ))}
-          </>
+          ))
         )}
       </div>
 
