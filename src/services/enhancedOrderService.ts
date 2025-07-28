@@ -58,6 +58,7 @@ export class EnhancedOrderService {
     try {
       const cleanOrderNumber = orderNumber.replace('#', '');
       
+      // The orders table uses shopify_order_id, not order_number
       const { data: order, error } = await supabase
         .from('orders')
         .select(`
@@ -76,10 +77,16 @@ export class EnhancedOrderService {
           )
         `)
         .eq('customer_email', email.toLowerCase())
-        .or(`order_number.eq.${cleanOrderNumber},order_number.eq.#${cleanOrderNumber}`)
-        .single();
+        .or(`shopify_order_id.eq.${cleanOrderNumber},shopify_order_id.eq.#${cleanOrderNumber},shopify_order_id.eq.ORD-${cleanOrderNumber}`)
+        .maybeSingle();
 
-      if (error || !order) {
+      if (error) {
+        console.error('Database lookup error:', error);
+        return null;
+      }
+
+      if (!order) {
+        console.log('No order found in database for:', { orderNumber: cleanOrderNumber, email });
         return null;
       }
 
@@ -178,9 +185,10 @@ export class EnhancedOrderService {
       // Use the edge function instead of direct API call to avoid CORS
       const { data, error } = await supabase.functions.invoke('shopify-order-lookup', {
         body: {
-          shop_domain: shopDomain,
-          order_number: orderNumber,
-          customer_email: email
+          shopDomain: shopDomain,
+          orderNumber: orderNumber,
+          customerEmail: email,
+          accessToken: accessToken
         }
       });
 
@@ -189,11 +197,28 @@ export class EnhancedOrderService {
         return null;
       }
 
-      if (data && data.order) {
+      if (data && data.success && data.order) {
         console.log(`✅ Found order via edge function`);
-        return data.order;
+        // Convert the edge function response to the expected format
+        return {
+          id: data.order.id,
+          name: data.order.name,
+          email: data.order.email || data.order.customerEmail,
+          total_price: data.order.totalPrice,
+          financial_status: data.order.financialStatus,
+          fulfillment_status: data.order.fulfillmentStatus,
+          created_at: data.order.createdAt,
+          line_items: data.order.lineItems?.map((item: any) => ({
+            id: item.id,
+            name: item.name,
+            quantity: item.quantity,
+            price: item.price,
+            product_id: item.productId
+          })) || []
+        };
       }
 
+      console.log('No order found via edge function');
       return null;
     } catch (error) {
       console.error(`Shopify lookup error for ${shopDomain}:`, error);
@@ -203,36 +228,45 @@ export class EnhancedOrderService {
 
   private static async syncToDatabase(merchantId: string, shopifyOrder: any): Promise<void> {
     try {
+      // The orders table only has: id, shopify_order_id, customer_email, total_amount, status, created_at
       const orderData = {
-        merchant_id: merchantId,
-        shopify_order_id: shopifyOrder.id,
+        shopify_order_id: shopifyOrder.id.toString(),
         customer_email: shopifyOrder.email,
         total_amount: parseFloat(shopifyOrder.total_price),
-        status: shopifyOrder.financial_status,
-        order_number: shopifyOrder.name,
-        financial_status: shopifyOrder.financial_status,
-        fulfillment_status: shopifyOrder.fulfillment_status
+        status: shopifyOrder.financial_status || 'completed'
       };
 
       const { data: order, error: orderError } = await supabase
         .from('orders')
-        .upsert(orderData)
+        .upsert(orderData, { 
+          onConflict: 'shopify_order_id',
+          ignoreDuplicates: false 
+        })
         .select('id')
         .single();
 
-      if (orderError) throw orderError;
+      if (orderError) {
+        console.error('Order upsert error:', orderError);
+        throw orderError;
+      }
 
       // Sync order items
-      if (shopifyOrder.line_items?.length > 0) {
+      if (shopifyOrder.line_items?.length > 0 && order?.id) {
         const items = shopifyOrder.line_items.map((item: any) => ({
           order_id: order.id,
-          shopify_product_id: item.product_id,
+          shopify_product_id: item.product_id?.toString() || item.id?.toString(),
           product_name: item.name,
           quantity: item.quantity,
           price: parseFloat(item.price)
         }));
 
-        await supabase.from('order_items').upsert(items);
+        // Delete existing items first, then insert new ones
+        await supabase.from('order_items').delete().eq('order_id', order.id);
+        const { error: itemsError } = await supabase.from('order_items').insert(items);
+        
+        if (itemsError) {
+          console.error('Order items insert error:', itemsError);
+        }
       }
     } catch (error) {
       console.error('Sync to database failed:', error);
