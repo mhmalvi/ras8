@@ -73,36 +73,28 @@ const Dashboard: React.FC = () => {
   }
 
   return (
-    <AppLayout 
-      title="Merchant Dashboard" 
-      description="Welcome back to your returns automation platform"
-    >
+    <AppLayout>
       <div className="space-y-8">
-        {/* Dashboard Stats */}
+        <div>
+          <h1 className="text-2xl font-semibold text-foreground">Dashboard</h1>
+          <p className="text-sm text-muted-foreground mt-1">
+            Welcome back to your returns automation platform
+          </p>
+        </div>
+        
         <RealDashboardStats />
         
-        <Separator />
-        
-        {/* AI Insights */}
         <AIInsightsCard />
         
-        <Separator />
-        
-        {/* Recent Returns */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Recent Returns</CardTitle>
-            <CardDescription>
-              Latest return requests from your customers
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
+        <div>
+          <h2 className="text-lg font-medium text-foreground mb-4">Recent Returns</h2>
+          <div className="bg-background rounded-lg border">
             <RealReturnsTable 
               searchTerm=""
               statusFilter="all"
             />
-          </CardContent>
-        </Card>
+          </div>
+        </div>
       </div>
     </AppLayout>
   );

@@ -1,26 +1,19 @@
 
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import AnalyticsDashboard from "@/components/AnalyticsDashboard";
 import AppLayout from "@/components/AppLayout";
 
 const Analytics = () => {
   return (
-    <AppLayout 
-      title="Analytics" 
-      description="Track your returns performance and AI insights"
-    >
-      <div className="space-y-6">
-        <Card>
-          <CardHeader>
-            <CardTitle>Returns Analytics</CardTitle>
-            <CardDescription>
-              Comprehensive insights into your returns performance and trends
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <AnalyticsDashboard />
-          </CardContent>
-        </Card>
+    <AppLayout>
+      <div className="space-y-8">
+        <div>
+          <h1 className="text-2xl font-semibold text-foreground">Analytics</h1>
+          <p className="text-sm text-muted-foreground mt-1">
+            Track your returns performance and AI insights
+          </p>
+        </div>
+        
+        <AnalyticsDashboard />
       </div>
     </AppLayout>
   );

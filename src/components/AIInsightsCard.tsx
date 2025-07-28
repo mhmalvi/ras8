@@ -85,105 +85,104 @@ const AIInsightsCard = () => {
   }
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
+    <div className="bg-background rounded-lg border p-6">
+      <div className="flex items-center justify-between mb-6">
+        <div className="flex items-center gap-2">
           <Sparkles className="h-5 w-5 text-purple-600" />
-          AI Insights
-        </CardTitle>
-        <CardDescription className="flex items-center gap-4">
-          <span>{insights.length} total recommendations</span>
+          <h2 className="text-lg font-medium text-foreground">AI Insights</h2>
+        </div>
+        <div className="flex items-center gap-4 text-sm text-muted-foreground">
+          <span>{insights.length} recommendations</span>
           {acceptedInsights.length > 0 && (
-            <div className="flex items-center gap-1">
-              <TrendingUp className="h-4 w-4 text-green-600" />
-              <span className="text-sm font-medium text-green-600">
-                {acceptanceRate.toFixed(0)}% acceptance rate
+            <div className="flex items-center gap-1 text-emerald-600">
+              <TrendingUp className="h-3 w-3" />
+              <span className="font-medium">
+                {acceptanceRate.toFixed(0)}% accepted
               </span>
             </div>
           )}
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
-        {recentInsights.length === 0 ? (
-          <div className="text-center py-6">
-            <Brain className="h-12 w-12 text-slate-300 mx-auto mb-3" />
-            <p className="text-slate-500 text-sm">
-              No AI recommendations yet. They'll appear as returns come in.
-            </p>
-          </div>
-        ) : (
-          <div className="space-y-4">
-            {recentInsights.map((insight) => (
-              <div key={insight.id} className="border rounded-lg p-4 bg-gradient-to-r from-purple-50 to-blue-50">
-                <div className="flex items-start justify-between mb-2">
-                  <div className="flex-1">
-                    <h4 className="font-medium text-sm text-purple-900">
-                      {insight.suggestion}
-                    </h4>
-                    <p className="text-xs text-slate-600 mt-1">
-                      {insight.reasoning}
+        </div>
+      </div>
+      
+      {recentInsights.length === 0 ? (
+        <div className="text-center py-8">
+          <Brain className="h-10 w-10 text-muted-foreground mx-auto mb-3" />
+          <p className="text-sm text-muted-foreground">
+            No AI recommendations yet. They'll appear as returns come in.
+          </p>
+        </div>
+      ) : (
+        <div className="space-y-4">
+          {recentInsights.map((insight) => (
+            <div key={insight.id} className="border rounded-lg p-4">
+              <div className="flex items-start justify-between mb-3">
+                <div className="flex-1">
+                  <h4 className="font-medium text-sm text-foreground mb-1">
+                    {insight.suggestion}
+                  </h4>
+                  <p className="text-xs text-muted-foreground">
+                    {insight.reasoning}
+                  </p>
+                  {insight.customer_email && (
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Customer: {insight.customer_email}
                     </p>
-                    {insight.customer_email && (
-                      <p className="text-xs text-slate-500 mt-1">
-                        Customer: {insight.customer_email}
-                      </p>
-                    )}
-                  </div>
-                  <div className="ml-4">
-                    {getConfidenceBadge(insight.confidence)}
-                  </div>
+                  )}
                 </div>
+                <div className="ml-4">
+                  {getConfidenceBadge(insight.confidence)}
+                </div>
+              </div>
+              
+              <div className="flex items-center justify-between">
+                <span className="text-xs text-muted-foreground">
+                  {insight.confidence}% confidence
+                </span>
                 
-                <div className="flex items-center justify-between">
-                  <span className="text-xs text-purple-600 font-medium">
-                    {insight.confidence}% confidence
-                  </span>
-                  
-                  {insight.accepted === null && (
-                    <div className="flex gap-1">
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="h-7 px-2"
-                        onClick={() => handleFeedback(insight.id, true)}
-                      >
-                        <ThumbsUp className="h-3 w-3" />
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="h-7 px-2"
-                        onClick={() => handleFeedback(insight.id, false)}
-                      >
-                        <ThumbsDown className="h-3 w-3" />
-                      </Button>
-                    </div>
-                  )}
-                  
-                  {insight.accepted !== null && (
-                    <Badge variant={insight.accepted ? "default" : "secondary"} className="text-xs">
-                      {insight.accepted ? "Accepted" : "Declined"}
-                    </Badge>
-                  )}
-                </div>
+                {insight.accepted === null && (
+                  <div className="flex gap-1">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="h-7 px-2"
+                      onClick={() => handleFeedback(insight.id, true)}
+                    >
+                      <ThumbsUp className="h-3 w-3" />
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="h-7 px-2"
+                      onClick={() => handleFeedback(insight.id, false)}
+                    >
+                      <ThumbsDown className="h-3 w-3" />
+                    </Button>
+                  </div>
+                )}
+                
+                {insight.accepted !== null && (
+                  <Badge variant={insight.accepted ? "default" : "secondary"} className="text-xs">
+                    {insight.accepted ? "Accepted" : "Declined"}
+                  </Badge>
+                )}
               </div>
-            ))}
-            
-            {insights.length > 3 && (
-              <div className="text-center pt-2">
-                <Button 
-                  variant="ghost" 
-                  size="sm"
-                  onClick={() => navigate('/ai-insights')}
-                >
-                  View all {insights.length} insights
-                </Button>
-              </div>
-            )}
-          </div>
-        )}
-      </CardContent>
-    </Card>
+            </div>
+          ))}
+          
+          {insights.length > 3 && (
+            <div className="text-center pt-2">
+              <Button 
+                variant="ghost" 
+                size="sm"
+                onClick={() => navigate('/ai-insights')}
+              >
+                View all {insights.length} insights
+              </Button>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
   );
 };
 

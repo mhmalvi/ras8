@@ -90,30 +90,29 @@ const RealDashboardStats = () => {
   }
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
       {/* Header with refresh */}
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold text-slate-900">Advanced Analytics</h2>
-          <p className="text-slate-600">Real-time insights and predictive analytics</p>
+          <h2 className="text-lg font-medium text-foreground">Key Metrics</h2>
+          <p className="text-sm text-muted-foreground">Real-time insights and analytics</p>
         </div>
         <Button 
           onClick={() => loadMetrics(true)} 
-          variant="outline" 
+          variant="ghost" 
           disabled={refreshing}
           size="sm"
         >
-          <RefreshCw className={`h-4 w-4 mr-2 ${refreshing ? 'animate-spin' : ''}`} />
-          Refresh
+          <RefreshCw className={`h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} />
         </Button>
       </div>
 
       {/* Primary Metrics */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <MetricCard
           title="Total Returns"
           value={metrics.totalReturns.toString()}
-          description={`${metrics.returnRate.toFixed(1)}% of total orders`}
+          description={`${metrics.returnRate.toFixed(1)}% of orders`}
           trend={{
             direction: metrics.monthOverMonthGrowth.returns > 0 ? 'up' : metrics.monthOverMonthGrowth.returns < 0 ? 'down' : 'neutral',
             value: formatPercent(metrics.monthOverMonthGrowth.returns),
@@ -124,9 +123,9 @@ const RealDashboardStats = () => {
         />
 
         <MetricCard
-          title="Exchanges vs Refunds"
-          value={`${metrics.totalExchanges}/${metrics.totalRefunds}`}
-          description={`${((metrics.totalExchanges / (metrics.totalExchanges + metrics.totalRefunds)) * 100).toFixed(1)}% exchange rate`}
+          title="Exchange Rate"
+          value={`${((metrics.totalExchanges / (metrics.totalExchanges + metrics.totalRefunds)) * 100).toFixed(1)}%`}
+          description={`${metrics.totalExchanges} of ${metrics.totalExchanges + metrics.totalRefunds} returns`}
           trend={{
             direction: metrics.monthOverMonthGrowth.exchanges > 0 ? 'up' : 'down',
             value: formatPercent(metrics.monthOverMonthGrowth.exchanges),
@@ -137,7 +136,7 @@ const RealDashboardStats = () => {
         />
 
         <MetricCard
-          title="AI Acceptance Rate"
+          title="AI Acceptance"
           value={`${metrics.aiAcceptanceRate.toFixed(1)}%`}
           description="AI suggestions accepted"
           icon={<Brain className="h-4 w-4" />}
@@ -145,9 +144,9 @@ const RealDashboardStats = () => {
         />
 
         <MetricCard
-          title="Revenue Impact"
+          title="Revenue Retained"
           value={formatCurrency(metrics.revenueImpact)}
-          description="Retained through exchanges"
+          description="Through exchanges"
           trend={{
             direction: metrics.monthOverMonthGrowth.revenue > 0 ? 'up' : 'down',
             value: formatPercent(metrics.monthOverMonthGrowth.revenue),
@@ -158,50 +157,12 @@ const RealDashboardStats = () => {
         />
       </div>
 
-      {/* Secondary Metrics */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <MetricCard
-          title="Avg Processing Time"
-          value={formatDays(metrics.averageProcessingTime)}
-          description="Time to resolution"
-          icon={<Clock className="h-4 w-4" />}
-          variant={metrics.averageProcessingTime > 5 ? 'warning' : 'success'}
-        />
-
-        <MetricCard
-          title="Customer Satisfaction"
-          value={`${metrics.customerSatisfactionScore.toFixed(0)}%`}
-          description="Based on exchanges & AI acceptance"
-          icon={<Users className="h-4 w-4" />}
-          variant={metrics.customerSatisfactionScore > 80 ? 'success' : metrics.customerSatisfactionScore < 60 ? 'warning' : 'default'}
-        />
-
-        <MetricCard
-          title="Return Rate"
-          value={`${metrics.returnRate.toFixed(2)}%`}
-          description="Of total orders"
-          icon={<Target className="h-4 w-4" />}
-          variant={metrics.returnRate > 15 ? 'danger' : metrics.returnRate > 10 ? 'warning' : 'success'}
-        />
-
-        <MetricCard
-          title="Predicted Next Month"
-          value={metrics.predictiveInsights.nextMonthReturns.toString()}
-          description="Forecasted returns"
-          icon={<TrendingUp className="h-4 w-4" />}
-        />
-      </div>
-
-      <Separator />
-
       {/* Trend Chart */}
       <TrendChart
-        title="Seasonal Return Trends (6 Months)"
+        title="Return Trends"
         data={metrics.seasonalTrends}
         type="line"
       />
-
-      <Separator />
 
       {/* Insights Panel */}
       <InsightsPanel

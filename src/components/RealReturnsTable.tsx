@@ -104,93 +104,78 @@ const RealReturnsTable = ({ searchTerm, statusFilter }: RealReturnsTableProps) =
 
   return (
     <>
-      <div className="rounded-lg border">
-        <Table>
-          <TableHeader>
-            <TableRow className="bg-slate-50">
-              <TableHead className="font-semibold">Order ID</TableHead>
-              <TableHead className="font-semibold">Customer</TableHead>
-              <TableHead className="font-semibold">Items</TableHead>
-              <TableHead className="font-semibold">Reason</TableHead>
-              <TableHead className="font-semibold">Amount</TableHead>
-              <TableHead className="font-semibold">Status</TableHead>
-              <TableHead className="font-semibold">AI Insights</TableHead>
-              <TableHead className="font-semibold">Date</TableHead>
-              <TableHead className="font-semibold text-center">Actions</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {filteredReturns.map((returnItem) => (
-              <TableRow key={returnItem.id} className="hover:bg-slate-50">
-                <TableCell className="font-medium">
-                  #{returnItem.shopify_order_id.slice(0, 8)}
-                </TableCell>
-                <TableCell>
-                  <div className="flex items-center space-x-2">
-                    <User className="h-4 w-4 text-muted-foreground" />
-                    <span className="text-sm">{returnItem.customer_email}</span>
-                  </div>
-                </TableCell>
-                <TableCell>
-                  <div className="flex items-center space-x-2">
-                    <Package className="h-4 w-4 text-muted-foreground" />
-                    <span className="text-sm">
-                      {returnItem.return_items?.length || 1} item(s)
-                    </span>
-                  </div>
-                </TableCell>
-                <TableCell>
-                  <span className="text-sm text-muted-foreground max-w-32 truncate block">
-                    {returnItem.reason}
+      <Table>
+        <TableHeader>
+          <TableRow className="border-b">
+            <TableHead className="font-medium text-muted-foreground">Order</TableHead>
+            <TableHead className="font-medium text-muted-foreground">Customer</TableHead>
+            <TableHead className="font-medium text-muted-foreground">Items</TableHead>
+            <TableHead className="font-medium text-muted-foreground">Amount</TableHead>
+            <TableHead className="font-medium text-muted-foreground">Status</TableHead>
+            <TableHead className="font-medium text-muted-foreground">AI Score</TableHead>
+            <TableHead className="font-medium text-muted-foreground">Date</TableHead>
+            <TableHead className="font-medium text-muted-foreground"></TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {filteredReturns.map((returnItem) => (
+            <TableRow key={returnItem.id} className="hover:bg-muted/5">
+              <TableCell className="font-medium">
+                #{returnItem.shopify_order_id.slice(0, 8)}
+              </TableCell>
+              <TableCell>
+                <div className="text-sm">{returnItem.customer_email}</div>
+              </TableCell>
+              <TableCell>
+                <div className="flex items-center gap-2">
+                  <Package className="h-3 w-3 text-muted-foreground" />
+                  <span className="text-sm">
+                    {returnItem.return_items?.length || 1}
                   </span>
-                </TableCell>
-                <TableCell className="font-medium">
-                  ${returnItem.total_amount.toFixed(2)}
-                </TableCell>
-                <TableCell>
-                  <Badge 
-                    variant="outline" 
-                    className={getStatusColor(returnItem.status)}
-                  >
-                    {returnItem.status.replace('_', ' ')}
-                  </Badge>
-                </TableCell>
-                <TableCell>
-                  {returnItem.ai_suggestions && returnItem.ai_suggestions.length > 0 ? (
-                    <div className="flex items-center space-x-2">
-                      <Brain className="h-4 w-4 text-purple-600" />
-                      <Badge variant="outline" className="text-purple-600 border-purple-200 bg-purple-50">
-                        {Math.round((returnItem.ai_suggestions[0]?.confidence_score || 0) * 100)}%
-                      </Badge>
-                    </div>
-                  ) : (
-                    <span className="text-xs text-muted-foreground">No AI data</span>
-                  )}
-                </TableCell>
-                <TableCell>
-                  <div className="flex items-center space-x-2 text-sm text-muted-foreground">
-                    <Calendar className="h-4 w-4" />
-                    <span>
-                      {format(new Date(returnItem.created_at), 'MMM dd, yyyy')}
+                </div>
+              </TableCell>
+              <TableCell className="font-medium">
+                ${returnItem.total_amount.toFixed(2)}
+              </TableCell>
+              <TableCell>
+                <Badge 
+                  variant="outline" 
+                  className={getStatusColor(returnItem.status)}
+                >
+                  {returnItem.status.replace('_', ' ')}
+                </Badge>
+              </TableCell>
+              <TableCell>
+                {returnItem.ai_suggestions && returnItem.ai_suggestions.length > 0 ? (
+                  <div className="flex items-center gap-1">
+                    <Brain className="h-3 w-3 text-muted-foreground" />
+                    <span className="text-sm font-medium">
+                      {Math.round((returnItem.ai_suggestions[0]?.confidence_score || 0) * 100)}%
                     </span>
                   </div>
-                </TableCell>
-                <TableCell className="text-center">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => handleViewReturn(returnItem)}
-                    className="flex items-center space-x-1"
-                  >
-                    <Eye className="h-4 w-4" />
-                    <span>View</span>
-                  </Button>
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </div>
+                ) : (
+                  <span className="text-xs text-muted-foreground">—</span>
+                )}
+              </TableCell>
+              <TableCell>
+                <span className="text-sm text-muted-foreground">
+                  {format(new Date(returnItem.created_at), 'MMM dd')}
+                </span>
+              </TableCell>
+              <TableCell>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => handleViewReturn(returnItem)}
+                  className="h-8 w-8 p-0"
+                >
+                  <Eye className="h-4 w-4" />
+                </Button>
+              </TableCell>
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
 
       {/* Return Processing Modal */}
       {selectedReturn && (
