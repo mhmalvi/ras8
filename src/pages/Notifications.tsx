@@ -203,6 +203,10 @@ const Notifications = () => {
 
       {/* Notifications List */}
       <div className="space-y-4">
+        {/* Debug info */}
+        <div className="text-xs text-slate-500 p-2 bg-slate-50 rounded">
+          Debug: {notifications.length} notifications, Filter: {filter}, Loading: {loading ? 'yes' : 'no'}
+        </div>
         {loading ? (
           <div className="space-y-4">
             {[...Array(3)].map((_, i) => (
