@@ -199,7 +199,14 @@ const Customers = () => {
                       <TableCell>${customer.totalAmount.toFixed(2)}</TableCell>
                       <TableCell>{new Date(customer.lastReturn).toLocaleDateString()}</TableCell>
                       <TableCell>
-                        <Button variant="outline" size="sm">
+                        <Button 
+                          variant="outline" 
+                          size="sm"
+                          onClick={() => {
+                            // Navigate to customer detail view or show modal
+                            console.log('View customer:', customer.email);
+                          }}
+                        >
                           <Eye className="h-4 w-4 mr-1" />
                           View
                         </Button>

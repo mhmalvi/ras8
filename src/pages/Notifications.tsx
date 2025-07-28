@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useToast } from '@/hooks/use-toast';
 import { Bell, Settings, Filter, CheckCheck, X, Info, AlertTriangle, Users, DollarSign } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -11,6 +12,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { useNotifications } from '@/hooks/useNotifications';
 
 const Notifications = () => {
+  const { toast } = useToast();
   const [filter, setFilter] = useState<string>('all');
   const [preferences, setPreferences] = useState({
     emailNotifications: true,
@@ -403,7 +405,15 @@ const Notifications = () => {
           </div>
 
           <div className="pt-4">
-            <Button className="w-full md:w-auto">
+            <Button 
+              className="w-full md:w-auto cursor-pointer"
+              onClick={() => {
+                toast({
+                  title: "Preferences Saved",
+                  description: "Your notification settings have been updated",
+                });
+              }}
+            >
               Save Preferences
             </Button>
           </div>

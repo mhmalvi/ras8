@@ -191,8 +191,13 @@ const SystemSetup = () => {
             </div>
 
             <div className="pt-4">
-              <Button onClick={runSystemChecks} variant="outline" className="w-full">
-                Refresh Status
+              <Button 
+                onClick={runSystemChecks} 
+                variant="outline" 
+                className="w-full"
+                disabled={loading}
+              >
+                {loading ? 'Checking...' : 'Refresh Status'}
               </Button>
             </div>
           </>

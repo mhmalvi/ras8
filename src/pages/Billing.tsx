@@ -1,10 +1,60 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { CreditCard, TrendingUp, Calendar, AlertTriangle } from "lucide-react";
+import { CreditCard, TrendingUp, Calendar, AlertTriangle, Loader2 } from "lucide-react";
 import AppLayout from "@/components/AppLayout";
+import { useSubscription } from "@/hooks/useSubscription";
+import { useToast } from "@/hooks/use-toast";
+import { useState } from "react";
 
 const Billing = () => {
+  const { subscriptionData, loading, openCustomerPortal, createCheckout } = useSubscription();
+  const { toast } = useToast();
+  const [actionLoading, setActionLoading] = useState(false);
+
+  const handleUpdatePayment = async () => {
+    setActionLoading(true);
+    try {
+      await openCustomerPortal();
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to open payment management portal",
+        variant: "destructive"
+      });
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleUpgradePlan = async () => {
+    setActionLoading(true);
+    try {
+      await createCheckout('pro');
+    } catch (error) {
+      toast({
+        title: "Error", 
+        description: "Failed to start checkout process",
+        variant: "destructive"
+      });
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <AppLayout>
+        <div className="space-y-6">
+          <div className="flex items-center justify-center py-12">
+            <Loader2 className="h-8 w-8 animate-spin" />
+            <span className="ml-2">Loading billing information...</span>
+          </div>
+        </div>
+      </AppLayout>
+    );
+  }
+
   return (
     <AppLayout>
       <div className="space-y-6">
@@ -13,8 +63,12 @@ const Billing = () => {
             <h1 className="text-3xl font-bold tracking-tight">Billing & Subscription</h1>
             <p className="text-muted-foreground">Manage your subscription and billing information</p>
           </div>
-          <Button>
-            <CreditCard className="mr-2 h-4 w-4" />
+          <Button onClick={handleUpdatePayment} disabled={actionLoading}>
+            {actionLoading ? (
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            ) : (
+              <CreditCard className="mr-2 h-4 w-4" />
+            )}
             Update Payment Method
           </Button>
         </div>
@@ -26,8 +80,25 @@ const Billing = () => {
               <Badge variant="default">Pro</Badge>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">$149/month</div>
-              <p className="text-xs text-muted-foreground">Unlimited returns processing</p>
+              <div className="text-2xl font-bold">
+                {subscriptionData.plan_type === 'pro' ? '$149' : 
+                 subscriptionData.plan_type === 'growth' ? '$79' : '$29'}/month
+              </div>
+              <p className="text-xs text-muted-foreground">
+                {subscriptionData.plan_type === 'pro' ? 'Unlimited returns processing' :
+                 subscriptionData.plan_type === 'growth' ? 'Up to 500 returns/month' : 'Up to 100 returns/month'}
+              </p>
+              {subscriptionData.plan_type !== 'pro' && (
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={handleUpgradePlan}
+                  disabled={actionLoading}
+                  className="mt-2"
+                >
+                  Upgrade Plan
+                </Button>
+              )}
             </CardContent>
           </Card>
 

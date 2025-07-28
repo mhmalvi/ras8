@@ -182,7 +182,7 @@ Customer Service Team`;
           <Button 
             onClick={generateMessage} 
             disabled={loading || (messageType === 'custom' && !customPrompt.trim())}
-            className="w-full"
+            className="w-full cursor-pointer"
           >
             {loading ? (
               <>
@@ -217,7 +217,7 @@ Customer Service Team`;
             </div>
 
             <div className="flex gap-3">
-              <Button onClick={sendMessage} disabled={sending} className="flex-1">
+              <Button onClick={sendMessage} disabled={sending} className="flex-1 cursor-pointer">
                 {sending ? (
                   <>
                     <Clock className="h-4 w-4 mr-2 animate-spin" />
@@ -230,7 +230,7 @@ Customer Service Team`;
                   </>
                 )}
               </Button>
-              <Button variant="outline" onClick={() => setGeneratedMessage('')}>
+              <Button variant="outline" onClick={() => setGeneratedMessage('')} className="cursor-pointer">
                 Clear
               </Button>
             </div>

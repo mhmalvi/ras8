@@ -164,6 +164,7 @@ const MerchantAssignment = () => {
                     fetchMerchants();
                   }}
                   disabled={fetchingMerchants}
+                  className="cursor-pointer"
                 >
                   <RefreshCw className={`h-3 w-3 ${fetchingMerchants ? 'animate-spin' : ''}`} />
                 </Button>
@@ -190,7 +191,7 @@ const MerchantAssignment = () => {
             <Button 
               onClick={handleAssignMerchant}
               disabled={!selectedMerchant || loading}
-              className="w-full"
+              className="w-full cursor-pointer"
             >
               {loading ? (
                 <>

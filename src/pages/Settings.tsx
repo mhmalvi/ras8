@@ -1,4 +1,5 @@
 
+import { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import SystemSetup from "@/components/SystemSetup";
@@ -7,13 +8,15 @@ import EmailNotificationSettings from "@/components/EmailNotificationSettings";
 import AppLayout from "@/components/AppLayout";
 
 const Settings = () => {
+  const [activeTab, setActiveTab] = useState('system');
+
   return (
     <AppLayout 
       title="Settings" 
       description="Configure your store settings and preferences"
     >
       <div className="max-w-4xl mx-auto">
-        <Tabs defaultValue="system" className="space-y-6">
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
           <TabsList className="grid w-full grid-cols-3">
             <TabsTrigger value="system">System Setup</TabsTrigger>
             <TabsTrigger value="subscription">Subscription</TabsTrigger>
