@@ -16,11 +16,18 @@ serve(async (req) => {
   }
 
   try {
-    const { returnId, productId, customerEmail, reason, orderValue } = await req.json();
+    const { returnId, productId, customerEmail, reason, orderValue, returnReason, productName } = await req.json();
 
-    if (!returnId || !productId) {
-      throw new Error('Missing required fields: returnId and productId');
+    // More flexible validation - returnId is essential, but we can work with other fields
+    if (!returnId) {
+      throw new Error('Missing required field: returnId');
     }
+
+    // Provide defaults for missing fields
+    const effectiveProductId = productId || 'unknown-product';
+    const effectiveReason = reason || returnReason || 'Not specified';
+    const effectiveCustomerEmail = customerEmail || 'customer@example.com';
+    const effectiveOrderValue = orderValue || 0;
 
     // Initialize Supabase client
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
@@ -54,10 +61,11 @@ serve(async (req) => {
 As an e-commerce return specialist, analyze this return request and suggest the best exchange options:
 
 Return Details:
-- Product ID: ${productId}
-- Return Reason: ${reason || 'Not specified'}
-- Customer Email: ${customerEmail}
-- Order Value: $${orderValue || 'Unknown'}
+- Product ID: ${effectiveProductId}
+- Product Name: ${productName || 'Unknown Product'}
+- Return Reason: ${effectiveReason}
+- Customer Email: ${effectiveCustomerEmail}
+- Order Value: $${effectiveOrderValue}
 
 Based on this information, provide:
 1. 3 specific exchange recommendations with reasoning
@@ -139,10 +147,11 @@ Respond in JSON format:
         suggestion: JSON.stringify(aiSuggestion),
         confidence_score: aiSuggestion.overallConfidence || 0.7,
         metadata: {
-          productId,
-          reason,
-          customerEmail,
-          orderValue,
+          productId: effectiveProductId,
+          productName,
+          reason: effectiveReason,
+          customerEmail: effectiveCustomerEmail,
+          orderValue: effectiveOrderValue,
           timestamp: new Date().toISOString()
         }
       })

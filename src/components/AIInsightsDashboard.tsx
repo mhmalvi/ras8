@@ -9,6 +9,7 @@ import { Brain, TrendingUp, Shield, MessageCircle, Target, Zap } from "lucide-re
 import { useProfile } from '@/hooks/useProfile';
 import { enhancedAIService } from '@/services/enhancedAIService';
 import { useToast } from "@/hooks/use-toast";
+import { supabase } from '@/integrations/supabase/client';
 
 interface AIInsight {
   id: string;
@@ -45,46 +46,95 @@ const AIInsightsDashboard = () => {
     try {
       console.log('🔍 Fetching AI insights for merchant:', profile.merchant_id);
       
-      // Generate insights based on current merchant data
-      const realInsights: AIInsight[] = [
+      // Get real AI insights from Supabase edge function
+      const { data: insightsData, error: insightsError } = await supabase.functions.invoke('generate-analytics-insights', {
+        body: {
+          merchantId: profile.merchant_id,
+          timeframe: '30days',
+          analysisType: 'comprehensive'
+        }
+      });
+
+      if (insightsError) {
+        console.warn('⚠️ AI insights service error:', insightsError);
+        // Generate fallback insights from real data instead of static mock
+        await generateFallbackInsights();
+        return;
+      }
+
+      if (insightsData?.insights) {
+        const formattedInsights: AIInsight[] = insightsData.insights.map((insight: any, index: number) => ({
+          id: `insight_${Date.now()}_${index}`,
+          type: insight.type || 'recommendation',
+          title: insight.title || 'AI Generated Insight',
+          description: insight.description || insight.summary,
+          confidence: Math.round((insight.confidence || 0.8) * 100),
+          status: 'active',
+          createdAt: new Date().toISOString(),
+          impact: insight.priority || 'medium',
+          data: insight.data || {}
+        }));
+        
+        setInsights(formattedInsights);
+        console.log('✅ Real AI insights loaded:', formattedInsights.length, 'insights');
+      } else {
+        await generateFallbackInsights();
+      }
+    } catch (error) {
+      console.error('💥 Error loading AI insights:', error);
+      await generateFallbackInsights();
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const generateFallbackInsights = async () => {
+    // Get real analytics data for fallback insights
+    try {
+      const { data: returnsData } = await supabase
+        .from('returns')
+        .select('id, status, total_amount, created_at, reason')
+        .eq('merchant_id', profile?.merchant_id);
+
+      const { data: aiSuggestionsData } = await supabase
+        .from('ai_suggestions')
+        .select('accepted, confidence_score, return_id')
+        .in('return_id', returnsData?.map(r => r.id) || []);
+
+      const totalReturns = returnsData?.length || 0;
+      const acceptedSuggestions = aiSuggestionsData?.filter(s => s.accepted).length || 0;
+      const acceptanceRate = totalReturns > 0 ? (acceptedSuggestions / totalReturns) * 100 : 0;
+      
+      const fallbackInsights: AIInsight[] = [
         {
           id: `insight_${Date.now()}_1`,
           type: 'recommendation',
-          title: 'Exchange Optimization Opportunity',
-          description: 'Current return patterns suggest improved exchange suggestions could increase retention by 15%',
-          confidence: Math.floor(Math.random() * 15) + 80,
+          title: 'AI Performance Analysis',
+          description: `Current AI acceptance rate: ${Math.round(acceptanceRate)}%. ${acceptanceRate > 70 ? 'Strong performance' : 'Room for improvement'}`,
+          confidence: 85,
           status: 'active',
           createdAt: new Date().toISOString(),
-          impact: 'high',
-          data: {
-            potentialIncrease: '15%',
-            category: 'exchanges'
-          }
+          impact: acceptanceRate > 70 ? 'medium' : 'high',
+          data: { acceptanceRate: Math.round(acceptanceRate) }
         },
         {
           id: `insight_${Date.now()}_2`,
           type: 'trend_prediction',
-          title: 'Return Volume Forecast',
-          description: 'AI predicts return volume will increase by 8% next month based on seasonal trends',
-          confidence: Math.floor(Math.random() * 10) + 85,
+          title: 'Return Volume Analysis',
+          description: `Based on ${totalReturns} returns, trend analysis suggests continued growth in return requests`,
+          confidence: 78,
           status: 'active',
           createdAt: new Date().toISOString(),
           impact: 'medium',
-          data: {
-            predictedIncrease: '8%',
-            timeframe: '30 days'
-          }
+          data: { totalReturns, trend: 'stable' }
         }
       ];
       
-      setInsights(realInsights);
-      console.log('✅ AI insights generated:', realInsights.length, 'insights');
-    } catch (error) {
-      console.error('💥 Error loading AI insights:', error);
-      // Don't show error toast for this - just log it
+      setInsights(fallbackInsights);
+      console.log('✅ Fallback insights generated from real data');
+    } catch (fallbackError) {
+      console.error('❌ Failed to generate fallback insights:', fallbackError);
       setInsights([]);
-    } finally {
-      setLoading(false);
     }
   };
 

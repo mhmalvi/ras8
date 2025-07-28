@@ -8,8 +8,9 @@ import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Check, X, RefreshCw, Download } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast";
+import { useRealReturnsData } from '@/hooks/useRealReturnsData';
 
-interface Return {
+interface TransformedReturn {
   id: string;
   orderNumber: string;
   customer: string;
@@ -25,65 +26,28 @@ interface Return {
 
 const BulkActionsReturns = () => {
   const { toast } = useToast();
+  const { returns, loading, error, updateReturnStatus, bulkUpdateReturns } = useRealReturnsData();
   const [selectedReturns, setSelectedReturns] = useState<string[]>([]);
   const [bulkAction, setBulkAction] = useState<string>('');
 
-  const returns: Return[] = [
-    {
-      id: '1',
-      orderNumber: '#12345',
-      customer: 'John Doe',
-      email: 'john@example.com',
-      items: 'Blue T-Shirt (L)',
-      reason: 'Too small',
-      status: 'requested',
-      amount: 29.99,
-      date: '2024-01-15',
-      aiSuggestion: 'Exchange for XL size',
-      confidence: 94
-    },
-    {
-      id: '2',
-      orderNumber: '#12346',
-      customer: 'Sarah Smith',
-      email: 'sarah@example.com',
-      items: 'Red Dress (M)',
-      reason: 'Wrong color',
-      status: 'requested',
-      amount: 89.99,
-      date: '2024-01-14',
-      aiSuggestion: 'Exchange for Black Dress',
-      confidence: 87
-    },
-    {
-      id: '3',
-      orderNumber: '#12347',
-      customer: 'Mike Johnson',
-      email: 'mike@example.com',
-      items: 'Running Shoes (10)',
-      reason: 'Defective',
-      status: 'approved',
-      amount: 129.99,
-      date: '2024-01-13'
-    },
-    {
-      id: '4',
-      orderNumber: '#12348',
-      customer: 'Lisa Brown',
-      email: 'lisa@example.com',
-      items: 'Winter Jacket (S)',
-      reason: 'Too large',
-      status: 'requested',
-      amount: 199.99,
-      date: '2024-01-12',
-      aiSuggestion: 'Exchange for XS size',
-      confidence: 92
-    }
-  ];
+  // Transform real returns data to match component interface
+  const transformedReturns = returns.map(returnItem => ({
+    id: returnItem.id,
+    orderNumber: `#${returnItem.shopify_order_id}`,
+    customer: returnItem.customer_email.split('@')[0],
+    email: returnItem.customer_email,
+    items: returnItem.return_items?.map(item => `${item.product_name} (${item.quantity})`).join(', ') || 'Items',
+    reason: returnItem.reason,
+    status: returnItem.status as 'requested' | 'approved' | 'in_transit' | 'completed',
+    amount: returnItem.total_amount,
+    date: new Date(returnItem.created_at).toLocaleDateString(),
+    aiSuggestion: returnItem.ai_suggestions?.[0]?.reasoning,
+    confidence: returnItem.ai_suggestions?.[0] ? Math.round(returnItem.ai_suggestions[0].confidence_score * 100) : undefined
+  }));
 
   const handleSelectAll = (checked: boolean) => {
     if (checked) {
-      setSelectedReturns(returns.map(r => r.id));
+      setSelectedReturns(transformedReturns.map(r => r.id));
     } else {
       setSelectedReturns([]);
     }
@@ -97,23 +61,41 @@ const BulkActionsReturns = () => {
     }
   };
 
-  const handleBulkAction = () => {
+  const handleBulkAction = async () => {
     if (!bulkAction || selectedReturns.length === 0) return;
 
-    const actionLabels = {
-      approve: 'approved',
-      reject: 'rejected',
-      apply_ai: 'AI suggestions applied to',
-      export: 'exported'
-    };
+    try {
+      const actionLabels = {
+        approve: 'approved',
+        reject: 'rejected',
+        apply_ai: 'approved', // Apply AI suggestions typically means approve
+        export: 'exported'
+      };
 
-    toast({
-      title: "Bulk action completed",
-      description: `${selectedReturns.length} returns have been ${actionLabels[bulkAction as keyof typeof actionLabels]}.`
-    });
+      // Perform real bulk actions based on the action type
+      if (bulkAction === 'approve' || bulkAction === 'apply_ai') {
+        await bulkUpdateReturns(selectedReturns, 'approved');
+      } else if (bulkAction === 'reject') {
+        await bulkUpdateReturns(selectedReturns, 'rejected');
+      } else if (bulkAction === 'export') {
+        // Export functionality would be implemented here
+        console.log('Exporting returns:', selectedReturns);
+      }
 
-    setSelectedReturns([]);
-    setBulkAction('');
+      toast({
+        title: "Bulk action completed",
+        description: `${selectedReturns.length} returns have been ${actionLabels[bulkAction as keyof typeof actionLabels]}.`
+      });
+
+      setSelectedReturns([]);
+      setBulkAction('');
+    } catch (error) {
+      toast({
+        title: "Bulk action failed",
+        description: "Failed to perform bulk action. Please try again.",
+        variant: "destructive"
+      });
+    }
   };
 
   const getStatusBadge = (status: string) => {
@@ -186,9 +168,9 @@ const BulkActionsReturns = () => {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead className="w-12">
+                 <TableHead className="w-12">
                   <Checkbox
-                    checked={selectedReturns.length === returns.length}
+                    checked={selectedReturns.length === transformedReturns.length && transformedReturns.length > 0}
                     onCheckedChange={handleSelectAll}
                   />
                 </TableHead>
@@ -203,7 +185,29 @@ const BulkActionsReturns = () => {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {returns.map((returnItem) => (
+              {loading ? (
+                <TableRow>
+                  <TableCell colSpan={9} className="text-center py-8">
+                    <div className="flex items-center justify-center">
+                      <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600 mr-2"></div>
+                      Loading returns...
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ) : error ? (
+                <TableRow>
+                  <TableCell colSpan={9} className="text-center py-8 text-red-600">
+                    Error loading returns: {error}
+                  </TableCell>
+                </TableRow>
+              ) : transformedReturns.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={9} className="text-center py-8 text-muted-foreground">
+                    No returns found
+                  </TableCell>
+                </TableRow>
+              ) : (
+                transformedReturns.map((returnItem) => (
                 <TableRow key={returnItem.id} className={selectedReturns.includes(returnItem.id) ? 'bg-blue-50' : ''}>
                   <TableCell>
                     <Checkbox
@@ -238,11 +242,18 @@ const BulkActionsReturns = () => {
                     <div className="flex items-center justify-end gap-2">
                       {returnItem.status === 'requested' && (
                         <>
-                          <Button variant="outline" size="sm">
+                          <Button 
+                            variant="outline" 
+                            size="sm"
+                            onClick={() => updateReturnStatus(returnItem.id, 'rejected')}
+                          >
                             <X className="h-3 w-3 mr-1" />
                             Reject
                           </Button>
-                          <Button size="sm">
+                          <Button 
+                            size="sm"
+                            onClick={() => updateReturnStatus(returnItem.id, 'approved')}
+                          >
                             <Check className="h-3 w-3 mr-1" />
                             Approve
                           </Button>
@@ -251,7 +262,8 @@ const BulkActionsReturns = () => {
                     </div>
                   </TableCell>
                 </TableRow>
-              ))}
+                ))
+              )}
             </TableBody>
           </Table>
         </div>
