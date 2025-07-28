@@ -22,8 +22,6 @@ export const useNotifications = (filters: NotificationFilters = {}) => {
   // Load notifications from the database
   const loadNotifications = useCallback(async () => {
     if (!merchantId) {
-      setNotifications([]);
-      setCounts({ total: 0, unread: 0, high: 0, medium: 0, low: 0 });
       setLoading(false);
       return;
     }
