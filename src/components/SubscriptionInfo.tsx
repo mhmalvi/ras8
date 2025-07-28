@@ -53,9 +53,9 @@ export const SubscriptionInfo = ({ isCollapsed }: SubscriptionInfoProps) => {
   };
 
   const getUsageColor = () => {
-    if (usagePercentage >= 85) return 'bg-red-500';
-    if (usagePercentage >= 60) return 'bg-yellow-500';
-    return 'bg-green-500';
+    if (usagePercentage >= 85) return 'bg-destructive';
+    if (usagePercentage >= 60) return 'bg-warning';
+    return 'bg-primary';
   };
 
   const handleClick = () => {
@@ -119,9 +119,9 @@ export const SubscriptionInfo = ({ isCollapsed }: SubscriptionInfoProps) => {
               value={usagePercentage} 
               className={cn(
                 "h-2",
-                usagePercentage >= 85 ? '[&>div]:bg-red-500' : 
-                usagePercentage >= 60 ? '[&>div]:bg-yellow-500' : 
-                '[&>div]:bg-green-500'
+                usagePercentage >= 85 ? '[&>div]:bg-destructive' : 
+                usagePercentage >= 60 ? '[&>div]:bg-warning' : 
+                '[&>div]:bg-primary'
               )}
             />
             <div className="text-xs text-muted-foreground text-center">

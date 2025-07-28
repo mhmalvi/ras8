@@ -24,6 +24,9 @@ import { useToast } from "@/hooks/use-toast";
 import { Plus, Activity } from "lucide-react";
 import { useWebhookMonitoring } from "@/hooks/useWebhookMonitoring";
 
+// Import automation component
+import AutomationSettings from "@/components/AutomationSettings";
+
 const Settings = () => {
   const [activeTab, setActiveTab] = useState('billing');
   const { toast } = useToast();
@@ -527,27 +530,7 @@ const Settings = () => {
                   </CardHeader>
                   <CardContent>
                     <div className="space-y-6">
-                      <div className="text-center p-8 border-2 border-dashed border-border rounded-lg">
-                        <Activity className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-                        <h3 className="text-lg font-medium text-foreground mb-2">Automation Configuration</h3>
-                        <p className="text-muted-foreground mb-4">
-                          Set up automated rules, labels, and workflow configurations for your returns processing.
-                        </p>
-                        <div className="grid gap-4 sm:grid-cols-3">
-                          <Button variant="outline" className="transition-all duration-200 hover:shadow-lg">
-                            <Activity className="mr-2 h-4 w-4" />
-                            Rules
-                          </Button>
-                          <Button variant="outline" className="transition-all duration-200 hover:shadow-lg">
-                            <Activity className="mr-2 h-4 w-4" />
-                            Labels
-                          </Button>
-                          <Button variant="outline" className="transition-all duration-200 hover:shadow-lg">
-                            <Activity className="mr-2 h-4 w-4" />
-                            Setups
-                          </Button>
-                        </div>
-                      </div>
+                      <AutomationSettings />
                     </div>
                   </CardContent>
                 </Card>

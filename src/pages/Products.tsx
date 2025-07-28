@@ -26,10 +26,10 @@ const Products = () => {
 
   const getRiskColor = (risk: string) => {
     switch (risk) {
-      case 'high': return 'text-red-600 bg-red-50 border-red-200';
-      case 'medium': return 'text-yellow-600 bg-yellow-50 border-yellow-200';
-      case 'low': return 'text-green-600 bg-green-50 border-green-200';
-      default: return 'text-gray-600 bg-gray-50 border-gray-200';
+      case 'high': return 'text-destructive bg-destructive/10 border-destructive/20';
+      case 'medium': return 'text-warning bg-warning/10 border-warning/20';
+      case 'low': return 'text-primary bg-primary/10 border-primary/20';
+      default: return 'text-muted-foreground bg-muted border-border';
     }
   };
 
@@ -58,9 +58,9 @@ const Products = () => {
 
   // Chart data for return rate distribution
   const riskDistribution = [
-    { name: 'Low Risk', value: salesData.filter(p => getRiskLevel(p.return_rate) === 'low').length, color: '#10B981' },
-    { name: 'Medium Risk', value: salesData.filter(p => getRiskLevel(p.return_rate) === 'medium').length, color: '#F59E0B' },
-    { name: 'High Risk', value: salesData.filter(p => getRiskLevel(p.return_rate) === 'high').length, color: '#EF4444' }
+    { name: 'Low Risk', value: salesData.filter(p => getRiskLevel(p.return_rate) === 'low').length, color: 'hsl(var(--primary))' },
+    { name: 'Medium Risk', value: salesData.filter(p => getRiskLevel(p.return_rate) === 'medium').length, color: 'hsl(var(--warning))' },
+    { name: 'High Risk', value: salesData.filter(p => getRiskLevel(p.return_rate) === 'high').length, color: 'hsl(var(--destructive))' }
   ];
 
   // Top problematic products for chart
@@ -130,10 +130,10 @@ const Products = () => {
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">High Risk Products</CardTitle>
-              <AlertTriangle className="h-4 w-4 text-red-500" />
+              <AlertTriangle className="h-4 w-4 text-destructive" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-red-600">
+              <div className="text-2xl font-bold text-destructive">
                 {salesData.filter(p => getRiskLevel(p.return_rate) === 'high').length}
               </div>
               <p className="text-xs text-muted-foreground">
@@ -229,7 +229,7 @@ const Products = () => {
                       name === 'returnRate' ? 'Return Rate' : name
                     ]}
                   />
-                  <Bar dataKey="returnRate" fill="#EF4444" />
+                  <Bar dataKey="returnRate" fill="hsl(var(--destructive))" />
                 </BarChart>
               </ResponsiveContainer>
             </CardContent>
@@ -308,7 +308,7 @@ const Products = () => {
                               </div>
                               <div>
                                 <p className="text-muted-foreground">Total Returns</p>
-                                <p className="font-semibold text-red-600">{product.total_returns}</p>
+                                <p className="font-semibold text-destructive">{product.total_returns}</p>
                               </div>
                               <div>
                                 <p className="text-muted-foreground">Return Rate</p>
