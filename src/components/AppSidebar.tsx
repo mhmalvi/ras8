@@ -42,24 +42,6 @@ const mainItems = [
     url: "/products",
     icon: Inbox,
   },
-  {
-    title: "Automations",
-    url: "/automations",
-    icon: Activity,
-  },
-  {
-    title: "Customers",
-    url: "/customers",
-    icon: Users,
-  },
-]
-
-const supportItems = [
-  {
-    title: "Support",
-    url: "/support",
-    icon: HelpCircle,
-  },
 ]
 
 export function AppSidebar() {
@@ -104,32 +86,11 @@ export function AppSidebar() {
           </SidebarGroupContent>
         </SidebarGroup>
 
-        {/* Subscription & Version Info + Support Section at Bottom */}
+        {/* Usage Panel at Bottom */}
         <SidebarGroup className="mt-auto">
-          <SidebarGroupContent className="space-y-2">
-            {/* Subscription and Version Info */}
+          <SidebarGroupContent>
+            {/* Subscription Usage Info */}
             <SubscriptionInfo isCollapsed={isCollapsed} />
-            
-            {/* Support Menu */}
-            <SidebarMenu>
-              {supportItems.map((item) => (
-                <SidebarMenuItem key={item.title}>
-                  <SidebarMenuButton asChild>
-                    <NavLink 
-                      to={item.url} 
-                      end 
-                      className={({ isActive }) => cn(
-                        "flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-all hover:text-primary cursor-pointer",
-                        isActive ? "bg-muted text-primary font-medium" : "hover:bg-muted/50"
-                      )}
-                    >
-                      <item.icon className="h-4 w-4" />
-                      {!isCollapsed && <span>{item.title}</span>}
-                    </NavLink>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
-            </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
       </SidebarContent>

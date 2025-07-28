@@ -8,8 +8,9 @@ import { useAtomicAuth } from "@/contexts/AtomicAuthContext";
 import ProfileCreator from "@/components/ProfileCreator";
 import { LoadingSpinner } from "@/components/LoadingStates";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { AlertCircle, RefreshCw } from "lucide-react";
+import { AlertCircle, RefreshCw, HelpCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useNavigate } from "react-router-dom";
 
 interface AppLayoutProps {
   children: React.ReactNode;
@@ -18,6 +19,7 @@ interface AppLayoutProps {
 const AppLayout = ({ children }: AppLayoutProps) => {
   const { user, loading: authLoading } = useAtomicAuth();
   const { profile, loading: profileLoading, error: profileError, refetch } = useMerchantProfile();
+  const navigate = useNavigate();
 
   // Show loading for reasonable time only
   if (authLoading || (profileLoading && !profileError)) {
@@ -89,6 +91,14 @@ const AppLayout = ({ children }: AppLayoutProps) => {
           <header className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 px-8 py-6">
             <div className="flex items-center justify-end space-x-4">
               <NotificationDropdown />
+              <Button 
+                variant="ghost" 
+                size="icon"
+                onClick={() => navigate('/support')}
+                className="relative"
+              >
+                <HelpCircle className="h-5 w-5" />
+              </Button>
               <UserMenu />
             </div>
           </header>

@@ -451,7 +451,7 @@ const Settings = () => {
           {/* Settings Tabs */}
           <section className="animate-fade-in">
             <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-8">
-              <TabsList className="grid w-full grid-cols-3 max-w-lg h-12">
+              <TabsList className="grid w-full grid-cols-4 max-w-2xl h-12">
                 <TabsTrigger 
                   value="billing" 
                   className="flex items-center space-x-2 transition-all duration-200"
@@ -472,6 +472,13 @@ const Settings = () => {
                 >
                   <Shield className="h-4 w-4" />
                   <span className="hidden sm:block">Integrations</span>
+                </TabsTrigger>
+                <TabsTrigger 
+                  value="automation"
+                  className="flex items-center space-x-2 transition-all duration-200"
+                >
+                  <Activity className="h-4 w-4" />
+                  <span className="hidden sm:block">Automation</span>
                 </TabsTrigger>
               </TabsList>
               
@@ -500,6 +507,47 @@ const Settings = () => {
                     <div className="space-y-6">
                       <SystemSetup />
                       <EmailNotificationSettings />
+                    </div>
+                  </CardContent>
+                </Card>
+              </TabsContent>
+
+              <TabsContent value="automation" className="space-y-0">
+                <Card className="shadow-sm hover:shadow-md transition-shadow duration-300">
+                  <CardHeader className="pb-4">
+                    <CardTitle className="flex items-center space-x-2 text-foreground">
+                      <div className="bg-primary/10 p-2 rounded-lg">
+                        <Activity className="h-5 w-5 text-primary" />
+                      </div>
+                      <span>Automation Settings</span>
+                    </CardTitle>
+                    <CardDescription className="text-muted-foreground">
+                      Configure automated workflows, rules, labels, and setups
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-6">
+                      <div className="text-center p-8 border-2 border-dashed border-border rounded-lg">
+                        <Activity className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+                        <h3 className="text-lg font-medium text-foreground mb-2">Automation Configuration</h3>
+                        <p className="text-muted-foreground mb-4">
+                          Set up automated rules, labels, and workflow configurations for your returns processing.
+                        </p>
+                        <div className="grid gap-4 sm:grid-cols-3">
+                          <Button variant="outline" className="transition-all duration-200 hover:shadow-lg">
+                            <Activity className="mr-2 h-4 w-4" />
+                            Rules
+                          </Button>
+                          <Button variant="outline" className="transition-all duration-200 hover:shadow-lg">
+                            <Activity className="mr-2 h-4 w-4" />
+                            Labels
+                          </Button>
+                          <Button variant="outline" className="transition-all duration-200 hover:shadow-lg">
+                            <Activity className="mr-2 h-4 w-4" />
+                            Setups
+                          </Button>
+                        </div>
+                      </div>
                     </div>
                   </CardContent>
                 </Card>
