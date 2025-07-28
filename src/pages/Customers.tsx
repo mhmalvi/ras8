@@ -117,14 +117,14 @@ const Customers = () => {
     customer.email.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'frequent': return 'destructive';
-      case 'active': return 'default';
-      case 'new': return 'secondary';
-      default: return 'secondary';
-    }
-  };
+    const getStatusColor = (status: string) => {
+      switch (status) {
+        case 'frequent': return 'destructive';
+        case 'active': return 'default';
+        case 'new': return 'secondary';
+        default: return 'secondary';
+      }
+    };
 
   const totalCustomers = customers.length;
   const frequentCustomers = customers.filter(c => c.status === 'frequent').length;
@@ -266,7 +266,7 @@ const Customers = () => {
                                 <Button 
                                   variant="ghost" 
                                   size="sm"
-                                  className="h-8 w-8 p-0"
+                                  className="h-8 w-8 p-0 force-interactive"
                                   onClick={() => handleViewCustomer(customer)}
                                 >
                                   <Eye className="h-4 w-4" />

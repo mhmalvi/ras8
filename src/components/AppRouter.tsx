@@ -12,6 +12,12 @@ import Settings from '@/pages/Settings';
 import Auth from '@/pages/Auth';
 import CustomerPortal from '@/pages/CustomerPortal';
 import Automations from '@/pages/Automations';
+import Notifications from '@/pages/Notifications';
+import Customers from '@/pages/Customers';
+import Integrations from '@/pages/Integrations';
+import Webhooks from '@/pages/Webhooks';
+import Security from '@/pages/Security';
+import Performance from '@/pages/Performance';
 import MasterAdmin from '@/pages/MasterAdmin';
 import DebugPanel from '@/pages/DebugPanel';
 import Database from '@/pages/Database';
@@ -112,6 +118,54 @@ const AppRouter = () => {
             element={
               <ProtectedRoute>
                 <Automations />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/notifications" 
+            element={
+              <ProtectedRoute>
+                <Notifications />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/customers" 
+            element={
+              <ProtectedRoute>
+                <Customers />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/integrations" 
+            element={
+              <ProtectedRoute>
+                <Integrations />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/webhooks" 
+            element={
+              <ProtectedRoute>
+                <Webhooks />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/security" 
+            element={
+              <ProtectedRoute>
+                <Security />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/performance" 
+            element={
+              <ProtectedRoute>
+                <Performance />
               </ProtectedRoute>
             } 
           />

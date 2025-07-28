@@ -71,20 +71,20 @@ const Notifications = () => {
 
   const getPriorityColor = (priority: string) => {
     switch (priority) {
-      case 'high': return 'bg-red-100 text-red-700 border-red-200';
-      case 'medium': return 'bg-orange-100 text-orange-700 border-orange-200';
-      case 'low': return 'bg-blue-100 text-blue-700 border-blue-200';
-      default: return 'bg-slate-100 text-slate-700 border-slate-200';
+      case 'high': return 'bg-destructive/10 text-destructive border-destructive/20';
+      case 'medium': return 'bg-yellow-100 text-yellow-700 border-yellow-200 dark:bg-yellow-900/20 dark:text-yellow-400 dark:border-yellow-800';
+      case 'low': return 'bg-primary/10 text-primary border-primary/20';
+      default: return 'bg-muted text-muted-foreground border-border';
     }
   };
 
   const getTypeColor = (type: string) => {
     switch (type) {
-      case 'return': return 'bg-blue-100 text-blue-600';
-      case 'ai_suggestion': return 'bg-purple-100 text-purple-600';
-      case 'billing': return 'bg-green-100 text-green-600';
-      case 'system': return 'bg-slate-100 text-slate-600';
-      default: return 'bg-slate-100 text-slate-600';
+      case 'return': return 'bg-primary/10 text-primary';
+      case 'ai_suggestion': return 'bg-purple-100 text-purple-600 dark:bg-purple-900/20 dark:text-purple-400';
+      case 'billing': return 'bg-green-100 text-green-600 dark:bg-green-900/20 dark:text-green-400';
+      case 'system': return 'bg-muted text-muted-foreground';
+      default: return 'bg-muted text-muted-foreground';
     }
   };
 
@@ -133,10 +133,10 @@ const Notifications = () => {
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-slate-600">Total</p>
-                <p className="text-2xl font-bold text-slate-900">{counts.total}</p>
+                <p className="text-sm font-medium text-muted-foreground">Total</p>
+                <p className="text-2xl font-bold text-foreground">{counts.total}</p>
               </div>
-              <Bell className="h-8 w-8 text-slate-400" />
+              <Bell className="h-8 w-8 text-muted-foreground" />
             </div>
           </CardContent>
         </Card>
@@ -144,11 +144,11 @@ const Notifications = () => {
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-slate-600">Unread</p>
-                <p className="text-2xl font-bold text-blue-600">{counts.unread}</p>
+                <p className="text-sm font-medium text-muted-foreground">Unread</p>
+                <p className="text-2xl font-bold text-primary">{counts.unread}</p>
               </div>
-              <div className="h-8 w-8 bg-blue-100 rounded-full flex items-center justify-center">
-                <Bell className="h-4 w-4 text-blue-600" />
+              <div className="h-8 w-8 bg-primary/10 rounded-full flex items-center justify-center">
+                <Bell className="h-4 w-4 text-primary" />
               </div>
             </div>
           </CardContent>
@@ -157,10 +157,10 @@ const Notifications = () => {
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-slate-600">High Priority</p>
-                <p className="text-2xl font-bold text-red-600">{counts.high}</p>
+                <p className="text-sm font-medium text-muted-foreground">High Priority</p>
+                <p className="text-2xl font-bold text-destructive">{counts.high}</p>
               </div>
-              <AlertTriangle className="h-8 w-8 text-red-400" />
+              <AlertTriangle className="h-8 w-8 text-destructive/60" />
             </div>
           </CardContent>
         </Card>
@@ -168,12 +168,12 @@ const Notifications = () => {
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-slate-600">AI Suggestions</p>
-                <p className="text-2xl font-bold text-purple-600">
+                <p className="text-sm font-medium text-muted-foreground">AI Suggestions</p>
+                <p className="text-2xl font-bold text-purple-600 dark:text-purple-400">
                   {notifications.filter(n => n.type === 'ai_suggestion').length}
                 </p>
               </div>
-              <Info className="h-8 w-8 text-purple-400" />
+              <Info className="h-8 w-8 text-purple-600/60 dark:text-purple-400/60" />
             </div>
           </CardContent>
         </Card>
@@ -184,8 +184,8 @@ const Notifications = () => {
         <CardContent className="p-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
-              <Filter className="h-4 w-4 text-slate-500" />
-              <span className="text-sm font-medium text-slate-700">Filter by:</span>
+              <Filter className="h-4 w-4 text-muted-foreground" />
+              <span className="text-sm font-medium text-foreground">Filter by:</span>
             </div>
             <Select value={filter} onValueChange={setFilter}>
               <SelectTrigger className="w-[180px]">
@@ -231,17 +231,17 @@ const Notifications = () => {
         ) : error ? (
           <Card>
             <CardContent className="p-6 text-center">
-              <AlertTriangle className="h-12 w-12 text-red-400 mx-auto mb-4" />
-              <p className="text-red-600 mb-2">Error loading notifications</p>
-              <p className="text-sm text-slate-500">{error}</p>
+              <AlertTriangle className="h-12 w-12 text-destructive/60 mx-auto mb-4" />
+              <p className="text-destructive mb-2">Error loading notifications</p>
+              <p className="text-sm text-muted-foreground">{error}</p>
             </CardContent>
           </Card>
         ) : filteredNotifications.length === 0 ? (
           <Card>
             <CardContent className="p-6 text-center">
-              <Bell className="h-12 w-12 text-slate-400 mx-auto mb-4" />
-              <p className="text-slate-600">No notifications found</p>
-              <p className="text-sm text-slate-500 mt-2">
+              <Bell className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+              <p className="text-foreground">No notifications found</p>
+              <p className="text-sm text-muted-foreground mt-2">
                 {filter === 'all' 
                   ? "You're all caught up! New notifications will appear here."
                   : "No notifications match your current filter."}
@@ -253,7 +253,7 @@ const Notifications = () => {
             <Card 
               key={notification.id} 
               className={`transition-colors hover:shadow-md ${
-                !notification.read ? 'ring-1 ring-blue-200 bg-blue-50/30' : ''
+                !notification.read ? 'ring-1 ring-primary/20 bg-primary/5' : ''
               }`}
             >
               <CardContent className="p-6">
@@ -267,18 +267,18 @@ const Notifications = () => {
                     {/* Content */}
                     <div className="flex-1 space-y-2">
                       <div className="flex items-center gap-3">
-                        <h3 className="font-semibold text-slate-900">{notification.title}</h3>
+                        <h3 className="font-semibold text-foreground">{notification.title}</h3>
                         <Badge className={`text-xs ${getPriorityColor(notification.priority)}`}>
                           {notification.priority}
                         </Badge>
                         {!notification.read && (
-                          <div className="w-2 h-2 bg-blue-600 rounded-full"></div>
+                          <div className="w-2 h-2 bg-primary rounded-full"></div>
                         )}
                       </div>
                       
-                      <p className="text-slate-600 leading-relaxed">{notification.message}</p>
+                      <p className="text-muted-foreground leading-relaxed">{notification.message}</p>
                       
-                      <div className="flex items-center gap-4 text-xs text-slate-500">
+                      <div className="flex items-center gap-4 text-xs text-muted-foreground">
                         <span>
                           {new Date(notification.created_at).toLocaleDateString('en-US', {
                             year: 'numeric',
@@ -309,7 +309,7 @@ const Notifications = () => {
                       variant="ghost"
                       size="sm"
                       onClick={() => deleteNotification(notification.id)}
-                      className="h-6 w-6 p-0 text-red-600 hover:text-red-700"
+                      className="h-6 w-6 p-0 text-destructive hover:text-destructive/80"
                     >
                       <X className="h-3 w-3" />
                     </Button>
@@ -335,7 +335,7 @@ const Notifications = () => {
               <div className="flex items-center justify-between">
                 <div>
                   <Label className="text-sm font-medium">Email Notifications</Label>
-                  <p className="text-xs text-slate-500 mt-1">Receive notifications via email</p>
+                  <p className="text-xs text-muted-foreground mt-1">Receive notifications via email</p>
                 </div>
                 <Switch
                   checked={preferences.emailNotifications}
@@ -348,7 +348,7 @@ const Notifications = () => {
               <div className="flex items-center justify-between">
                 <div>
                   <Label className="text-sm font-medium">Return Updates</Label>
-                  <p className="text-xs text-slate-500 mt-1">Get notified about return status changes</p>
+                  <p className="text-xs text-muted-foreground mt-1">Get notified about return status changes</p>
                 </div>
                 <Switch
                   checked={preferences.returnUpdates}
@@ -361,7 +361,7 @@ const Notifications = () => {
               <div className="flex items-center justify-between">
                 <div>
                   <Label className="text-sm font-medium">AI Suggestions</Label>
-                  <p className="text-xs text-slate-500 mt-1">Notifications for AI recommendations</p>
+                  <p className="text-xs text-muted-foreground mt-1">Notifications for AI recommendations</p>
                 </div>
                 <Switch
                   checked={preferences.aiSuggestions}
@@ -376,7 +376,7 @@ const Notifications = () => {
               <div className="flex items-center justify-between">
                 <div>
                   <Label className="text-sm font-medium">Billing Alerts</Label>
-                  <p className="text-xs text-slate-500 mt-1">Usage limits and billing notifications</p>
+                  <p className="text-xs text-muted-foreground mt-1">Usage limits and billing notifications</p>
                 </div>
                 <Switch
                   checked={preferences.billingAlerts}
@@ -389,7 +389,7 @@ const Notifications = () => {
               <div className="flex items-center justify-between">
                 <div>
                   <Label className="text-sm font-medium">System Updates</Label>
-                  <p className="text-xs text-slate-500 mt-1">Platform updates and maintenance notices</p>
+                  <p className="text-xs text-muted-foreground mt-1">Platform updates and maintenance notices</p>
                 </div>
                 <Switch
                   checked={preferences.systemUpdates}
@@ -402,7 +402,7 @@ const Notifications = () => {
               <div className="flex items-center justify-between">
                 <div>
                   <Label className="text-sm font-medium">Push Notifications</Label>
-                  <p className="text-xs text-slate-500 mt-1">Browser push notifications</p>
+                  <p className="text-xs text-muted-foreground mt-1">Browser push notifications</p>
                 </div>
                 <Switch
                   checked={preferences.pushNotifications}
