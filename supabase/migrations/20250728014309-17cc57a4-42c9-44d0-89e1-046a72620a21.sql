@@ -1,0 +1,7 @@
+-- Create some test notifications for the demo merchant
+INSERT INTO public.notifications (merchant_id, type, title, message, priority, data, read) VALUES
+  ('550e8400-e29b-41d4-a716-446655440000', 'return', 'New Return Request', 'Customer john@example.com requested return for Order #1001', 'high', '{"return_id": "test-return-1", "order_id": "1001", "customer_email": "john@example.com"}', false),
+  ('550e8400-e29b-41d4-a716-446655440000', 'ai_suggestion', 'AI Exchange Suggestion', 'High confidence exchange suggestion available (85% match)', 'medium', '{"return_id": "test-return-2", "confidence_score": 0.85, "suggestion_type": "exchange"}', false),
+  ('550e8400-e29b-41d4-a716-446655440000', 'return_status', 'Return Approved', 'Return for Order #1002 has been approved and processed', 'low', '{"return_id": "test-return-3", "order_id": "1002", "old_status": "requested", "new_status": "approved"}', true),
+  ('550e8400-e29b-41d4-a716-446655440000', 'system', 'System Maintenance', 'Scheduled maintenance will occur tonight from 2-4 AM EST', 'medium', '{"maintenance_type": "scheduled", "duration": "2 hours"}', false),
+  ('550e8400-e29b-41d4-a716-446655440000', 'ai_suggestion', 'Smart Exchange Recommendation', 'AI found perfect alternative for returned item (92% confidence)', 'high', '{"return_id": "test-return-4", "confidence_score": 0.92, "suggested_product": "Alternative Jacket"}', false);
