@@ -11,6 +11,11 @@ import Analytics from '@/pages/Analytics';
 import AIInsights from '@/pages/AIInsights';
 import Products from '@/pages/Products';
 import Settings from '@/pages/Settings';
+import SettingsBilling from '@/pages/SettingsBilling';
+import SettingsWebhooks from '@/pages/SettingsWebhooks';
+import SettingsIntegrations from '@/pages/SettingsIntegrations';
+import SettingsAutomation from '@/pages/SettingsAutomation';
+import SettingsSystem from '@/pages/SettingsSystem';
 import Auth from '@/pages/Auth';
 import CustomerPortal from '@/pages/CustomerPortal';
 import Automations from '@/pages/Automations';
@@ -198,6 +203,46 @@ const AppRouter = () => {
             element={
               <ProtectedRoute>
                 <Settings />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/settings/billing" 
+            element={
+              <ProtectedRoute>
+                <SettingsBilling />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/settings/webhooks" 
+            element={
+              <ProtectedRoute>
+                <SettingsWebhooks />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/settings/integrations" 
+            element={
+              <ProtectedRoute>
+                <SettingsIntegrations />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/settings/automation" 
+            element={
+              <ProtectedRoute>
+                <SettingsAutomation />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/settings/system" 
+            element={
+              <ProtectedRoute>
+                <SettingsSystem />
               </ProtectedRoute>
             } 
           />
