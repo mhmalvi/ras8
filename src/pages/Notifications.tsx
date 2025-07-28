@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { Bell, Settings, Filter, CheckCheck, X, Info, AlertTriangle, Users, DollarSign } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -24,8 +24,8 @@ const Notifications = () => {
     billingAlerts: true
   });
 
-  // Get filter object for the hook
-  const getFilterObject = () => {
+  // Memoize filter object to prevent unnecessary re-renders
+  const filterObject = useMemo(() => {
     switch (filter) {
       case 'unread':
         return { read: false };
@@ -46,7 +46,7 @@ const Notifications = () => {
       default:
         return {};
     }
-  };
+  }, [filter]);
 
   const { 
     notifications, 
@@ -56,7 +56,7 @@ const Notifications = () => {
     markAsRead, 
     markAllAsRead, 
     deleteNotification 
-  } = useNotifications(getFilterObject());
+  } = useNotifications(filterObject);
 
   const getNotificationIcon = (type: string) => {
     switch (type) {
