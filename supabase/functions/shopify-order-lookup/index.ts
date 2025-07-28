@@ -44,7 +44,7 @@ serve(async (req) => {
 
     // Search for order by name (order number)
     const orderByNameResponse = await fetch(
-      `https://${normalizedDomain}/admin/api/2023-07/orders.json?name=%23${normalizedOrderNumber}&limit=10`,
+      `https://${normalizedDomain}/admin/api/2024-07/orders.json?name=${encodeURIComponent(normalizedOrderNumber)}&status=any&limit=50`,
       {
         headers: {
           'X-Shopify-Access-Token': accessToken,
@@ -65,7 +65,7 @@ serve(async (req) => {
     if (orders.length === 0 && /^\d+$/.test(normalizedOrderNumber)) {
       try {
         const orderByIdResponse = await fetch(
-          `https://${normalizedDomain}/admin/api/2023-07/orders/${normalizedOrderNumber}.json`,
+          `https://${normalizedDomain}/admin/api/2024-07/orders/${normalizedOrderNumber}.json`,
           {
             headers: {
               'X-Shopify-Access-Token': accessToken,
