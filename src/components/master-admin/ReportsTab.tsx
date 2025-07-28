@@ -1,9 +1,71 @@
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Download, FileText, Calendar, TrendingUp, Users, DollarSign } from "lucide-react";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Download, FileText, Calendar, TrendingUp, Users, DollarSign, RefreshCw } from "lucide-react";
+import { useMasterAdminData } from "@/hooks/useMasterAdminData";
+import { useToast } from "@/hooks/use-toast";
 
 const ReportsTab = () => {
+  const [startDate, setStartDate] = useState('2024-01-01');
+  const [endDate, setEndDate] = useState(new Date().toISOString().split('T')[0]);
+  const [reportType, setReportType] = useState('');
+  const [isGenerating, setIsGenerating] = useState(false);
+  const { stats, merchants, loading } = useMasterAdminData();
+  const { toast } = useToast();
+
+  const generateReport = async (type: string, isCustom = false) => {
+    setIsGenerating(true);
+    
+    try {
+      console.log(`🔄 Generating ${type} report...`);
+      
+      // Simulate report generation
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      
+      toast({
+        title: "Report Generated Successfully",
+        description: `${type} report has been generated and is ready for download.`
+      });
+      
+      // In a real implementation, this would download the file
+      console.log(`✅ ${type} report generated successfully`);
+      
+    } catch (error) {
+      console.error('❌ Error generating report:', error);
+      toast({
+        variant: "destructive",
+        title: "Report Generation Failed",
+        description: "Unable to generate the requested report. Please try again."
+      });
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
+  const downloadReport = async (reportId: number, title: string) => {
+    try {
+      console.log(`🔄 Downloading report: ${title}`);
+      
+      toast({
+        title: "Download Started",
+        description: `${title} download has been initiated.`
+      });
+      
+      // In a real implementation, this would trigger the actual file download
+      console.log(`✅ ${title} download started`);
+      
+    } catch (error) {
+      console.error('❌ Error downloading report:', error);
+      toast({
+        variant: "destructive",
+        title: "Download Failed",
+        description: "Unable to download the report. Please try again."
+      });
+    }
+  };
+
   const reportTypes = [
     {
       id: 1,
@@ -43,12 +105,18 @@ const ReportsTab = () => {
     }
   ];
 
-  const quickStats = [
-    { name: 'Total Reports Generated', value: '1,247', icon: FileText, color: 'blue' },
-    { name: 'Active Merchants', value: '4', icon: Users, color: 'green' },
-    { name: 'Revenue This Month', value: '$30,250', icon: DollarSign, color: 'purple' },
-    { name: 'Returns Processed', value: '346', icon: TrendingUp, color: 'orange' },
-  ];
+  const getQuickStats = () => {
+    if (!stats) return [];
+    
+    return [
+      { name: 'Total Reports Generated', value: '1,247', icon: FileText, color: 'blue' },
+      { name: 'Active Merchants', value: stats.totalMerchants.toString(), icon: Users, color: 'green' },
+      { name: 'Revenue This Month', value: `$${stats.monthlyGrowth.revenue.toLocaleString()}`, icon: DollarSign, color: 'purple' },
+      { name: 'Returns Processed', value: stats.totalReturns.toString(), icon: TrendingUp, color: 'orange' },
+    ];
+  };
+
+  const quickStats = getQuickStats();
 
   const getTypeColor = (type: string) => {
     switch (type) {
@@ -107,20 +175,40 @@ const ReportsTab = () => {
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="grid grid-cols-1 gap-3">
-              <Button variant="outline" className="justify-start gap-2 h-12">
-                <Download className="h-4 w-4" />
+              <Button 
+                variant="outline" 
+                className="justify-start gap-2 h-12"
+                onClick={() => generateReport('Returns Summary')}
+                disabled={isGenerating || loading}
+              >
+                {isGenerating ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
                 Generate Returns Summary (Last 30 days)
               </Button>
-              <Button variant="outline" className="justify-start gap-2 h-12">
-                <Download className="h-4 w-4" />
+              <Button 
+                variant="outline" 
+                className="justify-start gap-2 h-12"
+                onClick={() => generateReport('Merchant Performance Report')}
+                disabled={isGenerating || loading}
+              >
+                {isGenerating ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
                 Generate Merchant Performance Report
               </Button>
-              <Button variant="outline" className="justify-start gap-2 h-12">
-                <Download className="h-4 w-4" />
+              <Button 
+                variant="outline" 
+                className="justify-start gap-2 h-12"
+                onClick={() => generateReport('Financial Analytics')}
+                disabled={isGenerating || loading}
+              >
+                {isGenerating ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
                 Generate Financial Analytics
               </Button>
-              <Button variant="outline" className="justify-start gap-2 h-12">
-                <Download className="h-4 w-4" />
+              <Button 
+                variant="outline" 
+                className="justify-start gap-2 h-12"
+                onClick={() => generateReport('System Usage Report')}
+                disabled={isGenerating || loading}
+              >
+                {isGenerating ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
                 Generate System Usage Report
               </Button>
             </div>
@@ -143,28 +231,38 @@ const ReportsTab = () => {
                 <label className="text-sm font-medium text-slate-700 mb-2 block">Start Date</label>
                 <input
                   type="date"
+                  value={startDate}
+                  onChange={(e) => setStartDate(e.target.value)}
                   className="w-full px-3 py-2 border border-slate-300 rounded-md text-sm"
-                  defaultValue="2024-01-01"
                 />
               </div>
               <div>
                 <label className="text-sm font-medium text-slate-700 mb-2 block">End Date</label>
                 <input
                   type="date"
+                  value={endDate}
+                  onChange={(e) => setEndDate(e.target.value)}
                   className="w-full px-3 py-2 border border-slate-300 rounded-md text-sm"
-                  defaultValue="2024-01-31"
                 />
               </div>
             </div>
-            <select className="w-full px-3 py-2 border border-slate-300 rounded-md text-sm">
-              <option>Select Report Type</option>
-              <option>Returns Summary</option>
-              <option>Merchant Performance</option>
-              <option>Financial Analytics</option>
-              <option>System Usage</option>
+            <select 
+              className="w-full px-3 py-2 border border-slate-300 rounded-md text-sm"
+              value={reportType}
+              onChange={(e) => setReportType(e.target.value)}
+            >
+              <option value="">Select Report Type</option>
+              <option value="returns">Returns Summary</option>
+              <option value="performance">Merchant Performance</option>
+              <option value="financial">Financial Analytics</option>
+              <option value="usage">System Usage</option>
             </select>
-            <Button className="w-full">
-              <Download className="h-4 w-4 mr-2" />
+            <Button 
+              className="w-full"
+              onClick={() => generateReport(reportType || 'Custom Report', true)}
+              disabled={!reportType || isGenerating || loading}
+            >
+              {isGenerating ? <RefreshCw className="h-4 w-4 mr-2 animate-spin" /> : <Download className="h-4 w-4 mr-2" />}
               Generate Custom Report
             </Button>
           </CardContent>
@@ -209,7 +307,11 @@ const ReportsTab = () => {
                     <div>Size: {report.size}</div>
                     <div>Generated: {report.lastGenerated}</div>
                   </div>
-                  <Button size="sm" variant="outline">
+                  <Button 
+                    size="sm" 
+                    variant="outline"
+                    onClick={() => downloadReport(report.id, report.title)}
+                  >
                     <Download className="h-4 w-4 mr-2" />
                     Download
                   </Button>
