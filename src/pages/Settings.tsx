@@ -152,13 +152,7 @@ const Settings = () => {
           {settingsOptions.map((option) => (
             <Card 
               key={option.id}
-              className={`cursor-pointer transition-all duration-300 hover:shadow-lg hover:scale-105 ${option.color}`}
-              onClick={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                console.log('🖱️ Card clicked:', option.id, 'path:', option.path);
-                handleCardClick(option.path);
-              }}
+              className={`transition-all duration-300 hover:shadow-lg hover:scale-105 ${option.color}`}
             >
               <CardHeader className="pb-4">
                 <div className="flex items-center justify-between">
