@@ -294,8 +294,8 @@ const AtomicAppRouter = () => {
             {/* Catch all - redirect to dashboard for authenticated users */}
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
-          </div>
           <Toaster />
+          </div>
         </BrowserRouter>
       </AtomicAuthProvider>
     </ErrorBoundary>
