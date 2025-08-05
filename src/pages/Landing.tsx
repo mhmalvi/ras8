@@ -25,8 +25,8 @@ const Landing = () => {
               <Link to="/auth">
                 <Button variant="ghost">Sign In</Button>
               </Link>
-              <Link to="/customer-portal">
-                <Button variant="ghost">Customer Portal</Button>
+              <Link to="/return-portal">
+                <Button variant="ghost">Return Portal</Button>
               </Link>
               <Link to="/auth">
                 <Button className="bg-blue-600 hover:bg-blue-700">
@@ -60,9 +60,9 @@ const Landing = () => {
                 <ArrowRight className="ml-2 h-5 w-5" />
               </Button>
             </Link>
-            <Link to="/customer-portal">
+            <Link to="/return-portal">
               <Button size="lg" variant="outline">
-                Try Customer Portal
+                Try Return Portal
               </Button>
             </Link>
           </div>
@@ -206,9 +206,9 @@ const Landing = () => {
                 <ArrowRight className="ml-2 h-5 w-5" />
               </Button>
             </Link>
-            <Link to="/customer-portal">
+            <Link to="/return-portal">
               <Button size="lg" variant="outline" className="border-white text-white hover:bg-white/10">
-                Try Customer Portal
+                Try Return Portal
               </Button>
             </Link>
           </div>
@@ -234,7 +234,7 @@ const Landing = () => {
               <h4 className="font-semibold text-white mb-4">Product</h4>
               <ul className="space-y-2 text-sm">
                 <li><Link to="/auth" className="hover:text-white">Dashboard</Link></li>
-                <li><Link to="/customer-portal" className="hover:text-white">Customer Portal</Link></li>
+                <li><Link to="/return-portal" className="hover:text-white">Return Portal</Link></li>
                 <li><Link to="/auth" className="hover:text-white">Settings</Link></li>
               </ul>
             </div>
