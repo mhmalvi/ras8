@@ -42,6 +42,36 @@ const mainItems = [
     url: "/products",
     icon: Inbox,
   },
+  {
+    title: "Customers",
+    url: "/customers",
+    icon: Users,
+  },
+  {
+    title: "Automations",
+    url: "/automations",
+    icon: Activity,
+  },
+  {
+    title: "Integrations",
+    url: "/integrations",
+    icon: Webhook,
+  },
+  {
+    title: "Notifications",
+    url: "/notifications",
+    icon: Bell,
+  },
+  {
+    title: "Billing",
+    url: "/billing",
+    icon: CreditCard,
+  },
+  {
+    title: "Settings",
+    url: "/settings",
+    icon: Settings,
+  },
 ]
 
 export function AppSidebar() {

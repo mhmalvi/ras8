@@ -13,6 +13,11 @@ import Dashboard from '@/pages/Dashboard';
 import Returns from '@/pages/Returns';
 import Analytics from '@/pages/Analytics';
 import Settings from '@/pages/Settings';
+import SettingsBilling from '@/pages/SettingsBilling';
+import SettingsWebhooks from '@/pages/SettingsWebhooks';
+import SettingsIntegrations from '@/pages/SettingsIntegrations';
+import SettingsAutomation from '@/pages/SettingsAutomation';
+import SettingsSystem from '@/pages/SettingsSystem';
 import Auth from '@/pages/Auth';
 import CustomerPortal from '@/pages/CustomerPortal';
 import Automations from '@/pages/Automations';
@@ -224,6 +229,46 @@ const AtomicAppRouter = () => {
               element={
                 <AtomicProtectedRoute>
                   <Settings />
+                </AtomicProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/settings/billing" 
+              element={
+                <AtomicProtectedRoute>
+                  <SettingsBilling />
+                </AtomicProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/settings/webhooks" 
+              element={
+                <AtomicProtectedRoute>
+                  <SettingsWebhooks />
+                </AtomicProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/settings/integrations" 
+              element={
+                <AtomicProtectedRoute>
+                  <SettingsIntegrations />
+                </AtomicProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/settings/automation" 
+              element={
+                <AtomicProtectedRoute>
+                  <SettingsAutomation />
+                </AtomicProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/settings/system" 
+              element={
+                <AtomicProtectedRoute>
+                  <SettingsSystem />
                 </AtomicProtectedRoute>
               } 
             />
