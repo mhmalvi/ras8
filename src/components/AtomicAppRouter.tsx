@@ -57,9 +57,9 @@ const AtomicAppRouter = () => {
         console.error('💥 App Error:', error, errorInfo);
       }}
     >
-      <AppBridgeProvider>
-        <AtomicAuthProvider>
-          <BrowserRouter>
+      <BrowserRouter>
+        <AppBridgeProvider>
+          <AtomicAuthProvider>
             <div className="min-h-screen bg-background">
               <Routes>
             {/* Public Routes */}
@@ -297,12 +297,12 @@ const AtomicAppRouter = () => {
             
             {/* Catch all - redirect to dashboard for authenticated users */}
             <Route path="*" element={<Navigate to="/" replace />} />
-            </Routes>
-            <Toaster />
-            </div>
-          </BrowserRouter>
-        </AtomicAuthProvider>
-      </AppBridgeProvider>
+              </Routes>
+              <Toaster />
+              </div>
+            </AtomicAuthProvider>
+          </AppBridgeProvider>
+        </BrowserRouter>
     </ErrorBoundary>
   );
 };
