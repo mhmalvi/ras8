@@ -62,6 +62,7 @@ const ReturnProcessingModal = ({
       
       const { data, error } = await supabase.functions.invoke('generate-exchange-recommendation', {
         body: {
+          returnId: returnData.id,
           returnReason: returnData.reason,
           productName: returnData.return_items?.[0]?.product_name || 'Product',
           customerEmail: returnData.customer_email,
@@ -76,13 +77,16 @@ const ReturnProcessingModal = ({
 
       console.log('✅ AI recommendation received:', data);
       
-      if (data?.success && data?.data) {
+      if (data?.success && data?.suggestion) {
+        const suggestion = data.suggestion;
+        const firstRecommendation = suggestion.recommendations?.[0];
+        
         setAiRecommendation({
-          suggestedProduct: data.data.suggestedProduct,
-          confidence: data.data.confidence,
-          reasoning: data.data.reasoning,
+          suggestedProduct: firstRecommendation?.productSuggestion || 'Exchange recommendation',
+          confidence: Math.round((firstRecommendation?.confidenceScore || suggestion.overallConfidence || 0.7) * 100),
+          reasoning: firstRecommendation?.reasoning || 'AI-generated exchange recommendation',
           type: 'exchange',
-          expectedOutcome: 'Improved customer satisfaction',
+          expectedOutcome: suggestion.customerSatisfactionPotential === 'high' ? 'High customer satisfaction' : 'Improved customer satisfaction',
           alternativeOptions: ['Full refund', 'Store credit']
         });
         
@@ -91,10 +95,10 @@ const ReturnProcessingModal = ({
           .from('ai_suggestions')
           .insert({
             return_id: returnData.id,
-            suggested_product_name: data.data.suggestedProduct,
+            suggested_product_name: firstRecommendation?.productSuggestion || 'Exchange recommendation',
             suggestion_type: 'exchange',
-            confidence_score: data.data.confidence / 100,
-            reasoning: data.data.reasoning,
+            confidence_score: firstRecommendation?.confidenceScore || suggestion.overallConfidence || 0.7,
+            reasoning: firstRecommendation?.reasoning || 'AI-generated exchange recommendation',
             accepted: null
           });
       } else {
