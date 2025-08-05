@@ -3,6 +3,7 @@ import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AtomicAuthProvider } from '@/contexts/AtomicAuthContext';
 import { AppBridgeProvider } from '@/components/AppBridgeProvider';
+import { ShopifyEmbeddedErrorBoundary } from '@/components/ShopifyEmbeddedErrorBoundary';
 import { Toaster } from "@/components/ui/toaster";
 import { ErrorBoundary } from 'react-error-boundary';
 import AtomicProtectedRoute from '@/components/AtomicProtectedRoute';
@@ -33,6 +34,7 @@ import Security from '@/pages/Security';
 import Integrations from '@/pages/Integrations';
 import Webhooks from '@/pages/Webhooks';
 import ShopifyInstall from '@/pages/ShopifyInstall';
+import ShopifyTesting from '@/pages/ShopifyTesting';
 
 const ErrorFallback = ({ error, resetErrorBoundary }: { error: Error; resetErrorBoundary: () => void }) => (
   <div className="min-h-screen flex items-center justify-center bg-background">
@@ -59,9 +61,10 @@ const AtomicAppRouter = () => {
     >
       <BrowserRouter>
         <AppBridgeProvider>
-          <AtomicAuthProvider>
-            <div className="min-h-screen bg-background">
-              <Routes>
+          <ShopifyEmbeddedErrorBoundary>
+            <AtomicAuthProvider>
+              <div className="min-h-screen bg-background">
+                <Routes>
             {/* Public Routes */}
             <Route path="/landing" element={<Index />} />
             <Route path="/return-portal" element={<CustomerPortal />} />
@@ -264,6 +267,14 @@ const AtomicAppRouter = () => {
                 </AtomicProtectedRoute>
               } 
             />
+            <Route 
+              path="/shopify/testing" 
+              element={
+                <AtomicProtectedRoute>
+                  <ShopifyTesting />
+                </AtomicProtectedRoute>
+              } 
+            />
             
             {/* Error/Fallback Routes */}
             <Route path="/unauthorized" element={
@@ -297,10 +308,11 @@ const AtomicAppRouter = () => {
             
             {/* Catch all - redirect to dashboard for authenticated users */}
             <Route path="*" element={<Navigate to="/" replace />} />
-              </Routes>
-              <Toaster />
-              </div>
-            </AtomicAuthProvider>
+                </Routes>
+                <Toaster />
+                </div>
+              </AtomicAuthProvider>
+            </ShopifyEmbeddedErrorBoundary>
           </AppBridgeProvider>
         </BrowserRouter>
     </ErrorBoundary>

@@ -1,0 +1,45 @@
+# Learn more about configuring your app at https://shopify.dev/docs/apps/tools/cli/configuration
+
+name = "returns-automation"
+client_id = "{{SHOPIFY_CLIENT_ID}}"
+application_url = "https://your-app-domain.com"
+embedded = true
+
+[access_scopes]
+# https://shopify.dev/docs/api/usage/access-scopes
+scopes = "read_orders,write_orders,read_customers,read_products,write_draft_orders,read_inventory,read_locations"
+
+[auth]
+redirect_urls = [
+  "https://your-app-domain.com/functions/v1/shopify-oauth-callback",
+  "https://your-app-domain.com/auth/callback"
+]
+
+[webhooks]
+api_version = "2024-01"
+
+  [[webhooks.subscriptions]]
+  topics = [ "orders/create", "orders/updated", "orders/paid" ]
+  uri = "https://your-app-domain.com/functions/v1/shopify-webhook"
+
+  [[webhooks.subscriptions]]
+  topics = [ "app/uninstalled" ]
+  uri = "https://your-app-domain.com/functions/v1/shopify-webhook"
+
+  [[webhooks.subscriptions]]
+  topics = [ "customers/data_request", "customers/redact", "shop/redact" ]
+  uri = "https://your-app-domain.com/functions/v1/shopify-gdpr-webhooks"
+
+[app_proxy]
+# Uncomment the following to add an App Proxy
+# url = "https://my-app-proxy.com"
+# subpath = "apps"
+# prefix = "proxy"
+
+[pos]
+embedded = false
+
+[build]
+automatically_update_urls_on_dev = true
+dev_store_url = "https://your-dev-store.myshopify.com"
+include_config_on_deploy = true
