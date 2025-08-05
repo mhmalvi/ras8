@@ -151,15 +151,13 @@ const AtomicAppRouter = () => {
               } 
             />
             
-            {/* Protected Routes - Dashboard is at root "/" */}
+            {/* Main Landing Page - Waitlist Registration */}
             <Route 
               path="/" 
-              element={
-                <AtomicProtectedRoute>
-                  <Dashboard />
-                </AtomicProtectedRoute>
-              } 
+              element={<Index />}
             />
+            
+            {/* Dashboard Route - Protected */}
             <Route 
               path="/dashboard" 
               element={
