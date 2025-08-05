@@ -35,28 +35,6 @@ const Settings = () => {
       badgeColor: 'bg-blue-100 text-blue-800'
     },
     {
-      id: 'webhooks',
-      title: 'Webhooks',
-      description: 'Configure webhook endpoints and monitor delivery',
-      icon: <Webhook className="h-6 w-6" />,
-      path: '/settings/webhooks',
-      color: 'bg-purple-50 border-purple-200 hover:bg-purple-100',
-      iconColor: 'text-purple-600',
-      badge: 'Active',
-      badgeColor: 'bg-purple-100 text-purple-800'
-    },
-    {
-      id: 'integrations',
-      title: 'Integrations',
-      description: 'Connect third-party services and manage API keys',
-      icon: <Shield className="h-6 w-6" />,
-      path: '/settings/integrations',
-      color: 'bg-green-50 border-green-200 hover:bg-green-100',
-      iconColor: 'text-green-600',
-      badge: '4 Available',
-      badgeColor: 'bg-green-100 text-green-800'
-    },
-    {
       id: 'automation',
       title: 'Automation System',
       description: 'Configure automation rules, labels, and n8n workflows',
