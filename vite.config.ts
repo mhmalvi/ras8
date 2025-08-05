@@ -22,36 +22,28 @@ export default defineConfig(({ mode }) => ({
   },
   // Performance optimizations
   build: {
+    // Reduce preload warnings by limiting module preloading
+    modulePreload: {
+      polyfill: false,
+      resolveDependencies: (filename, deps) => {
+        // Only preload critical dependencies
+        return deps.filter(dep => 
+          dep.includes('react') || 
+          dep.includes('main') ||
+          dep.includes('index')
+        );
+      }
+    },
     // Enable code splitting
     rollupOptions: {
       output: {
         manualChunks: {
-          // Vendor chunks
+          // Core chunks only
           'react-vendor': ['react', 'react-dom'],
-          'ui-vendor': ['@radix-ui/react-dialog', '@radix-ui/react-dropdown-menu', '@radix-ui/react-select'],
-          'chart-vendor': ['recharts'],
           'supabase-vendor': ['@supabase/supabase-js'],
-          // Feature chunks
-          'analytics': [
-            './src/hooks/useRealAnalyticsData.tsx',
-            './src/hooks/usePerformanceData.tsx',
-            './src/components/AnalyticsDashboard.tsx'
-          ],
-          'returns': [
-            './src/services/returnService.ts',
-            './src/services/merchantReturnsService.ts',
-            './src/hooks/useRealReturnsData.tsx'
-          ],
-          'ai': [
-            './src/services/aiService.ts',
-            './src/hooks/useAIRecommendations.tsx'
-          ]
         },
         // Optimize chunk naming
-        chunkFileNames: (chunkInfo) => {
-          const facadeModuleId = chunkInfo.facadeModuleId ? chunkInfo.facadeModuleId.split('/').pop()?.replace('.tsx', '').replace('.ts', '') : 'chunk';
-          return `assets/js/[name]-[hash].js`;
-        },
+        chunkFileNames: 'assets/js/[name]-[hash].js',
         entryFileNames: 'assets/js/[name]-[hash].js',
         assetFileNames: 'assets/[ext]/[name]-[hash].[ext]'
       }
@@ -60,8 +52,8 @@ export default defineConfig(({ mode }) => ({
     target: 'esnext',
     minify: 'esbuild',
     sourcemap: mode === 'development',
-    // Chunk size warning limit
-    chunkSizeWarningLimit: 1000,
+    // Increase chunk size limit to reduce splitting
+    chunkSizeWarningLimit: 2000,
     // Enable CSS code splitting
     cssCodeSplit: true
   },
