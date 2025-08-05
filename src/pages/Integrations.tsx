@@ -15,9 +15,11 @@ import {
 } from "lucide-react";
 import AppLayout from "@/components/AppLayout";
 import { useState } from "react";
+import { useToast } from "@/hooks/use-toast";
 
 const Integrations = () => {
   const [searchQuery, setSearchQuery] = useState("");
+  const { toast } = useToast();
 
   const integrations = [
     {
@@ -75,6 +77,22 @@ const Integrations = () => {
     integration.description.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
+  const handleIntegrationAction = (integration: typeof integrations[0]) => {
+    if (integration.status === "connected") {
+      // Handle manage/configure action
+      toast({
+        title: `Managing ${integration.name}`,
+        description: `Opening ${integration.name} configuration...`,
+      });
+    } else {
+      // Handle connect action
+      toast({
+        title: `Connecting ${integration.name}`,
+        description: `Starting connection process for ${integration.name}...`,
+      });
+    }
+  };
+
   return (
     <AppLayout>
       <div className="space-y-6">
@@ -125,6 +143,7 @@ const Integrations = () => {
                   <Button 
                     size="sm" 
                     variant={integration.status === "connected" ? "outline" : "default"}
+                    onClick={() => handleIntegrationAction(integration)}
                   >
                     {integration.status === "connected" ? "Manage" : "Connect"}
                     <ArrowRight className="ml-1 h-3 w-3" />
@@ -143,7 +162,14 @@ const Integrations = () => {
               <p className="text-sm text-muted-foreground mb-4">
                 Contact us to request a custom integration
               </p>
-              <Button variant="outline" size="sm">
+              <Button 
+                variant="outline" 
+                size="sm"
+                onClick={() => toast({
+                  title: "Custom Integration Request",
+                  description: "We'll contact you shortly to discuss your requirements.",
+                })}
+              >
                 Request Integration
               </Button>
             </div>
