@@ -1,8 +1,13 @@
 
-import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
+import React, { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 import { AuthService } from '@/services/authService';
+
+// Debug check - ensure React is available
+if (!React || !useState) {
+  console.error('💥 CRITICAL: React or hooks are not available!', { React, useState });
+}
 
 interface AuthContextType {
   user: User | null;
