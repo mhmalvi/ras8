@@ -2,6 +2,7 @@
 import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AtomicAuthProvider } from '@/contexts/AtomicAuthContext';
+import { AppBridgeProvider } from '@/components/AppBridgeProvider';
 import { Toaster } from "@/components/ui/toaster";
 import { ErrorBoundary } from 'react-error-boundary';
 import AtomicProtectedRoute from '@/components/AtomicProtectedRoute';
@@ -31,6 +32,7 @@ import Notifications from '@/pages/Notifications';
 import Security from '@/pages/Security';
 import Integrations from '@/pages/Integrations';
 import Webhooks from '@/pages/Webhooks';
+import ShopifyInstall from '@/pages/ShopifyInstall';
 
 const ErrorFallback = ({ error, resetErrorBoundary }: { error: Error; resetErrorBoundary: () => void }) => (
   <div className="min-h-screen flex items-center justify-center bg-background">
@@ -55,13 +57,15 @@ const AtomicAppRouter = () => {
         console.error('💥 App Error:', error, errorInfo);
       }}
     >
-      <AtomicAuthProvider>
-        <BrowserRouter>
-          <div className="min-h-screen bg-background">
-            <Routes>
+      <AppBridgeProvider>
+        <AtomicAuthProvider>
+          <BrowserRouter>
+            <div className="min-h-screen bg-background">
+              <Routes>
             {/* Public Routes */}
             <Route path="/landing" element={<Index />} />
             <Route path="/return-portal" element={<CustomerPortal />} />
+            <Route path="/shopify/install" element={<ShopifyInstall />} />
             
             {/* Auth Route - only accessible when logged out */}
             <Route 
@@ -293,11 +297,12 @@ const AtomicAppRouter = () => {
             
             {/* Catch all - redirect to dashboard for authenticated users */}
             <Route path="*" element={<Navigate to="/" replace />} />
-          </Routes>
-          <Toaster />
-          </div>
-        </BrowserRouter>
-      </AtomicAuthProvider>
+            </Routes>
+            <Toaster />
+            </div>
+          </BrowserRouter>
+        </AtomicAuthProvider>
+      </AppBridgeProvider>
     </ErrorBoundary>
   );
 };

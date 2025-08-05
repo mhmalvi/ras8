@@ -1,22 +1,58 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
-import { ExternalLink, Shield, Zap, BarChart3 } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
+import { ExternalLink, Shield, Zap, BarChart3, AlertCircle } from 'lucide-react';
 
 const ShopifyInstallation = () => {
   const [shopDomain, setShopDomain] = useState('');
   const [installing, setInstalling] = useState(false);
+  const [clientId, setClientId] = useState<string | null>(null);
+  const [configError, setConfigError] = useState<string | null>(null);
   const { toast } = useToast();
 
-  // Shopify App configuration - use proper client ID
-  const SHOPIFY_CLIENT_ID = 'your-shopify-client-id'; // This should be set via environment
+  // Shopify App configuration
   const SCOPES = 'read_orders,write_orders,read_customers,read_products';
   const CALLBACK_URL = `${window.location.origin}/functions/v1/shopify-oauth-callback`;
 
+  // Fetch Shopify configuration on component mount
+  useEffect(() => {
+    const fetchShopifyConfig = async () => {
+      try {
+        const { data, error } = await supabase.functions.invoke('get-shopify-config');
+        
+        if (error) {
+          throw error;
+        }
+
+        if (data?.clientId) {
+          setClientId(data.clientId);
+          console.log('✅ Shopify Client ID loaded successfully');
+        } else {
+          setConfigError('Shopify Client ID not configured. Please contact support.');
+        }
+      } catch (error) {
+        console.error('❌ Error fetching Shopify config:', error);
+        setConfigError('Unable to load Shopify configuration. Please try again later.');
+      }
+    };
+
+    fetchShopifyConfig();
+  }, []);
+
   const handleInstall = async () => {
+    if (!clientId) {
+      toast({
+        title: "Configuration error",
+        description: "Shopify Client ID is not configured. Please contact support.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     if (!shopDomain.trim()) {
       toast({
         title: "Shop domain required",
@@ -27,10 +63,10 @@ const ShopifyInstallation = () => {
     }
 
     // Clean up shop domain
-    const cleanDomain = shopDomain.replace(/^https?:\/\//, '').replace(/\/$/, '');
+    let cleanDomain = shopDomain.replace(/^https?:\/\//, '').replace(/\/$/, '');
     if (!cleanDomain.includes('.myshopify.com') && !cleanDomain.includes('.')) {
-      const correctedDomain = `${cleanDomain}.myshopify.com`;
-      setShopDomain(correctedDomain);
+      cleanDomain = `${cleanDomain}.myshopify.com`;
+      setShopDomain(cleanDomain);
     }
 
     setInstalling(true);
@@ -40,13 +76,15 @@ const ShopifyInstallation = () => {
       const state = crypto.randomUUID();
       sessionStorage.setItem('shopify_oauth_state', state);
 
-      // Build Shopify OAuth URL with proper parameters
+      // Build Shopify OAuth URL with proper parameters for embedded app
       const authUrl = new URL(`https://${cleanDomain}/admin/oauth/authorize`);
-      authUrl.searchParams.set('client_id', SHOPIFY_CLIENT_ID);
+      authUrl.searchParams.set('client_id', clientId);
       authUrl.searchParams.set('scope', SCOPES);
       authUrl.searchParams.set('redirect_uri', CALLBACK_URL);
       authUrl.searchParams.set('state', state);
       authUrl.searchParams.set('grant_options[]', 'per-user'); // For proper app embedding
+
+      console.log('🚀 Redirecting to Shopify OAuth:', authUrl.toString());
 
       // Redirect to Shopify OAuth
       window.location.href = authUrl.toString();
@@ -121,6 +159,13 @@ const ShopifyInstallation = () => {
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
+            {/* Show configuration error if any */}
+            {configError && (
+              <div className="flex items-center gap-2 p-3 text-sm text-red-600 bg-red-50 border border-red-200 rounded-md">
+                <AlertCircle className="h-4 w-4 flex-shrink-0" />
+                <span>{configError}</span>
+              </div>
+            )}
             <div>
               <label htmlFor="shop-domain" className="block text-sm font-medium text-gray-700 mb-2">
                 Shop Domain
@@ -138,7 +183,7 @@ const ShopifyInstallation = () => {
             
             <Button 
               onClick={handleInstall}
-              disabled={installing}
+              disabled={installing || !clientId || !!configError}
               className="w-full"
               size="lg"
             >

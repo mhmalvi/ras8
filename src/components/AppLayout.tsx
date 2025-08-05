@@ -5,6 +5,7 @@ import UserMenu from "@/components/UserMenu";
 import { NotificationDropdown } from "@/components/NotificationDropdown";
 import { useMerchantProfile } from "@/hooks/useMerchantProfile";
 import { useAtomicAuth } from "@/contexts/AtomicAuthContext";
+import { useAppBridge } from "@/components/AppBridgeProvider";
 import ProfileCreator from "@/components/ProfileCreator";
 import { LoadingSpinner } from "@/components/LoadingStates";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -19,13 +20,14 @@ interface AppLayoutProps {
 const AppLayout = ({ children }: AppLayoutProps) => {
   const { user, loading: authLoading } = useAtomicAuth();
   const { profile, loading: profileLoading, error: profileError, refetch } = useMerchantProfile();
+  const { isEmbedded, loading: appBridgeLoading } = useAppBridge();
   const navigate = useNavigate();
 
-  // Show loading for reasonable time only
-  if (authLoading || (profileLoading && !profileError)) {
+  // Show loading for App Bridge initialization and authentication
+  if (authLoading || appBridgeLoading || (profileLoading && !profileError)) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <LoadingSpinner size="lg" text="Loading your dashboard..." />
+      <div className={`${isEmbedded ? 'h-screen' : 'min-h-screen'} flex items-center justify-center`}>
+        <LoadingSpinner size="lg" text={isEmbedded ? "Loading Shopify app..." : "Loading your dashboard..."} />
       </div>
     );
   }
@@ -84,30 +86,47 @@ const AppLayout = ({ children }: AppLayoutProps) => {
   // User is authenticated with profile - show main app layout
   return (
     <SidebarProvider>
-      <div className="min-h-screen flex w-full bg-background">
-        <AppSidebar />
+      <div className={`${isEmbedded ? 'h-screen' : 'min-h-screen'} flex w-full bg-background ${isEmbedded ? 'overflow-hidden' : ''}`}>
+        {/* Only show sidebar when not embedded */}
+        {!isEmbedded && <AppSidebar />}
+        
         <div className="flex-1 flex flex-col">
-          {/* Header */}
-          <header className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 px-8 py-6">
-            <div className="flex items-center justify-end space-x-4">
-              <NotificationDropdown />
-              <Button 
-                variant="ghost" 
-                size="icon"
-                onClick={() => navigate('/support')}
-                className="relative"
-              >
-                <HelpCircle className="h-5 w-5" />
-              </Button>
-              <UserMenu />
-            </div>
-          </header>
+          {/* Header - modified for embedded mode */}
+          {!isEmbedded && (
+            <header className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 px-8 py-6">
+              <div className="flex items-center justify-end space-x-4">
+                <NotificationDropdown />
+                <Button 
+                  variant="ghost" 
+                  size="icon"
+                  onClick={() => navigate('/support')}
+                  className="relative"
+                >
+                  <HelpCircle className="h-5 w-5" />
+                </Button>
+                <UserMenu />
+              </div>
+            </header>
+          )}
 
-          {/* Main Content */}
-          <main className="flex-1 px-8 py-8">
-            <div className="max-w-6xl mx-auto">
-              {/* Show merchant assignment alert if needed */}
-              {!profile.merchant_id && (
+          {/* Embedded mode header - minimal */}
+          {isEmbedded && (
+            <header className="border-b bg-background px-4 py-3">
+              <div className="flex items-center justify-between">
+                <h1 className="font-semibold text-lg">Returns Automation</h1>
+                <div className="flex items-center space-x-2">
+                  <NotificationDropdown />
+                  <UserMenu />
+                </div>
+              </div>
+            </header>
+          )}
+
+          {/* Main Content - adjusted for embedded mode */}
+          <main className={`flex-1 ${isEmbedded ? 'px-4 py-4 overflow-auto' : 'px-8 py-8'}`}>
+            <div className={`${isEmbedded ? 'max-w-none' : 'max-w-6xl'} mx-auto`}>
+              {/* Show merchant assignment alert if needed - hide in embedded mode */}
+              {!isEmbedded && !profile.merchant_id && (
                 <Alert className="mb-8">
                   <AlertCircle className="h-4 w-4" />
                   <AlertDescription>
