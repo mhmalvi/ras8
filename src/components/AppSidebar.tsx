@@ -57,21 +57,6 @@ const mainItems = [
     url: "/integrations",
     icon: Webhook,
   },
-  {
-    title: "Notifications",
-    url: "/notifications",
-    icon: Bell,
-  },
-  {
-    title: "Billing",
-    url: "/billing",
-    icon: CreditCard,
-  },
-  {
-    title: "Settings",
-    url: "/settings",
-    icon: Settings,
-  },
 ]
 
 export function AppSidebar() {
