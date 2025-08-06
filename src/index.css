@@ -4,57 +4,57 @@
 
 @layer base {
   :root {
-    /* Enterprise Color Palette */
-    --background: 248 250 252; /* Pale Gray #F8FAFC */
-    --foreground: 15 23 42; /* Midnight Blue #0F172A */
-    --card: 255 255 255;
-    --card-foreground: 15 23 42;
-    --popover: 255 255 255;
-    --popover-foreground: 15 23 42;
-    --primary: 37 99 235; /* Accent Blue #2563EB */
-    --primary-foreground: 248 250 252;
-    --secondary: 241 245 249;
-    --secondary-foreground: 15 23 42;
-    --muted: 241 245 249;
-    --muted-foreground: 100 116 139;
-    --accent: 16 185 129; /* Emerald #10B981 */
-    --accent-foreground: 248 250 252;
-    --destructive: 239 68 68;
-    --destructive-foreground: 248 250 252;
-    --warning: 245 158 11;
-    --warning-foreground: 15 23 42;
-    --border: 226 232 240;
-    --input: 226 232 240;
-    --ring: 37 99 235;
-    --chart-1: 37 99 235;
-    --chart-2: 16 185 129;
-    --chart-3: 245 158 11;
-    --chart-4: 239 68 68;
-    --chart-5: 139 92 246;
-    --radius: 0.75rem;
+    /* Professional Shopify-Aligned Color Palette */
+    --background: 0 0% 100%; /* Pure White */
+    --foreground: 210 11% 15%; /* Professional Dark Gray */
+    --card: 0 0% 100%;
+    --card-foreground: 210 11% 15%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 210 11% 15%;
+    --primary: 142 76% 36%; /* Shopify Green #5FB03A */
+    --primary-foreground: 0 0% 100%;
+    --secondary: 210 17% 95%; /* Light Gray */
+    --secondary-foreground: 210 11% 15%;
+    --muted: 210 17% 95%;
+    --muted-foreground: 210 9% 47%;
+    --accent: 210 100% 56%; /* Professional Blue #1A73E8 */
+    --accent-foreground: 0 0% 100%;
+    --destructive: 0 65% 51%; /* Professional Red */
+    --destructive-foreground: 0 0% 100%;
+    --warning: 35 91% 65%; /* Professional Orange */
+    --warning-foreground: 210 11% 15%;
+    --border: 210 20% 90%; /* Subtle Border */
+    --input: 210 20% 90%;
+    --ring: 142 76% 36%; /* Shopify Green Focus */
+    --chart-1: 142 76% 36%; /* Shopify Green */
+    --chart-2: 210 100% 56%; /* Professional Blue */
+    --chart-3: 35 91% 65%; /* Professional Orange */
+    --chart-4: 0 65% 51%; /* Professional Red */
+    --chart-5: 267 57% 58%; /* Professional Purple */
+    --radius: 0.5rem;
 
-    /* Enterprise Design Tokens */
-    --midnight: 15 23 42; /* #0F172A */
-    --jet-black: 17 24 39; /* #111827 */
-    --accent-blue: 37 99 235; /* #2563EB */
-    --emerald: 16 185 129; /* #10B981 */
-    --pale-gray: 248 250 252; /* #F8FAFC */
+    /* Professional Design Tokens */
+    --shopify-green: 142 76% 36%; /* #5FB03A */
+    --professional-dark: 210 11% 15%; /* #2C3E50 */
+    --professional-blue: 210 100% 56%; /* #1A73E8 */
+    --professional-gray: 210 17% 95%; /* #F8F9FA */
+    --commerce-purple: 267 57% 58%; /* #7C3AED */
     
-    /* Gradients */
-    --gradient-primary: linear-gradient(135deg, hsl(var(--accent-blue)), hsl(var(--emerald)));
-    --gradient-dark: linear-gradient(135deg, hsl(var(--midnight)), hsl(var(--jet-black)));
-    --gradient-mesh: radial-gradient(circle at 20% 80%, hsla(var(--accent-blue), 0.15), transparent 50%), 
-                     radial-gradient(circle at 80% 20%, hsla(var(--emerald), 0.15), transparent 50%),
-                     radial-gradient(circle at 40% 40%, hsla(var(--midnight), 0.1), transparent 50%);
+    /* Professional Gradients */
+    --gradient-primary: linear-gradient(135deg, hsl(var(--shopify-green)), hsl(var(--professional-blue)));
+    --gradient-shopify: linear-gradient(135deg, hsl(var(--shopify-green)), hsl(var(--commerce-purple)));
+    --gradient-mesh: radial-gradient(circle at 20% 80%, hsla(var(--shopify-green), 0.1), transparent 50%), 
+                     radial-gradient(circle at 80% 20%, hsla(var(--professional-blue), 0.1), transparent 50%),
+                     radial-gradient(circle at 40% 40%, hsla(var(--professional-dark), 0.05), transparent 50%);
     
     /* Typography */
     --font-display: 'Inter', 'General Sans', 'Neue Montreal', system-ui, sans-serif;
     --font-body: 'Inter', 'IBM Plex Sans', 'Satoshi', system-ui, sans-serif;
     
-    /* Shadows */
-    --shadow-elegant: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
-    --shadow-glow: 0 0 40px hsla(var(--accent-blue), 0.3);
-    --shadow-depth: 0 10px 30px -5px rgba(0, 0, 0, 0.3);
+    /* Professional Shadows */
+    --shadow-elegant: 0 25px 50px -12px rgba(0, 0, 0, 0.1);
+    --shadow-glow: 0 0 40px hsla(var(--shopify-green), 0.2);
+    --shadow-depth: 0 10px 30px -5px rgba(0, 0, 0, 0.15);
   }
 
   .dark {
@@ -213,10 +213,10 @@
 
 @keyframes glow {
   from {
-    box-shadow: 0 0 20px hsla(var(--accent-blue), 0.3);
+    box-shadow: 0 0 20px hsla(var(--shopify-green), 0.3);
   }
   to {
-    box-shadow: 0 0 40px hsla(var(--accent-blue), 0.6);
+    box-shadow: 0 0 40px hsla(var(--shopify-green), 0.6);
   }
 }
 
