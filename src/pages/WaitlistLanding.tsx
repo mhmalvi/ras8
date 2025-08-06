@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { motion, useAnimation, useInView } from 'framer-motion';
+import { useState, useEffect } from 'react';
+import { motion } from 'framer-motion';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -61,7 +61,7 @@ const WaitlistLanding = () => {
     fetchWaitlistCount();
   }, []);
 
-  const handleWaitlistSubmission = async (e: React.FormEvent) => {
+  const handleWaitlistSubmission = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     
     if (!formData.email.trim() || !formData.name.trim()) {
