@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { 
@@ -34,9 +35,10 @@ const WaitlistLanding = () => {
     shopifyStore: ''
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [waitlistCount, setWaitlistCount] = useState(500);
+const [waitlistCount, setWaitlistCount] = useState(500);
+const [showWalkthrough, setShowWalkthrough] = useState(false);
 
-  const { toast } = useToast();
+const { toast } = useToast();
 
   // Fetch waitlist count - EXACT SAME functionality preserved
   useEffect(() => {
@@ -206,9 +208,49 @@ const WaitlistLanding = () => {
             </div>
           </div>
         </div>
-      </motion.nav>
+</motion.nav>
 
-      {/* 1. Hero Section - "Returns. Reimagined." */}
+{/* Walkthrough Modal */}
+<Dialog open={showWalkthrough} onOpenChange={setShowWalkthrough}>
+  <DialogContent className="max-w-4xl">
+    <DialogHeader>
+      <DialogTitle>Animated Walkthrough</DialogTitle>
+      <DialogDescription>
+        See how AI intercepts refunds, suggests exchanges, and updates your dashboard in real time.
+      </DialogDescription>
+    </DialogHeader>
+
+    <div className="grid md:grid-cols-2 gap-6">
+      <div>
+        <AICard />
+      </div>
+      <div className="space-y-4">
+        <div className="border border-border rounded-lg p-4 bg-muted/30">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-sm font-medium">Return #001 • Sarah M.</span>
+            <Badge variant="secondary" className="text-xs">pending</Badge>
+          </div>
+          <p className="text-xs text-muted-foreground">Blue Hoodie • Reason: Too small</p>
+          <div className="mt-3 flex items-center gap-2">
+            <Badge className="text-xs">Exchange suggested</Badge>
+            <span className="text-xs text-accent">Revenue Recovered: $72.40</span>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-3 gap-3 text-center">
+          {[{label:'Exchanges',value:'18'},{label:'Revenue Saved',value:'$1,247'},{label:'AI Accuracy',value:'94%'}].map((s, i) => (
+            <motion.div key={i} className="p-3 bg-background/60 rounded-lg border border-border/50" initial={{opacity:0, y:10}} animate={{opacity:1, y:0}} transition={{delay:0.2*i}}>
+              <div className="text-lg font-bold text-foreground">{s.value}</div>
+              <div className="text-xs text-muted-foreground">{s.label}</div>
+            </motion.div>
+          ))}
+        </div>
+      </div>
+    </div>
+  </DialogContent>
+</Dialog>
+
+{/* 1. Hero Section - "Returns. Reimagined." */}
       <section className="relative pt-24 pb-32">
         <div className="container mx-auto px-6">
           <div className="max-w-7xl mx-auto">
@@ -254,14 +296,11 @@ const WaitlistLanding = () => {
                     </Button>
                   </motion.div>
                   
-                  <Button 
+<Button 
                     variant="outline" 
                     size="lg" 
                     className="px-10 py-4 text-lg border-border hover:bg-muted/50 transition-all duration-300"
-                    onClick={() => {
-                      const journey = document.querySelector('#return-journey');
-                      journey?.scrollIntoView({ behavior: 'smooth' });
-                    }}
+                    onClick={() => setShowWalkthrough(true)}
                   >
                     <Play className="mr-2 h-5 w-5" />
                     See It In Action
