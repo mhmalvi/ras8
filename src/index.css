@@ -14,7 +14,7 @@
     --popover: 0 0% 100%;
     --popover-foreground: 215 25% 13%;
 
-    --primary: 165 70% 28%; /* Shopify Teal #008060 (refined) */
+    --primary: 158 64% 38%; /* Premium Emerald (refined Shopify green) */
     --primary-foreground: 0 0% 100%;
 
     --secondary: 210 16% 96%; /* Subtle Surface */
@@ -34,10 +34,10 @@
 
     --border: 210 18% 88%;
     --input: 210 18% 88%;
-    --ring: 165 70% 28%; /* Match primary for focus rings */
+    --ring: 158 64% 38%; /* Match primary for focus rings */
 
     /* Charts */
-    --chart-1: 165 70% 28%; /* Teal */
+    --chart-1: 158 64% 38%; /* Emerald */
     --chart-2: 217 90% 55%; /* Blue */
     --chart-3: 38 92% 50%;  /* Orange */
     --chart-4: 0 72% 51%;   /* Red */
@@ -46,14 +46,14 @@
     --radius: 0.75rem;
 
     /* Premium Design Tokens */
-    --shopify-green: 165 70% 28%;
+    --shopify-green: 158 64% 38%;
     --professional-dark: 215 25% 13%;
     --professional-blue: 217 90% 55%;
     --professional-gray: 210 16% 96%;
     --commerce-purple: 267 57% 58%;
     
     /* Premium Gradients */
-    --gradient-primary: linear-gradient(135deg, hsl(var(--primary)), hsl(var(--accent)));
+    --gradient-primary: linear-gradient(135deg, hsl(var(--primary)), hsl(152 68% 46%));
     --gradient-shopify: linear-gradient(135deg, hsl(var(--primary)), hsl(var(--commerce-purple)));
     --gradient-mesh: radial-gradient(circle at 20% 80%, hsla(var(--primary), 0.10), transparent 50%), 
                      radial-gradient(circle at 80% 20%, hsla(var(--accent), 0.10), transparent 50%),
@@ -80,7 +80,7 @@
     --popover: 17 24 39;
     --popover-foreground: 210 40% 98%;
 
-    --primary: 165 70% 35%; /* Teal brighter on dark */
+    --primary: 158 66% 45%; /* Emerald brighter on dark */
     --primary-foreground: 0 0% 100%;
 
     --secondary: 220 14% 20%;
@@ -100,9 +100,9 @@
 
     --border: 220 14% 22%;
     --input: 220 14% 22%;
-    --ring: 165 70% 35%;
+    --ring: 158 66% 45%;
 
-    --chart-1: 165 70% 35%;
+    --chart-1: 158 66% 45%;
     --chart-2: 217 90% 60%;
     --chart-3: 38 92% 55%;
     --chart-4: 0 72% 51%;
