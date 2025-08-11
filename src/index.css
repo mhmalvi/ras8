@@ -4,87 +4,109 @@
 
 @layer base {
   :root {
-    /* Professional Shopify-Aligned Color Palette */
-    --background: 0 0% 100%; /* Pure White */
-    --foreground: 210 11% 15%; /* Professional Dark Gray */
-    --card: 0 0% 100%;
-    --card-foreground: 210 11% 15%;
-    --popover: 0 0% 100%;
-    --popover-foreground: 210 11% 15%;
-    --primary: 142 76% 36%; /* Shopify Green #5FB03A */
-    --primary-foreground: 0 0% 100%;
-    --secondary: 210 17% 95%; /* Light Gray */
-    --secondary-foreground: 210 11% 15%;
-    --muted: 210 17% 95%;
-    --muted-foreground: 210 9% 47%;
-    --accent: 210 100% 56%; /* Professional Blue #1A73E8 */
-    --accent-foreground: 0 0% 100%;
-    --destructive: 0 65% 51%; /* Professional Red */
-    --destructive-foreground: 0 0% 100%;
-    --warning: 35 91% 65%; /* Professional Orange */
-    --warning-foreground: 210 11% 15%;
-    --border: 210 20% 90%; /* Subtle Border */
-    --input: 210 20% 90%;
-    --ring: 142 76% 36%; /* Shopify Green Focus */
-    --chart-1: 142 76% 36%; /* Shopify Green */
-    --chart-2: 210 100% 56%; /* Professional Blue */
-    --chart-3: 35 91% 65%; /* Professional Orange */
-    --chart-4: 0 65% 51%; /* Professional Red */
-    --chart-5: 267 57% 58%; /* Professional Purple */
-    --radius: 0.5rem;
+    /* Premium Shopify-Synced Palette (Sophisticated, Accessible) */
+    --background: 0 0% 100%; /* Canvas */
+    --foreground: 215 25% 13%; /* Neutral Ink */
 
-    /* Professional Design Tokens */
-    --shopify-green: 142 76% 36%; /* #5FB03A */
-    --professional-dark: 210 11% 15%; /* #2C3E50 */
-    --professional-blue: 210 100% 56%; /* #1A73E8 */
-    --professional-gray: 210 17% 95%; /* #F8F9FA */
-    --commerce-purple: 267 57% 58%; /* #7C3AED */
+    --card: 0 0% 100%;
+    --card-foreground: 215 25% 13%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 215 25% 13%;
+
+    --primary: 165 70% 28%; /* Shopify Teal #008060 (refined) */
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 210 16% 96%; /* Subtle Surface */
+    --secondary-foreground: 215 25% 13%;
+
+    --muted: 210 16% 96%;
+    --muted-foreground: 215 15% 40%;
+
+    --accent: 217 90% 55%; /* Premium Commerce Blue */
+    --accent-foreground: 0 0% 100%;
+
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 0 0% 100%;
+
+    --warning: 38 92% 50%;
+    --warning-foreground: 215 25% 13%;
+
+    --border: 210 18% 88%;
+    --input: 210 18% 88%;
+    --ring: 165 70% 28%; /* Match primary for focus rings */
+
+    /* Charts */
+    --chart-1: 165 70% 28%; /* Teal */
+    --chart-2: 217 90% 55%; /* Blue */
+    --chart-3: 38 92% 50%;  /* Orange */
+    --chart-4: 0 72% 51%;   /* Red */
+    --chart-5: 267 57% 58%; /* Purple */
+
+    --radius: 0.75rem;
+
+    /* Premium Design Tokens */
+    --shopify-green: 165 70% 28%;
+    --professional-dark: 215 25% 13%;
+    --professional-blue: 217 90% 55%;
+    --professional-gray: 210 16% 96%;
+    --commerce-purple: 267 57% 58%;
     
-    /* Professional Gradients */
-    --gradient-primary: linear-gradient(135deg, hsl(var(--shopify-green)), hsl(var(--professional-blue)));
-    --gradient-shopify: linear-gradient(135deg, hsl(var(--shopify-green)), hsl(var(--commerce-purple)));
-    --gradient-mesh: radial-gradient(circle at 20% 80%, hsla(var(--shopify-green), 0.1), transparent 50%), 
-                     radial-gradient(circle at 80% 20%, hsla(var(--professional-blue), 0.1), transparent 50%),
+    /* Premium Gradients */
+    --gradient-primary: linear-gradient(135deg, hsl(var(--primary)), hsl(var(--accent)));
+    --gradient-shopify: linear-gradient(135deg, hsl(var(--primary)), hsl(var(--commerce-purple)));
+    --gradient-mesh: radial-gradient(circle at 20% 80%, hsla(var(--primary), 0.10), transparent 50%), 
+                     radial-gradient(circle at 80% 20%, hsla(var(--accent), 0.10), transparent 50%),
                      radial-gradient(circle at 40% 40%, hsla(var(--professional-dark), 0.05), transparent 50%);
     
     /* Typography */
     --font-display: 'Inter', 'General Sans', 'Neue Montreal', system-ui, sans-serif;
     --font-body: 'Inter', 'IBM Plex Sans', 'Satoshi', system-ui, sans-serif;
     
-    /* Professional Shadows */
-    --shadow-elegant: 0 25px 50px -12px rgba(0, 0, 0, 0.1);
-    --shadow-glow: 0 0 40px hsla(var(--shopify-green), 0.2);
-    --shadow-depth: 0 10px 30px -5px rgba(0, 0, 0, 0.15);
+    /* Premium Shadows */
+    --shadow-elegant: 0 24px 48px -16px hsl(var(--professional-dark) / 0.15);
+    --shadow-glow: 0 0 40px hsl(var(--primary) / 0.25);
+    --shadow-depth: 0 12px 32px -8px hsl(var(--professional-dark) / 0.18);
   }
 
   .dark {
-    /* Dark mode with enterprise colors */
-    --background: 15 23 42; /* Midnight Blue */
-    --foreground: 248 250 252; /* Pale Gray */
-    --card: 17 24 39; /* Jet Black */
-    --card-foreground: 248 250 252;
+    /* Dark mode with premium Shopify-synced colors */
+    --background: 15 23 42; /* Midnight */
+    --foreground: 210 40% 98%; /* Near-white */
+
+    --card: 17 24 39;
+    --card-foreground: 210 40% 98%;
+
     --popover: 17 24 39;
-    --popover-foreground: 248 250 252;
-    --primary: 37 99 235; /* Accent Blue */
-    --primary-foreground: 248 250 252;
-    --secondary: 30 41 59;
-    --secondary-foreground: 248 250 252;
-    --muted: 30 41 59;
-    --muted-foreground: 148 163 184;
-    --accent: 16 185 129; /* Emerald */
-    --accent-foreground: 248 250 252;
-    --destructive: 239 68 68;
-    --destructive-foreground: 248 250 252;
-    --warning: 245 158 11;
-    --warning-foreground: 15 23 42;
-    --border: 30 41 59;
-    --input: 30 41 59;
-    --ring: 37 99 235;
-    --chart-1: 37 99 235;
-    --chart-2: 16 185 129;
-    --chart-3: 245 158 11;
-    --chart-4: 239 68 68;
-    --chart-5: 139 92 246;
+    --popover-foreground: 210 40% 98%;
+
+    --primary: 165 70% 35%; /* Teal brighter on dark */
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 220 14% 20%;
+    --secondary-foreground: 210 40% 98%;
+
+    --muted: 220 14% 20%;
+    --muted-foreground: 215 20% 75%;
+
+    --accent: 217 90% 60%;
+    --accent-foreground: 0 0% 100%;
+
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 0 0% 100%;
+
+    --warning: 38 92% 55%;
+    --warning-foreground: 210 40% 98%;
+
+    --border: 220 14% 22%;
+    --input: 220 14% 22%;
+    --ring: 165 70% 35%;
+
+    --chart-1: 165 70% 35%;
+    --chart-2: 217 90% 60%;
+    --chart-3: 38 92% 55%;
+    --chart-4: 0 72% 51%;
+    --chart-5: 267 57% 58%;
   }
 }
 
