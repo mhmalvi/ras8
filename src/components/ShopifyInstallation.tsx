@@ -16,31 +16,18 @@ const ShopifyInstallation = () => {
 
   // Shopify App configuration
   const SCOPES = 'read_orders,write_orders,read_customers,read_products';
-  const CALLBACK_URL = `${window.location.origin}/functions/v1/shopify-oauth-callback`;
+  const CALLBACK_URL = `${window.location.origin}/auth/callback`;
 
-  // Fetch Shopify configuration on component mount
+  // Set Shopify configuration on component mount
   useEffect(() => {
-    const fetchShopifyConfig = async () => {
-      try {
-        const { data, error } = await supabase.functions.invoke('get-shopify-config');
-        
-        if (error) {
-          throw error;
-        }
-
-        if (data?.clientId) {
-          setClientId(data.clientId);
-          console.log('✅ Shopify Client ID loaded successfully');
-        } else {
-          setConfigError('Shopify Client ID not configured. Please contact support.');
-        }
-      } catch (error) {
-        console.error('❌ Error fetching Shopify config:', error);
-        setConfigError('Unable to load Shopify configuration. Please try again later.');
-      }
-    };
-
-    fetchShopifyConfig();
+    // Use the hardcoded client ID from environment
+    const configuredClientId = '2da34c83e89f6645ad1fb2028c7532dd';
+    if (configuredClientId) {
+      setClientId(configuredClientId);
+      console.log('✅ Shopify Client ID loaded successfully');
+    } else {
+      setConfigError('Shopify Client ID not configured. Please contact support.');
+    }
   }, []);
 
   const handleInstall = async () => {
@@ -73,7 +60,7 @@ const ShopifyInstallation = () => {
 
     try {
       // Generate state parameter for security
-      const state = crypto.randomUUID();
+      const state = Math.random().toString(36).substring(2) + Date.now().toString(36);
       sessionStorage.setItem('shopify_oauth_state', state);
 
       // Build Shopify OAuth URL with proper parameters for embedded app

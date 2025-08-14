@@ -46,12 +46,12 @@ export const AtomicAuthProvider = ({ children }: AtomicAuthProviderProps) => {
 
     const initializeAuth = async () => {
       try {
-        console.log('🔐 Initializing authentication...');
+        // Initializing authentication
         
         // Set up auth state change listener first
         const { data: { subscription } } = supabase.auth.onAuthStateChange(
           (event, session) => {
-            console.log('🔐 Auth state changed:', event, session?.user?.email || 'no user');
+            // Auth state changed
             
             if (isMounted) {
               setSession(session);
@@ -78,7 +78,7 @@ export const AtomicAuthProvider = ({ children }: AtomicAuthProviderProps) => {
             setLoading(false);
           }
         } else {
-          console.log('📋 Initial session check:', session?.user?.email || 'no session');
+          // Initial session check complete
           if (isMounted) {
             setSession(session);
             setUser(session?.user ?? null);
@@ -111,12 +111,12 @@ export const AtomicAuthProvider = ({ children }: AtomicAuthProviderProps) => {
     try {
       setError(null);
       setLoading(true);
-      console.log('🔐 Sign in attempt for:', email);
+      // Sign in attempt
       
       const data = await AuthService.signIn(email, password);
       
       if (data.user) {
-        console.log('✅ Authentication successful');
+        // Authentication successful
       }
       
       setLoading(false);
@@ -134,7 +134,7 @@ export const AtomicAuthProvider = ({ children }: AtomicAuthProviderProps) => {
     try {
       setError(null);
       setLoading(true);
-      console.log('🔐 Sign up attempt for:', email);
+      // Sign up attempt
       
       const data = await AuthService.signUp(email, password, firstName, lastName);
       
@@ -152,9 +152,9 @@ export const AtomicAuthProvider = ({ children }: AtomicAuthProviderProps) => {
   const signOut = async () => {
     try {
       setError(null);
-      console.log('🔐 Signing out...');
+      // Signing out
       await AuthService.signOut();
-      console.log('✅ Sign out successful');
+      // Sign out successful
     } catch (error) {
       console.error('❌ Sign out failed:', error);
       const errorMessage = error instanceof Error ? error.message : 'Sign out failed';

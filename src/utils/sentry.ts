@@ -11,7 +11,7 @@ export const initSentry = () => {
   if (isProduction) {
     // Sentry configuration would be handled at deployment time
     // through environment variables managed by the hosting provider
-    console.log('Production environment detected - Sentry would be initialized');
+    // Sentry would be initialized in production
   }
 };
 

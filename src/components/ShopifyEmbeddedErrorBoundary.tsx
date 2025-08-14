@@ -108,6 +108,14 @@ export const ShopifyEmbeddedErrorBoundary: React.FC<ShopifyEmbeddedErrorBoundary
   children 
 }) => {
   const handleError = (error: Error, errorInfo: any) => {
+    // Filter out Shopify platform errors that we can't control
+    if (error.message?.includes('SendBeacon failed') || 
+        error.stack?.includes('context-slice-metrics') ||
+        error.stack?.includes('shopifycloud/web/assets')) {
+      // Silently ignore Shopify platform errors
+      return;
+    }
+    
     console.error('🚨 Shopify Embedded App Error:', error, errorInfo);
     
     // You can add additional error reporting here

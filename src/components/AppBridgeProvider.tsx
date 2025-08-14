@@ -38,20 +38,8 @@ export const AppBridgeProvider: React.FC<AppBridgeProviderProps> = ({ children }
         if (host || shop) {
           setIsEmbedded(true);
           
-          // Get Shopify configuration from our edge function
-          let clientId = 'your-shopify-client-id'; // fallback
-          
-          try {
-            const { data: config } = await supabase.functions.invoke('get-shopify-config');
-            if (config?.clientId) {
-              clientId = config.clientId;
-              console.log('✅ Using configured Shopify Client ID');
-            } else {
-              console.warn('⚠️ Using fallback Shopify Client ID - configure SHOPIFY_CLIENT_ID in Supabase secrets');
-            }
-          } catch (configError) {
-            console.warn('⚠️ Could not fetch Shopify config, using fallback:', configError);
-          }
+          // Use the configured Shopify Client ID
+          const clientId = '2da34c83e89f6645ad1fb2028c7532dd';
           
           // Dynamically import App Bridge
           const { default: createApp } = await import('@shopify/app-bridge');

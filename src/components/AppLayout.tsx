@@ -87,8 +87,8 @@ const AppLayout = ({ children }: AppLayoutProps) => {
   return (
     <SidebarProvider>
       <div className={`${isEmbedded ? 'h-screen' : 'min-h-screen'} flex w-full bg-background ${isEmbedded ? 'overflow-hidden' : ''}`}>
-        {/* Only show sidebar when not embedded */}
-        {!isEmbedded && <AppSidebar />}
+        {/* Show sidebar in both embedded and standalone modes */}
+        <AppSidebar />
         
         <div className="flex-1 flex flex-col">
           {/* Header - modified for embedded mode */}

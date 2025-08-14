@@ -2,7 +2,7 @@
 import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AtomicAuthProvider } from '@/contexts/AtomicAuthContext';
-import { AppBridgeProvider } from '@/components/AppBridgeProvider';
+import { AppBridgeProvider, useAppBridge } from '@/components/AppBridgeProvider';
 import { ShopifyEmbeddedErrorBoundary } from '@/components/ShopifyEmbeddedErrorBoundary';
 import { Toaster } from "@/components/ui/toaster";
 import { ErrorBoundary } from 'react-error-boundary';
@@ -40,6 +40,7 @@ import Integrations from '@/pages/Integrations';
 import Webhooks from '@/pages/Webhooks';
 import ShopifyInstall from '@/pages/ShopifyInstall';
 import ShopifyTesting from '@/pages/ShopifyTesting';
+import ShopifyGDPRWebhooks from '@/pages/ShopifyGDPRWebhooks';
 
 const ErrorFallback = ({ error, resetErrorBoundary }: { error: Error; resetErrorBoundary: () => void }) => (
   <div className="min-h-screen flex items-center justify-center bg-background">
@@ -55,6 +56,75 @@ const ErrorFallback = ({ error, resetErrorBoundary }: { error: Error; resetError
     </div>
   </div>
 );
+
+// Component that checks if we're in Shopify and redirects appropriately
+const AppBridgeAwareRoute = ({ children }: { children: React.ReactNode }) => {
+  const { isEmbedded, loading } = useAppBridge();
+  
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="flex flex-col items-center gap-4">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+          <span className="text-muted-foreground">Loading...</span>
+        </div>
+      </div>
+    );
+  }
+  
+  // If we're embedded in Shopify, redirect to dashboard ONLY from root path
+  if (isEmbedded && window.location.pathname === '/') {
+    return <Navigate to="/dashboard" replace />;
+  }
+  
+  // If not embedded, show landing page only for root path
+  if (!isEmbedded && window.location.pathname === '/') {
+    return <>{children}</>;
+  }
+  
+  // For all other paths when embedded, don't interfere
+  return <>{children}</>;
+};
+
+// Shopify OAuth callback handler
+const ShopifyAuthCallback = () => {
+  React.useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const code = urlParams.get('code');
+    const shop = urlParams.get('shop');
+    const host = urlParams.get('host');
+    const state = urlParams.get('state');
+    
+    if (code && shop) {
+      // Handle successful OAuth callback
+      console.log('Shopify OAuth success:', { shop, host, state });
+      
+      // Store shop info and redirect to dashboard
+      localStorage.setItem('shopify_shop', shop);
+      if (host) localStorage.setItem('shopify_host', host);
+      
+      // Redirect to dashboard or embedded app
+      if (host) {
+        window.location.href = `/?host=${host}&shop=${shop}`;
+      } else {
+        window.location.href = '/dashboard';
+      }
+    } else {
+      // Handle OAuth error
+      console.error('Shopify OAuth failed:', urlParams.toString());
+      window.location.href = '/error';
+    }
+  }, []);
+
+  return (
+    <div className="min-h-screen flex items-center justify-center">
+      <div className="flex flex-col items-center gap-4">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+        <span className="text-muted-foreground">Completing Shopify installation...</span>
+      </div>
+    </div>
+  );
+};
 
 const AtomicAppRouter = () => {
   return (
@@ -74,6 +144,12 @@ const AtomicAppRouter = () => {
             <Route path="/landing" element={<Index />} />
             <Route path="/return-portal" element={<CustomerPortal />} />
             <Route path="/shopify/install" element={<ShopifyInstall />} />
+            
+            {/* Shopify Auth Callback */}
+            <Route path="/auth/callback" element={<ShopifyAuthCallback />} />
+            
+            {/* Shopify GDPR Webhooks */}
+            <Route path="/functions/v1/shopify-gdpr-webhooks" element={<ShopifyGDPRWebhooks />} />
             
             {/* Auth Route - only accessible when logged out */}
             <Route 
@@ -151,10 +227,14 @@ const AtomicAppRouter = () => {
               } 
             />
             
-            {/* Main Landing Page - Waitlist Registration */}
+            {/* Shopify App Default Route - redirect to dashboard if embedded */}
             <Route 
               path="/" 
-              element={<Index />}
+              element={
+                <AppBridgeAwareRoute>
+                  <Index />
+                </AppBridgeAwareRoute>
+              }
             />
             
             {/* Dashboard Route - Protected */}

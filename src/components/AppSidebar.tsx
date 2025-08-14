@@ -3,6 +3,7 @@ import { Calendar, Home, Inbox, Search, Settings, User, Package, BarChart, Activ
 import { NavLink, useLocation } from "react-router-dom"
 import { cn } from "@/lib/utils"
 import { SubscriptionInfo } from "@/components/SubscriptionInfo"
+import { useAppBridge } from "@/components/AppBridgeProvider"
 
 import {
   Sidebar,
@@ -62,6 +63,7 @@ const mainItems = [
 export function AppSidebar() {
   const { state } = useSidebar()
   const location = useLocation()
+  const { isEmbedded } = useAppBridge()
   const currentPath = location.pathname
 
   const isActive = (path: string) => currentPath === path
@@ -71,7 +73,7 @@ export function AppSidebar() {
 
   return (
     <Sidebar
-      className={isCollapsed ? "w-14" : "w-60"}
+      className={isCollapsed ? "w-14" : isEmbedded ? "w-52" : "w-60"}
       collapsible="icon"
     >
       <SidebarContent>
