@@ -6,12 +6,45 @@ import "./index.css";
 import { registerSW } from "./utils/serviceWorkerRegistration";
 import { initSentry } from "./utils/sentry";
 import { initializeInteractivityFixes } from "./utils/interactivityFix";
+import { validateEnvironmentOrThrow, getEnvironmentReport } from "./utils/envValidation";
+import { startHealthMonitoring } from "./utils/healthCheck";
+
+// Validate environment before starting the app
+try {
+  validateEnvironmentOrThrow('client');
+  console.log('✅ H5 App - Environment validation passed');
+  
+  // Log environment report in development
+  if (import.meta.env.VITE_DEV_MODE === 'true') {
+    console.log(getEnvironmentReport());
+  }
+} catch (error) {
+  console.error('❌ H5 App - Environment validation failed:', error);
+  // In production, we might want to show a user-friendly error page
+  if (import.meta.env.VITE_DEV_MODE !== 'true') {
+    document.body.innerHTML = `
+      <div style="display: flex; align-items: center; justify-content: center; min-height: 100vh; background: #f8fafc; font-family: Arial, sans-serif;">
+        <div style="text-align: center; max-width: 600px; padding: 2rem;">
+          <h1 style="color: #dc2626; margin-bottom: 1rem;">Configuration Error</h1>
+          <p style="color: #64748b; margin-bottom: 2rem;">The H5 app is not properly configured. Please contact your administrator.</p>
+          <p style="color: #64748b; font-size: 0.875rem;">Error: ${error.message}</p>
+        </div>
+      </div>
+    `;
+    throw error;
+  }
+}
 
 // Initialize Sentry for error monitoring
 initSentry();
 
 // Initialize UI interactivity fixes
 initializeInteractivityFixes();
+
+// Start health monitoring in development
+if (import.meta.env.VITE_DEV_MODE === 'true') {
+  startHealthMonitoring(300000); // Check every 5 minutes
+}
 
 // Comprehensive console override to suppress Shopify platform noise
 const originalConsoleError = console.error;
