@@ -1,8 +1,8 @@
 # Learn more about configuring your app at https://shopify.dev/docs/apps/tools/cli/configuration
 
-name = "returns-automation"
+name = "H5"
 client_id = "2da34c83e89f6645ad1fb2028c7532dd"
-application_url = "https://localhost:8082"
+application_url = "https://ras-5.vercel.app"
 embedded = true
 
 [access_scopes]
@@ -11,24 +11,25 @@ scopes = "read_orders,write_orders,read_customers,read_products,write_draft_orde
 
 [auth]
 redirect_urls = [
-    "https://localhost:8082/auth/callback",
-    "https://localhost:8082/shopify/install",
-    "https://localhost:8082/"
+    "https://ras-5.vercel.app/functions/v1/shopify-oauth-callback",
+    "https://ras-5.vercel.app/auth/inline",
+    "https://ras-5.vercel.app/dashboard",
+    "https://ras-5.vercel.app/"
   ]
 [webhooks]
 api_version = "2024-01"
 
   [[webhooks.subscriptions]]
   topics = [ "orders/create", "orders/updated", "orders/paid" ]
-  uri = "https://localhost:8082/functions/v1/shopify-webhook"
+  uri = "https://ras-5.vercel.app/functions/v1/shopify-webhook"
 
   [[webhooks.subscriptions]]
   topics = [ "app/uninstalled" ]
-  uri = "https://localhost:8082/functions/v1/shopify-webhook"
+  uri = "https://ras-5.vercel.app/functions/v1/shopify-webhook"
 
   [[webhooks.subscriptions]]
   topics = [ "customers/data_request", "customers/redact", "shop/redact" ]
-  uri = "https://localhost:8082/functions/v1/shopify-gdpr-webhooks"
+  uri = "https://ras-5.vercel.app/functions/v1/shopify-gdpr-webhooks"
 
 [app_proxy]
 # Uncomment the following to add an App Proxy

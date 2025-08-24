@@ -11,44 +11,60 @@ interface RequiredEnvVars {
   };
 }
 
-const REQUIRED_ENV_VARS: RequiredEnvVars = {
-  // Shopify Configuration
+const CLIENT_ENV_VARS: RequiredEnvVars = {
+  // Client-side variables (accessible in browser)
   VITE_SHOPIFY_CLIENT_ID: {
     required: true,
     description: 'Shopify App Client ID from Partners Dashboard',
     example: '2da34c83e89f6645ad1fb2028c7532dd'
   },
-  SHOPIFY_CLIENT_SECRET: {
-    required: true,
-    description: 'Shopify App Client Secret from Partners Dashboard',
-    example: 'e993e23eed15e1cef5bd22b300fd062f'
-  },
   VITE_APP_URL: {
     required: true,
     description: 'Public URL where the app is accessible',
-    example: 'https://930f8f163c65.ngrok-free.app'
+    example: 'https://ras-5.vercel.app'
+  },
+  VITE_SUPABASE_URL: {
+    required: true,
+    description: 'Supabase project URL for client connections'
+  },
+  VITE_SUPABASE_ANON_KEY: {
+    required: true,
+    description: 'Supabase anonymous key for client connections'
+  },
+  VITE_DEV_MODE: {
+    required: false,
+    description: 'Development mode flag',
+    example: 'true'
+  }
+};
+
+const SERVER_ENV_VARS: RequiredEnvVars = {
+  // Server-side variables (Edge Functions only)
+  SHOPIFY_CLIENT_ID: {
+    required: true,
+    description: 'Shopify App Client ID for server functions'
+  },
+  SHOPIFY_CLIENT_SECRET: {
+    required: true,
+    description: 'Shopify App Client Secret for server functions',
+    example: 'e993e23eed15e1cef5bd22b300fd062f'
   },
   SHOPIFY_WEBHOOK_SECRET: {
     required: true,
     description: 'Webhook secret for HMAC verification',
     example: 'your_webhook_secret_here'
   },
-  
-  // Supabase Configuration (handled by Supabase)
   SUPABASE_URL: {
-    required: false,
-    description: 'Supabase project URL'
+    required: true,
+    description: 'Supabase project URL for server functions'
   },
   SUPABASE_SERVICE_ROLE_KEY: {
-    required: false,
+    required: true,
     description: 'Supabase service role key for server functions'
   },
-  
-  // Optional Configuration
-  VITE_DEV_MODE: {
-    required: false,
-    description: 'Development mode flag',
-    example: 'true'
+  VITE_APP_URL: {
+    required: true,
+    description: 'App URL for redirects and callbacks'
   }
 };
 
@@ -66,18 +82,21 @@ export function validateEnvironment(environment: 'client' | 'server' | 'all' = '
   const errors: string[] = [];
   const warnings: string[] = [];
   
-  Object.entries(REQUIRED_ENV_VARS).forEach(([varName, config]) => {
-    // Skip server-only vars when validating client
-    if (environment === 'client' && !varName.startsWith('VITE_')) {
-      return;
-    }
-    
-    // Skip client-only vars when validating server
-    if (environment === 'server' && varName.startsWith('VITE_')) {
-      return;
-    }
-    
-    const value = import.meta.env?.[varName] || process?.env?.[varName];
+  // Select appropriate environment variables based on context
+  let envVarsToCheck: RequiredEnvVars = {};
+  
+  if (environment === 'client') {
+    envVarsToCheck = CLIENT_ENV_VARS;
+  } else if (environment === 'server') {
+    envVarsToCheck = SERVER_ENV_VARS;
+  } else {
+    // For 'all', only check client vars in browser context (server vars are handled by Edge Functions)
+    envVarsToCheck = { ...CLIENT_ENV_VARS };
+    // Note: SERVER_ENV_VARS are handled by Supabase Edge Functions, not browser
+  }
+  
+  Object.entries(envVarsToCheck).forEach(([varName, config]) => {
+    const value = import.meta.env?.[varName] || (typeof process !== 'undefined' ? process?.env?.[varName] : undefined);
     
     if (config.required) {
       if (!value) {
@@ -177,8 +196,9 @@ export function getEnvironmentReport(): string {
     ''
   ];
   
-  Object.entries(REQUIRED_ENV_VARS).forEach(([varName, config]) => {
-    const value = import.meta.env?.[varName] || process?.env?.[varName];
+  // Use CLIENT_ENV_VARS for the report since this runs in browser
+  Object.entries(CLIENT_ENV_VARS).forEach(([varName, config]) => {
+    const value = import.meta.env?.[varName] || (typeof process !== 'undefined' ? process?.env?.[varName] : undefined);
     const status = value ? '✅ Set' : '❌ Missing';
     const maskedValue = value ? (value.length > 10 ? value.substring(0, 8) + '...' : value) : 'Not set';
     

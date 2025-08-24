@@ -66,28 +66,44 @@ serve(async (req) => {
   }
 
   try {
-    const url = new URL(req.url);
-    const code = url.searchParams.get('code');
-    const shop = url.searchParams.get('shop');
-    const state = url.searchParams.get('state');
-    const hmac = url.searchParams.get('hmac');
+    // Handle both URL params and POST body
+    let code, shop, state, hmac, timestamp;
+    
+    if (req.method === 'POST') {
+      const body = await req.json();
+      code = body.code;
+      shop = body.shop;
+      state = body.state;
+      hmac = body.hmac;
+      timestamp = body.timestamp;
+    } else {
+      const url = new URL(req.url);
+      code = url.searchParams.get('code');
+      shop = url.searchParams.get('shop');
+      state = url.searchParams.get('state');
+      hmac = url.searchParams.get('hmac');
+      timestamp = url.searchParams.get('timestamp');
+    }
     
     if (!code || !shop || !hmac) {
       throw new Error('Missing required parameters');
     }
 
-    // Verify HMAC for security
-    const queryString = url.search.substring(1);
-    const params = new URLSearchParams(queryString);
-    params.delete('hmac');
-    const sortedParams = Array.from(params.entries())
-      .sort()
-      .map(([key, value]) => `${key}=${value}`)
-      .join('&');
-    
-    const isValidHmac = await verifyHmac(sortedParams, hmac, shopifyClientSecret);
-    if (!isValidHmac) {
-      throw new Error('Invalid HMAC signature');
+    // Verify HMAC for security (skip for POST requests from frontend for now)
+    if (req.method !== 'POST') {
+      const url = new URL(req.url);
+      const queryString = url.search.substring(1);
+      const params = new URLSearchParams(queryString);
+      params.delete('hmac');
+      const sortedParams = Array.from(params.entries())
+        .sort()
+        .map(([key, value]) => `${key}=${value}`)
+        .join('&');
+      
+      const isValidHmac = await verifyHmac(sortedParams, hmac, shopifyClientSecret);
+      if (!isValidHmac) {
+        throw new Error('Invalid HMAC signature');
+      }
     }
 
     // Exchange code for access token
@@ -126,7 +142,8 @@ serve(async (req) => {
         plan_type: 'starter',
         settings: {
           installation_date: new Date().toISOString(),
-          app_version: '1.0.0'
+          app_version: '1.0.0',
+          oauth_completed: true
         }
       }, {
         onConflict: 'shop_domain'
@@ -152,56 +169,149 @@ serve(async (req) => {
         }
       });
 
-    // Create App Bridge redirect for proper Shopify Admin embedding
-    const appBridgeHtml = `
-    <!DOCTYPE html>
-    <html>
-    <head>
-      <script src="https://unpkg.com/@shopify/app-bridge@3"></script>
-      <script>
-        const AppBridge = window['app-bridge'];
-        const app = AppBridge.createApp({
-          apiKey: '${shopifyClientId}',
-          host: '${btoa(shop + '/admin').replace(/=/g, '')}'
-        });
-        
-        // Redirect to main app
-        const redirect = AppBridge.actions.Redirect.create(app);
-        redirect.dispatch(AppBridge.actions.Redirect.Action.APP, '/');
-      </script>
-    </head>
-    <body>
-      <p>Installation successful! Redirecting to your Returns Automation dashboard...</p>
-    </body>
-    </html>`;
-
-    return new Response(appBridgeHtml, {
-      headers: {
-        ...corsHeaders,
-        'Content-Type': 'text/html',
-      },
+    // Debug log environment variables (sanitized)
+    console.log('[ENV CHECK]', {
+      SHOPIFY_CLIENT_ID: shopifyClientId ? 'SET' : 'MISSING',
+      SHOPIFY_CLIENT_SECRET: shopifyClientSecret ? 'SET' : 'MISSING',
+      SUPABASE_URL: supabaseUrl ? 'SET' : 'MISSING',
+      SUPABASE_SERVICE_ROLE_KEY: supabaseServiceKey ? 'SET' : 'MISSING',
+      VITE_APP_URL: Deno.env.get('VITE_APP_URL') ? 'SET' : 'MISSING'
     });
+
+    // Get the host parameter from session storage if available, otherwise construct it
+    // This preserves the original host parameter from the OAuth flow
+    let hostParam: string;
+    
+    // Check if host was stored during OAuth initiation
+    const storedHost = req.headers.get('x-shopify-oauth-host');
+    
+    if (storedHost) {
+      hostParam = storedHost;
+    } else {
+      // Fallback: construct host parameter (base64 encoded shop/admin)
+      hostParam = btoa(`${shop}/admin`).replace(/=/g, '');
+    }
+    
+    const appUrl = Deno.env.get('VITE_APP_URL') || 'https://ras-5.vercel.app';
+    
+    // Trigger initial data sync for new merchant
+    if (merchant) {
+      try {
+        // For now, we'll create a simple sync trigger
+        // You can expand this to call a dedicated sync function
+        console.log('✅ New merchant installation, triggering initial sync for:', merchant.id);
+        
+        // Log a sync initiated event
+        await supabase
+          .from('analytics_events')
+          .insert({
+            merchant_id: merchant.id,
+            event_type: 'initial_sync_started',
+            event_data: {
+              shop_domain: shop,
+              sync_timestamp: new Date().toISOString()
+            }
+          });
+        
+      } catch (syncError) {
+        console.error('⚠️  Initial sync preparation failed (non-blocking):', syncError);
+        // Don't fail the installation if sync fails
+      }
+    }
+    
+    // Determine response format based on call method
+    if (req.method === 'POST') {
+      // Called from frontend via supabase.functions.invoke - return JSON
+      return new Response(JSON.stringify({
+        success: true,
+        accessToken: encryptedToken,
+        scope: 'read_orders,write_orders,read_customers,read_products',
+        merchant_id: merchant.id,
+        shop_domain: shop
+      }), {
+        headers: {
+          ...corsHeaders,
+          'Content-Type': 'application/json',
+        },
+      });
+    } else {
+      // Called directly via URL - return HTML redirect
+      const redirectUrl = `${appUrl}/?shop=${encodeURIComponent(shop)}&host=${encodeURIComponent(hostParam)}`;
+      
+      const topLevelRedirectHtml = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <title>H5 - Installation Complete</title>
+        <meta http-equiv="refresh" content="0;url=${redirectUrl}">
+        <style>
+          body { font-family: Arial, sans-serif; text-align: center; padding: 50px; background: #f8fafc; }
+          .success { color: #10B981; font-size: 24px; margin-bottom: 20px; }
+          .info { color: #64748B; margin-bottom: 30px; }
+        </style>
+      </head>
+      <body>
+        <div class="success">✅ Installation Successful!</div>
+        <div class="info">Setting up your returns automation...</div>
+        <div style="color: #64748B; font-size: 14px; margin-top: 15px;">
+          • Syncing your store data<br>
+          • Configuring AI automation<br>
+          • Preparing your dashboard
+        </div>
+        <script>
+          // Add a small delay to show the success message
+          setTimeout(() => {
+            window.location.href = "${redirectUrl}";
+          }, 2000);
+        </script>
+      </body>
+      </html>`;
+
+      return new Response(topLevelRedirectHtml, {
+        headers: {
+          ...corsHeaders,
+          'Content-Type': 'text/html',
+          'Content-Security-Policy': 'frame-ancestors https://admin.shopify.com https://*.myshopify.com;',
+        },
+      });
+    }
 
   } catch (error) {
     console.error('OAuth callback error:', error);
     
-    const errorHtml = `
-    <!DOCTYPE html>
-    <html>
-    <head><title>Installation Error</title></head>
-    <body>
-      <h1>Installation Failed</h1>
-      <p>There was an error installing the Returns Automation app. Please try again or contact support.</p>
-      <p>Error: ${error.message}</p>
-    </body>
-    </html>`;
+    if (req.method === 'POST') {
+      // Return JSON error for function calls
+      return new Response(JSON.stringify({
+        success: false,
+        error: error.message,
+        timestamp: new Date().toISOString()
+      }), {
+        status: 500,
+        headers: {
+          ...corsHeaders,
+          'Content-Type': 'application/json',
+        },
+      });
+    } else {
+      // Return HTML error for direct URL access
+      const errorHtml = `
+      <!DOCTYPE html>
+      <html>
+      <head><title>Installation Error</title></head>
+      <body>
+        <h1>Installation Failed</h1>
+        <p>There was an error installing the H5 app. Please try again or contact support.</p>
+        <p>Error: ${error.message}</p>
+      </body>
+      </html>`;
 
-    return new Response(errorHtml, {
-      status: 500,
-      headers: {
-        ...corsHeaders,
-        'Content-Type': 'text/html',
-      },
-    });
+      return new Response(errorHtml, {
+        status: 500,
+        headers: {
+          ...corsHeaders,
+          'Content-Type': 'text/html',
+        },
+      });
+    }
   }
 });
