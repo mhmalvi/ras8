@@ -44,13 +44,28 @@ interface ShopifyWebhookPayload {
 async function processOrderCreated(payload: ShopifyWebhookPayload, merchantId: string, supabase: any) {
   console.log('🛒 Processing order creation webhook:', payload.id);
 
-  // Insert order into database
+  // SECURITY FIX: Add merchant_id to ensure proper tenant isolation
   const orderData = {
+    merchant_id: merchantId,  // CRITICAL: Associate order with merchant
     shopify_order_id: payload.id.toString(),
     customer_email: payload.email || payload.customer?.email || 'unknown@example.com',
     total_amount: parseFloat(payload.total_price || '0'),
-    status: 'completed'
+    status: 'completed',
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString()
   };
+
+  // Validate merchant_id exists
+  if (!merchantId) {
+    console.error('❌ Order creation blocked: missing merchant_id');
+    throw new Error('Merchant ID required for order creation');
+  }
+
+  // Additional validation before inserting
+  if (!orderData.merchant_id) {
+    console.error('❌ Order creation blocked: orderData missing merchant_id');
+    throw new Error('Invalid merchant context');
+  }
 
   const { data: order, error: orderError } = await supabase
     .from('orders')
@@ -107,15 +122,17 @@ async function processOrderCreated(payload: ShopifyWebhookPayload, merchantId: s
 async function processOrderUpdated(payload: ShopifyWebhookPayload, merchantId: string, supabase: any) {
   console.log('📝 Processing order update webhook:', payload.id);
 
-  // Update existing order
+  // SECURITY FIX: Update existing order with merchant scoping
   const { data: order, error: orderError } = await supabase
     .from('orders')
     .update({
       customer_email: payload.email || payload.customer?.email || 'unknown@example.com',
       total_amount: parseFloat(payload.total_price || '0'),
-      status: payload.financial_status === 'paid' ? 'completed' : 'pending'
+      status: payload.financial_status === 'paid' ? 'completed' : 'pending',
+      updated_at: new Date().toISOString()
     })
     .eq('shopify_order_id', payload.id.toString())
+    .eq('merchant_id', merchantId)  // SECURITY: Ensure merchant scoping
     .select()
     .single();
 

@@ -59,7 +59,7 @@ export const SubscriptionInfo = ({ isCollapsed }: SubscriptionInfoProps) => {
   };
 
   const handleClick = () => {
-    navigate('/billing');
+    navigate('/settings/billing');
   };
 
   if (isCollapsed) {

@@ -16,6 +16,7 @@ import AppLayout from "@/components/AppLayout";
 import { useRealBillingData } from "@/hooks/useRealBillingData";
 import { useSubscription } from "@/hooks/useSubscription";
 import { Badge } from "@/components/ui/badge";
+import { BackButton } from "@/components/ui/back-button";
 
 const Settings = () => {
   const navigate = useNavigate();
@@ -71,13 +72,16 @@ const Settings = () => {
     <AppLayout>
       <div className="space-y-8 animate-fade-in">
         {/* Header */}
-        <div>
-          <h1 className="text-3xl font-bold bg-gradient-to-r from-primary to-blue-600 bg-clip-text text-transparent">
-            Settings
-          </h1>
-          <p className="text-muted-foreground mt-2 text-lg">
-            Configure your store settings, billing, and integrations
-          </p>
+        <div className="space-y-4">
+          <BackButton to="/dashboard">Back to Dashboard</BackButton>
+          <div>
+            <h1 className="text-3xl font-bold bg-gradient-to-r from-primary to-blue-600 bg-clip-text text-transparent">
+              Settings
+            </h1>
+            <p className="text-muted-foreground mt-2 text-lg">
+              Configure your store settings, billing, and integrations
+            </p>
+          </div>
         </div>
 
         {/* Quick Stats */}

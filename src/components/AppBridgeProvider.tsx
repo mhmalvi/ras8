@@ -1,6 +1,7 @@
 
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { logEnvironmentStatus } from '@/utils/environmentCheck';
 
 interface AppBridgeContextType {
   app: any;
@@ -30,6 +31,12 @@ export const AppBridgeProvider: React.FC<AppBridgeProviderProps> = ({ children }
   useEffect(() => {
     const initializeAppBridge = async () => {
       try {
+        // Log environment status for debugging
+        logEnvironmentStatus();
+        
+        // Add small delay to ensure URL params are available (fixes React StrictMode race condition)
+        await new Promise(resolve => setTimeout(resolve, 100));
+        
         // Check if we're running inside Shopify Admin
         const urlParams = new URLSearchParams(window.location.search);
         const host = urlParams.get('host');
@@ -38,20 +45,53 @@ export const AppBridgeProvider: React.FC<AppBridgeProviderProps> = ({ children }
         if (host || shop) {
           setIsEmbedded(true);
           
-          // Use the configured Shopify Client ID
-          const clientId = '2da34c83e89f6645ad1fb2028c7532dd';
+          // Use the configured Shopify Client ID from environment
+          const clientId = import.meta.env.VITE_SHOPIFY_CLIENT_ID;
+          
+          if (!clientId) {
+            console.error('Missing VITE_SHOPIFY_CLIENT_ID environment variable');
+            throw new Error('Shopify Client ID not configured');
+          }
           
           // Dynamically import App Bridge
           const { default: createApp } = await import('@shopify/app-bridge');
           
+          // Validate and construct host parameter
+          let validHost = host;
+          if (!validHost && shop) {
+            validHost = btoa(shop + '/admin').replace(/=/g, '');
+            console.log('🔧 Constructed host from shop:', { shop, host: validHost });
+          }
+          
+          if (!validHost) {
+            console.warn('⚠️ No valid host parameter available, might not be embedded');
+            setIsEmbedded(false);
+            return;
+          }
+          
+          console.log('🚀 Initializing App Bridge:', { clientId, host: validHost, shop });
+          
           const appBridge = createApp({
             apiKey: clientId,
-            host: host || btoa((shop || '') + '/admin').replace(/=/g, ''),
+            host: validHost,
+            forceRedirect: true, // Ensure proper redirection handling
+            development: import.meta.env.DEV, // Enable development mode for debugging
           });
 
-          // Set up global error handling
+          // Set up comprehensive error handling
           appBridge.subscribe('APP::ERROR', (error: any) => {
             console.error('App Bridge Error:', error);
+            // Don't throw errors that would break the app
+          });
+
+          // Handle authentication errors gracefully
+          appBridge.subscribe('APP::AUTH_ERROR', (error: any) => {
+            console.error('App Bridge Auth Error:', error);
+            // Redirect to OAuth if auth fails
+            const currentShop = new URLSearchParams(window.location.search).get('shop');
+            if (currentShop) {
+              window.location.href = `/auth/start?shop=${encodeURIComponent(currentShop)}&host=${encodeURIComponent(validHost)}`;
+            }
           });
 
           setApp(appBridge);

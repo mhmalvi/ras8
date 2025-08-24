@@ -11,7 +11,8 @@ scopes = "read_orders,write_orders,read_customers,read_products,write_draft_orde
 
 [auth]
 redirect_urls = [
-    "https://ras-5.vercel.app/functions/v1/shopify-oauth-callback",
+    "https://pvadajelvewdazwmvppk.supabase.co/functions/v1/shopify-oauth-callback",
+    "https://ras-5.vercel.app/auth/callback",
     "https://ras-5.vercel.app/auth/inline",
     "https://ras-5.vercel.app/dashboard",
     "https://ras-5.vercel.app/"
@@ -21,15 +22,15 @@ api_version = "2024-01"
 
   [[webhooks.subscriptions]]
   topics = [ "orders/create", "orders/updated", "orders/paid" ]
-  uri = "https://ras-5.vercel.app/functions/v1/shopify-webhook"
+  uri = "https://pvadajelvewdazwmvppk.supabase.co/functions/v1/enhanced-shopify-webhook"
 
   [[webhooks.subscriptions]]
   topics = [ "app/uninstalled" ]
-  uri = "https://ras-5.vercel.app/functions/v1/shopify-webhook"
+  uri = "https://pvadajelvewdazwmvppk.supabase.co/functions/v1/enhanced-shopify-webhook"
 
   [[webhooks.subscriptions]]
   topics = [ "customers/data_request", "customers/redact", "shop/redact" ]
-  uri = "https://ras-5.vercel.app/functions/v1/shopify-gdpr-webhooks"
+  uri = "https://pvadajelvewdazwmvppk.supabase.co/functions/v1/shopify-gdpr-webhooks"
 
 [app_proxy]
 # Uncomment the following to add an App Proxy

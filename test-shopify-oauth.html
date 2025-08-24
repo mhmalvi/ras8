@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Shopify OAuth Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f8fafc;
+        }
+        .test-section {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .status {
+            padding: 10px;
+            border-radius: 4px;
+            margin: 10px 0;
+        }
+        .success { background: #dcfce7; color: #166534; }
+        .warning { background: #fef3c7; color: #92400e; }
+        .error { background: #fee2e2; color: #dc2626; }
+        .info { background: #dbeafe; color: #1e40af; }
+        button {
+            background: #3b82f6;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover { background: #2563eb; }
+        .log {
+            background: #1f2937;
+            color: #f3f4f6;
+            padding: 15px;
+            border-radius: 4px;
+            font-family: monospace;
+            white-space: pre-wrap;
+            max-height: 300px;
+            overflow-y: auto;
+            margin: 10px 0;
+        }
+        input {
+            padding: 8px;
+            border: 1px solid #d1d5db;
+            border-radius: 4px;
+            margin: 5px;
+            min-width: 200px;
+        }
+    </style>
+</head>
+<body>
+    <h1>🧪 Shopify OAuth Flow Test</h1>
+    
+    <div class="test-section">
+        <h3>1. Environment Check</h3>
+        <button onclick="testEnvironment()">Check Environment Variables</button>
+        <div id="env-status" class="status info">Click to test environment variables...</div>
+    </div>
+
+    <div class="test-section">
+        <h3>2. OAuth Callback URL Test</h3>
+        <input type="text" id="shop-input" placeholder="your-shop.myshopify.com" />
+        <button onclick="testOAuthCallback()">Test OAuth Callback</button>
+        <div id="oauth-status" class="status info">Enter shop domain and click to test...</div>
+    </div>
+
+    <div class="test-section">
+        <h3>3. App Bridge Test</h3>
+        <button onclick="testAppBridge()">Test App Bridge Context</button>
+        <div id="appbridge-status" class="status info">Click to test App Bridge detection...</div>
+    </div>
+
+    <div class="test-section">
+        <h3>4. CSP Header Test</h3>
+        <button onclick="testCSP()">Test CSP Headers</button>
+        <div id="csp-status" class="status info">Click to test CSP configuration...</div>
+    </div>
+
+    <div class="test-section">
+        <h3>5. Full Install Flow Simulation</h3>
+        <input type="text" id="install-shop" placeholder="your-shop.myshopify.com" />
+        <button onclick="simulateInstall()">Simulate Install Flow</button>
+        <div id="install-status" class="status info">Enter shop and simulate full flow...</div>
+    </div>
+
+    <div class="test-section">
+        <h3>Test Logs</h3>
+        <button onclick="clearLogs()">Clear Logs</button>
+        <div id="logs" class="log">Logs will appear here...\n</div>
+    </div>
+
+    <script>
+        const APP_URL = 'https://9b75bb04db41.ngrok-free.app';
+        
+        function log(message) {
+            const logs = document.getElementById('logs');
+            const timestamp = new Date().toISOString();
+            logs.textContent += `[${timestamp}] ${message}\n`;
+            logs.scrollTop = logs.scrollHeight;
+        }
+
+        function setStatus(id, type, message) {
+            const element = document.getElementById(id);
+            element.className = `status ${type}`;
+            element.textContent = message;
+        }
+
+        function clearLogs() {
+            document.getElementById('logs').textContent = 'Logs cleared...\n';
+        }
+
+        async function testEnvironment() {
+            log('Testing environment variables...');
+            setStatus('env-status', 'info', 'Testing environment...');
+            
+            try {
+                // Test if we can access the app URL
+                const response = await fetch(APP_URL, { method: 'HEAD' });
+                if (response.ok) {
+                    log('✅ App URL is accessible');
+                    setStatus('env-status', 'success', '✅ App URL accessible');
+                } else {
+                    log(`⚠️  App URL returned ${response.status}`);
+                    setStatus('env-status', 'warning', `⚠️  App URL returned ${response.status}`);
+                }
+            } catch (error) {
+                log(`❌ App URL test failed: ${error.message}`);
+                setStatus('env-status', 'error', `❌ App URL unreachable: ${error.message}`);
+            }
+        }
+
+        async function testOAuthCallback() {
+            const shop = document.getElementById('shop-input').value;
+            if (!shop) {
+                setStatus('oauth-status', 'error', '❌ Please enter a shop domain');
+                return;
+            }
+
+            log(`Testing OAuth callback for shop: ${shop}`);
+            setStatus('oauth-status', 'info', 'Testing OAuth callback...');
+
+            try {
+                const callbackUrl = `${APP_URL}/functions/v1/shopify-oauth-callback`;
+                const response = await fetch(callbackUrl, { method: 'HEAD' });
+                
+                if (response.ok) {
+                    log('✅ OAuth callback endpoint is accessible');
+                    setStatus('oauth-status', 'success', '✅ OAuth callback endpoint accessible');
+                } else if (response.status === 400) {
+                    log('✅ OAuth callback endpoint exists (400 expected for missing params)');
+                    setStatus('oauth-status', 'success', '✅ OAuth callback exists (400 = missing params)');
+                } else {
+                    log(`⚠️  OAuth callback returned ${response.status}`);
+                    setStatus('oauth-status', 'warning', `⚠️  Unexpected status: ${response.status}`);
+                }
+            } catch (error) {
+                log(`❌ OAuth callback test failed: ${error.message}`);
+                setStatus('oauth-status', 'error', `❌ Callback unreachable: ${error.message}`);
+            }
+        }
+
+        function testAppBridge() {
+            log('Testing App Bridge detection...');
+            setStatus('appbridge-status', 'info', 'Testing App Bridge...');
+
+            // Check if we're in an iframe (simulating Shopify embedding)
+            const inIframe = window.self !== window.top;
+            
+            // Check URL parameters
+            const urlParams = new URLSearchParams(window.location.search);
+            const shop = urlParams.get('shop');
+            const host = urlParams.get('host');
+
+            let status = [];
+            if (inIframe) {
+                status.push('✅ In iframe');
+                log('✅ App is running in iframe');
+            } else {
+                status.push('⚠️  Not in iframe');
+                log('⚠️  App is not in iframe (normal for testing)');
+            }
+
+            if (shop) {
+                status.push('✅ Shop param');
+                log(`✅ Shop parameter present: ${shop}`);
+            } else {
+                status.push('❌ No shop param');
+                log('❌ Shop parameter missing');
+            }
+
+            if (host) {
+                status.push('✅ Host param');
+                log(`✅ Host parameter present: ${host}`);
+            } else {
+                status.push('❌ No host param');
+                log('❌ Host parameter missing');
+            }
+
+            setStatus('appbridge-status', 'info', status.join(', '));
+        }
+
+        async function testCSP() {
+            log('Testing CSP headers...');
+            setStatus('csp-status', 'info', 'Testing CSP...');
+
+            try {
+                const response = await fetch(APP_URL);
+                const csp = response.headers.get('content-security-policy');
+                
+                if (csp) {
+                    log('✅ CSP header present');
+                    log(`CSP: ${csp}`);
+                    
+                    if (csp.includes('frame-ancestors')) {
+                        log('✅ Frame-ancestors directive found');
+                        setStatus('csp-status', 'success', '✅ CSP configured correctly');
+                    } else {
+                        log('⚠️  Frame-ancestors missing from CSP');
+                        setStatus('csp-status', 'warning', '⚠️  Frame-ancestors missing');
+                    }
+                } else {
+                    log('❌ No CSP header found');
+                    setStatus('csp-status', 'error', '❌ No CSP header');
+                }
+            } catch (error) {
+                log(`❌ CSP test failed: ${error.message}`);
+                setStatus('csp-status', 'error', `❌ Test failed: ${error.message}`);
+            }
+        }
+
+        async function simulateInstall() {
+            const shop = document.getElementById('install-shop').value;
+            if (!shop) {
+                setStatus('install-status', 'error', '❌ Please enter a shop domain');
+                return;
+            }
+
+            log(`🚀 Simulating install flow for: ${shop}`);
+            setStatus('install-status', 'info', '🚀 Simulating install...');
+
+            // Step 1: Test install page
+            try {
+                const installUrl = `${APP_URL}/shopify/install?shop=${shop}`;
+                log(`1. Testing install page: ${installUrl}`);
+                
+                const installResponse = await fetch(installUrl, { method: 'HEAD' });
+                if (installResponse.ok) {
+                    log('✅ Install page accessible');
+                } else {
+                    log(`⚠️  Install page returned ${installResponse.status}`);
+                }
+            } catch (error) {
+                log(`❌ Install page test failed: ${error.message}`);
+            }
+
+            // Step 2: Test OAuth callback
+            try {
+                const callbackUrl = `${APP_URL}/functions/v1/shopify-oauth-callback`;
+                log(`2. Testing OAuth callback: ${callbackUrl}`);
+                
+                const callbackResponse = await fetch(callbackUrl, { method: 'HEAD' });
+                if (callbackResponse.status === 400) {
+                    log('✅ OAuth callback exists (400 = missing params expected)');
+                } else {
+                    log(`⚠️  OAuth callback returned ${callbackResponse.status}`);
+                }
+            } catch (error) {
+                log(`❌ OAuth callback test failed: ${error.message}`);
+            }
+
+            // Step 3: Test dashboard with params
+            try {
+                const host = btoa(`${shop}/admin`).replace(/=/g, '');
+                const dashboardUrl = `${APP_URL}/dashboard?shop=${shop}&host=${host}`;
+                log(`3. Testing dashboard: ${dashboardUrl}`);
+                
+                const dashboardResponse = await fetch(dashboardUrl, { method: 'HEAD' });
+                if (dashboardResponse.ok) {
+                    log('✅ Dashboard accessible with shop/host params');
+                } else {
+                    log(`⚠️  Dashboard returned ${dashboardResponse.status}`);
+                }
+            } catch (error) {
+                log(`❌ Dashboard test failed: ${error.message}`);
+            }
+
+            log('🏁 Install flow simulation complete');
+            setStatus('install-status', 'success', '🏁 Simulation complete - check logs');
+        }
+
+        // Initialize
+        log('Shopify OAuth Test Tool initialized');
+        log(`App URL: ${APP_URL}`);
+        log('Click buttons above to run tests...\n');
+    </script>
+</body>
+</html>

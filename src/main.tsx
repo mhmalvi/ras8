@@ -2,15 +2,26 @@
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import AtomicAppRouter from "./components/AtomicAppRouter.tsx";
+import { MerchantSessionProvider } from "./contexts/MerchantSessionContext.tsx";
 import "./index.css";
 import { registerSW } from "./utils/serviceWorkerRegistration";
 import { initSentry } from "./utils/sentry";
 import { initializeInteractivityFixes } from "./utils/interactivityFix";
 import { validateEnvironmentOrThrow, getEnvironmentReport } from "./utils/envValidation";
 import { startHealthMonitoring } from "./utils/healthCheck";
+import { logEnvironmentStatus, validateCriticalEnvVars } from "./utils/envDebug";
 
 // Validate environment before starting the app
 try {
+  // Debug environment variables first
+  logEnvironmentStatus();
+  
+  const { valid, missing } = validateCriticalEnvVars();
+  if (!valid) {
+    console.error('❌ Critical environment variables missing:', missing);
+    throw new Error(`Missing critical environment variables: ${missing.join(', ')}`);
+  }
+  
   validateEnvironmentOrThrow('client');
   console.log('✅ H5 App - Environment validation passed');
   
@@ -74,7 +85,10 @@ const shouldSuppressMessage = (args: any[]) => {
          message.includes('C.checkMaxConnectTimeout @') ||
          message.includes('C.executeOperation @') ||
          message.includes('context-slice-graphql') ||
-         message.includes('WebSocket is closed before the connection is established');
+         message.includes('WebSocket is closed before the connection is established') ||
+         message.includes('WebSocket connection to') ||
+         message.includes('wss://argus.shopifycloud.com') ||
+         message.includes('WebSocket connection failed');
 };
 
 console.error = (...args) => {
@@ -140,6 +154,8 @@ if (!container) {
 const root = createRoot(container);
 root.render(
   <StrictMode>
-    <AtomicAppRouter />
+    <MerchantSessionProvider>
+      <AtomicAppRouter />
+    </MerchantSessionProvider>
   </StrictMode>
 );

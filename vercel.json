@@ -6,11 +6,7 @@
   "framework": "vite",
   "rewrites": [
     {
-      "source": "/functions/v1/(.*)",
-      "destination": "https://pvadajelvewdazwmvppk.supabase.co/functions/v1/$1"
-    },
-    {
-      "source": "/((?!functions/).*)",
+      "source": "/((?!api/).*)",
       "destination": "/index.html"
     }
   ],
@@ -38,6 +34,7 @@
     }
   ],
   "env": {
-    "VITE_APP_URL": "https://ras-5.vercel.app"
+    "VITE_APP_URL": "https://ras-5.vercel.app",
+    "JWT_SECRET_KEY": "h5-production-jwt-secret-key-change-this-in-production-2024"
   }
 }

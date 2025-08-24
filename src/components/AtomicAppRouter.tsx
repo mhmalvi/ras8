@@ -1,12 +1,11 @@
 
 import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import { AtomicAuthProvider } from '@/contexts/AtomicAuthContext';
 import { AppBridgeProvider, useAppBridge } from '@/components/AppBridgeProvider';
 import { ShopifyEmbeddedErrorBoundary } from '@/components/ShopifyEmbeddedErrorBoundary';
 import { Toaster } from "@/components/ui/toaster";
 import { ErrorBoundary } from 'react-error-boundary';
-import AtomicProtectedRoute from '@/components/AtomicProtectedRoute';
+import MerchantProtectedRoute from '@/components/MerchantProtectedRoute';
 import AtomicPublicRoute from '@/components/AtomicPublicRoute';
 import Index from '@/pages/Index';
 import Dashboard from '@/pages/Dashboard';
@@ -39,23 +38,90 @@ import Security from '@/pages/Security';
 import Integrations from '@/pages/Integrations';
 import Webhooks from '@/pages/Webhooks';
 import ShopifyInstall from '@/pages/ShopifyInstall';
+import ShopifyInstallEnhanced from '@/pages/ShopifyInstallEnhanced';
 import ShopifyTesting from '@/pages/ShopifyTesting';
 import ShopifyGDPRWebhooks from '@/pages/ShopifyGDPRWebhooks';
+import AuthInline from '@/pages/AuthInline';
+import DebugAuth from '@/pages/DebugAuth';
+import EmbedTest from '@/pages/EmbedTest';
+import ShopifyOAuthCallback from '@/pages/ShopifyOAuthCallback';
+import ShopifyAuthCallback from '@/pages/ShopifyAuthCallback';
+import PreferencesPage from '@/pages/PreferencesPage';
+import StartOAuth from '@/pages/StartOAuth';
+import DiagnosticTest from '@/pages/DiagnosticTest';
+import QuickTest from '@/pages/QuickTest';
+import AppRedirectHandler from '@/pages/AppRedirectHandler';
+import EmbedDebug from '@/pages/EmbedDebug';
+import OAuthStart from '@/pages/OAuthStart';
+import PartnerPlatformTest from '@/pages/PartnerPlatformTest';
+import HealthCheck from '@/pages/HealthCheck';
+import EnvironmentTest from '@/pages/EnvironmentTest';
 
-const ErrorFallback = ({ error, resetErrorBoundary }: { error: Error; resetErrorBoundary: () => void }) => (
-  <div className="min-h-screen flex items-center justify-center bg-background">
-    <div className="text-center space-y-4 p-6 max-w-md">
-      <h2 className="text-xl font-semibold text-red-600">Something went wrong</h2>
-      <p className="text-muted-foreground">{error.message}</p>
-      <button 
-        onClick={resetErrorBoundary}
-        className="px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90"
-      >
-        Try again
-      </button>
+const ErrorFallback = ({ error, resetErrorBoundary }: { error: Error; resetErrorBoundary: () => void }) => {
+  const isHookError = error.message.includes('hook') || error.message.includes('Hook');
+  const isNetworkError = error.message.includes('network') || error.message.includes('fetch');
+  
+  // Log detailed error for debugging
+  console.error('🚨 App Error Boundary Caught:', {
+    message: error.message,
+    stack: error.stack,
+    name: error.name,
+    isHookError,
+    isNetworkError
+  });
+
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-background p-4">
+      <div className="text-center space-y-4 p-6 max-w-lg border rounded-lg bg-card">
+        <div className="text-4xl mb-4">
+          {isHookError ? '⚠️' : isNetworkError ? '🌐' : '💥'}
+        </div>
+        
+        <h2 className="text-xl font-semibold text-red-600">
+          {isHookError ? 'Component Error' : 
+           isNetworkError ? 'Network Error' : 
+           'Application Error'}
+        </h2>
+        
+        <div className="space-y-2">
+          <p className="text-muted-foreground text-sm">{error.message}</p>
+          
+          {isHookError && (
+            <div className="bg-yellow-50 border border-yellow-200 rounded p-3 text-sm">
+              <p className="text-yellow-800">
+                This appears to be a React hook issue. The page will reload automatically.
+              </p>
+            </div>
+          )}
+        </div>
+        
+        <div className="flex gap-2 justify-center">
+          <button 
+            onClick={resetErrorBoundary}
+            className="px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90"
+          >
+            Try Again
+          </button>
+          <button 
+            onClick={() => window.location.reload()}
+            className="px-4 py-2 bg-gray-500 text-white rounded-md hover:bg-gray-600"
+          >
+            Reload Page
+          </button>
+        </div>
+        
+        <div className="text-xs text-muted-foreground">
+          <details>
+            <summary className="cursor-pointer">Technical Details</summary>
+            <pre className="mt-2 text-left bg-gray-100 p-2 rounded text-xs overflow-auto max-h-32">
+              {error.stack}
+            </pre>
+          </details>
+        </div>
+      </div>
     </div>
-  </div>
-);
+  );
+};
 
 // Component that checks if we're in Shopify and redirects appropriately
 const AppBridgeAwareRoute = ({ children }: { children: React.ReactNode }) => {
@@ -66,65 +132,71 @@ const AppBridgeAwareRoute = ({ children }: { children: React.ReactNode }) => {
       <div className="min-h-screen flex items-center justify-center">
         <div className="flex flex-col items-center gap-4">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-          <span className="text-muted-foreground">Loading...</span>
+          <span className="text-muted-foreground">Initializing App Bridge...</span>
         </div>
       </div>
     );
   }
   
-  // If we're embedded in Shopify, redirect to dashboard ONLY from root path
-  if (isEmbedded && window.location.pathname === '/') {
-    return <Navigate to="/dashboard" replace />;
-  }
+  const urlParams = new URLSearchParams(window.location.search);
+  const shop = urlParams.get('shop');
+  const host = urlParams.get('host');
+  const currentPath = window.location.pathname;
   
-  // If not embedded, show landing page only for root path
-  if (!isEmbedded && window.location.pathname === '/') {
+  // Enhanced logging for debugging
+  console.log('🔍 AppBridge Route Analysis:', {
+    isEmbedded,
+    shop,
+    host: host ? 'present' : 'missing',
+    currentPath,
+    search: window.location.search
+  });
+  
+  // If we're embedded in Shopify and have shop parameters, handle routing
+  if (isEmbedded && shop) {
+    // On root path with shop param, redirect to dashboard
+    if (currentPath === '/') {
+      console.log('🔄 Embedded app on root with shop param, redirecting to dashboard');
+      const redirectUrl = host 
+        ? `/dashboard?shop=${encodeURIComponent(shop)}&host=${encodeURIComponent(host)}`
+        : `/dashboard?shop=${encodeURIComponent(shop)}`;
+      return <Navigate to={redirectUrl} replace />;
+    }
+    
+    // For other paths, continue normally
     return <>{children}</>;
   }
   
-  // For all other paths when embedded, don't interfere
+  // If we're embedded but missing shop parameter, show helpful error
+  if (isEmbedded && currentPath === '/' && !shop) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="text-center max-w-md p-6">
+          <div className="text-4xl mb-4">🏪</div>
+          <h2 className="text-xl font-semibold text-red-600 mb-2">Installation Required</h2>
+          <p className="text-muted-foreground mb-4">
+            This app needs to be properly installed from your Shopify Admin panel.
+          </p>
+          <div className="bg-blue-50 border border-blue-200 rounded p-3 text-sm">
+            <p className="text-blue-800">
+              Please install this app through the Shopify App Store or Partner Dashboard.
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+  
+  // For standalone access (not embedded), show normal content
+  if (!isEmbedded) {
+    console.log('📱 Standalone app access detected');
+    return <>{children}</>;
+  }
+  
+  // Default: render children
   return <>{children}</>;
 };
 
-// Shopify OAuth callback handler
-const ShopifyAuthCallback = () => {
-  React.useEffect(() => {
-    const urlParams = new URLSearchParams(window.location.search);
-    const code = urlParams.get('code');
-    const shop = urlParams.get('shop');
-    const host = urlParams.get('host');
-    const state = urlParams.get('state');
-    
-    if (code && shop) {
-      // Handle successful OAuth callback
-      console.log('Shopify OAuth success:', { shop, host, state });
-      
-      // Store shop info and redirect to dashboard
-      localStorage.setItem('shopify_shop', shop);
-      if (host) localStorage.setItem('shopify_host', host);
-      
-      // Redirect to dashboard or embedded app
-      if (host) {
-        window.location.href = `/?host=${host}&shop=${shop}`;
-      } else {
-        window.location.href = '/dashboard';
-      }
-    } else {
-      // Handle OAuth error
-      console.error('Shopify OAuth failed:', urlParams.toString());
-      window.location.href = '/error';
-    }
-  }, []);
-
-  return (
-    <div className="min-h-screen flex items-center justify-center">
-      <div className="flex flex-col items-center gap-4">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-        <span className="text-muted-foreground">Completing Shopify installation...</span>
-      </div>
-    </div>
-  );
-};
 
 const AtomicAppRouter = () => {
   return (
@@ -137,16 +209,44 @@ const AtomicAppRouter = () => {
       <BrowserRouter>
         <AppBridgeProvider>
           <ShopifyEmbeddedErrorBoundary>
-            <AtomicAuthProvider>
-              <div className="min-h-screen bg-background">
+            <div className="min-h-screen bg-background">
                 <Routes>
             {/* Public Routes */}
             <Route path="/landing" element={<Index />} />
             <Route path="/return-portal" element={<CustomerPortal />} />
-            <Route path="/shopify/install" element={<ShopifyInstall />} />
+            <Route path="/shopify/install" element={<ShopifyInstallEnhanced />} />
+            <Route path="/install" element={<ShopifyInstallEnhanced />} />
             
-            {/* Shopify Auth Callback */}
+            {/* Shopify Auth Inline - Top-level re-embed page */}
+            <Route path="/auth/inline" element={<AuthInline />} />
+            
+            {/* App redirect handler for Partner Dashboard app URL redirects */}
+            <Route path="/apps/ras" element={<AppRedirectHandler />} />
+            <Route path="/apps/ras/*" element={<AppRedirectHandler />} />
+            
+            {/* OAuth callbacks - Partner Platform URLs */}
             <Route path="/auth/callback" element={<ShopifyAuthCallback />} />
+            <Route path="/auth/shopify/callback" element={<ShopifyAuthCallback />} />
+            <Route path="/functions/v1/shopify-oauth-callback" element={<ShopifyOAuthCallback />} />
+            
+            {/* OAuth initiation endpoints */}
+            <Route path="/functions/v1/shopify-oauth-start" element={<OAuthStart />} />
+            <Route path="/auth/start" element={<OAuthStart />} />
+            
+            {/* Preferences URL for Partner Platform */}
+            <Route path="/preferences" element={<PreferencesPage />} />
+            
+            {/* Debug page for troubleshooting */}
+            <Route path="/debug-auth" element={<DebugAuth />} />
+            <Route path="/embed-test" element={<EmbedTest />} />
+            <Route path="/embed-debug" element={<EmbedDebug />} />
+            <Route path="/start-oauth" element={<StartOAuth />} />
+            <Route path="/diagnostic" element={<DiagnosticTest />} />
+            <Route path="/quick-test" element={<QuickTest />} />
+            <Route path="/partner-platform-test" element={<PartnerPlatformTest />} />
+            <Route path="/environment-test" element={<EnvironmentTest />} />
+            <Route path="/health" element={<HealthCheck />} />
+            <Route path="/status" element={<HealthCheck />} />
             
             {/* Shopify GDPR Webhooks */}
             <Route path="/functions/v1/shopify-gdpr-webhooks" element={<ShopifyGDPRWebhooks />} />
@@ -165,65 +265,65 @@ const AtomicAppRouter = () => {
             <Route 
               path="/master-admin" 
               element={
-                <AtomicProtectedRoute>
+                <MerchantProtectedRoute>
                   <MasterAdmin />
-                </AtomicProtectedRoute>
+                </MerchantProtectedRoute>
               } 
             />
             <Route 
               path="/debug" 
               element={
-                <AtomicProtectedRoute>
+                <MerchantProtectedRoute>
                   <DebugPanel />
-                </AtomicProtectedRoute>
+                </MerchantProtectedRoute>
               } 
             />
             <Route 
               path="/database" 
               element={
-                <AtomicProtectedRoute>
+                <MerchantProtectedRoute>
                   <Database />
-                </AtomicProtectedRoute>
+                </MerchantProtectedRoute>
               } 
             />
             <Route 
               path="/logs" 
               element={
-                <AtomicProtectedRoute>
+                <MerchantProtectedRoute>
                   <Logs />
-                </AtomicProtectedRoute>
+                </MerchantProtectedRoute>
               } 
             />
             <Route 
               path="/api-monitor" 
               element={
-                <AtomicProtectedRoute>
+                <MerchantProtectedRoute>
                   <ApiMonitor />
-                </AtomicProtectedRoute>
+                </MerchantProtectedRoute>
               } 
             />
             <Route 
               path="/user-management" 
               element={
-                <AtomicProtectedRoute>
+                <MerchantProtectedRoute>
                   <UserManagement />
-                </AtomicProtectedRoute>
+                </MerchantProtectedRoute>
               } 
             />
             <Route 
               path="/system-reports" 
               element={
-                <AtomicProtectedRoute>
+                <MerchantProtectedRoute>
                   <SystemReports />
-                </AtomicProtectedRoute>
+                </MerchantProtectedRoute>
               } 
             />
             <Route 
               path="/support" 
               element={
-                <AtomicProtectedRoute>
+                <MerchantProtectedRoute>
                   <SupportCenter />
-                </AtomicProtectedRoute>
+                </MerchantProtectedRoute>
               } 
             />
             
@@ -241,161 +341,161 @@ const AtomicAppRouter = () => {
             <Route 
               path="/dashboard" 
               element={
-                <AtomicProtectedRoute>
+                <MerchantProtectedRoute>
                   <Dashboard />
-                </AtomicProtectedRoute>
+                </MerchantProtectedRoute>
               } 
             />
             <Route 
               path="/returns" 
               element={
-                <AtomicProtectedRoute>
+                <MerchantProtectedRoute>
                   <Returns />
-                </AtomicProtectedRoute>
+                </MerchantProtectedRoute>
               } 
             />
             <Route 
               path="/analytics" 
               element={
-                <AtomicProtectedRoute>
+                <MerchantProtectedRoute>
                   <Analytics />
-                </AtomicProtectedRoute>
+                </MerchantProtectedRoute>
               } 
             />
             <Route 
               path="/ai-insights" 
               element={
-                <AtomicProtectedRoute>
+                <MerchantProtectedRoute>
                   <AIInsights />
-                </AtomicProtectedRoute>
+                </MerchantProtectedRoute>
               } 
             />
             <Route 
               path="/customers" 
               element={
-                <AtomicProtectedRoute>
+                <MerchantProtectedRoute>
                   <Customers />
-                </AtomicProtectedRoute>
+                </MerchantProtectedRoute>
               } 
             />
             <Route 
               path="/products" 
               element={
-                <AtomicProtectedRoute>
+                <MerchantProtectedRoute>
                   <Products />
-                </AtomicProtectedRoute>
+                </MerchantProtectedRoute>
               } 
             />
             <Route 
               path="/performance" 
               element={
-                <AtomicProtectedRoute>
+                <MerchantProtectedRoute>
                   <Performance />
-                </AtomicProtectedRoute>
+                </MerchantProtectedRoute>
               } 
             />
             <Route 
               path="/billing" 
               element={
-                <AtomicProtectedRoute>
+                <MerchantProtectedRoute>
                   <Billing />
-                </AtomicProtectedRoute>
+                </MerchantProtectedRoute>
               } 
             />
             <Route 
               path="/settings" 
               element={
-                <AtomicProtectedRoute>
+                <MerchantProtectedRoute>
                   <Settings />
-                </AtomicProtectedRoute>
+                </MerchantProtectedRoute>
               } 
             />
             <Route 
               path="/settings/billing" 
               element={
-                <AtomicProtectedRoute>
+                <MerchantProtectedRoute>
                   <SettingsBilling />
-                </AtomicProtectedRoute>
+                </MerchantProtectedRoute>
               } 
             />
             <Route 
               path="/settings/webhooks" 
               element={
-                <AtomicProtectedRoute>
+                <MerchantProtectedRoute>
                   <SettingsWebhooks />
-                </AtomicProtectedRoute>
+                </MerchantProtectedRoute>
               } 
             />
             <Route 
               path="/settings/integrations" 
               element={
-                <AtomicProtectedRoute>
+                <MerchantProtectedRoute>
                   <SettingsIntegrations />
-                </AtomicProtectedRoute>
+                </MerchantProtectedRoute>
               } 
             />
             <Route 
               path="/settings/automation" 
               element={
-                <AtomicProtectedRoute>
+                <MerchantProtectedRoute>
                   <SettingsAutomation />
-                </AtomicProtectedRoute>
+                </MerchantProtectedRoute>
               } 
             />
             <Route 
               path="/settings/system" 
               element={
-                <AtomicProtectedRoute>
+                <MerchantProtectedRoute>
                   <SettingsSystem />
-                </AtomicProtectedRoute>
+                </MerchantProtectedRoute>
               } 
             />
             <Route 
               path="/notifications" 
               element={
-                <AtomicProtectedRoute>
+                <MerchantProtectedRoute>
                   <Notifications />
-                </AtomicProtectedRoute>
+                </MerchantProtectedRoute>
               } 
             />
             <Route 
               path="/automations" 
               element={
-                <AtomicProtectedRoute>
+                <MerchantProtectedRoute>
                   <Automations />
-                </AtomicProtectedRoute>
+                </MerchantProtectedRoute>
               } 
             />
             <Route 
               path="/security" 
               element={
-                <AtomicProtectedRoute>
+                <MerchantProtectedRoute>
                   <Security />
-                </AtomicProtectedRoute>
+                </MerchantProtectedRoute>
               } 
             />
             <Route 
               path="/integrations" 
               element={
-                <AtomicProtectedRoute>
+                <MerchantProtectedRoute>
                   <Integrations />
-                </AtomicProtectedRoute>
+                </MerchantProtectedRoute>
               } 
             />
             <Route 
               path="/webhooks" 
               element={
-                <AtomicProtectedRoute>
+                <MerchantProtectedRoute>
                   <Webhooks />
-                </AtomicProtectedRoute>
+                </MerchantProtectedRoute>
               } 
             />
             <Route 
               path="/shopify/testing" 
               element={
-                <AtomicProtectedRoute>
+                <MerchantProtectedRoute>
                   <ShopifyTesting />
-                </AtomicProtectedRoute>
+                </MerchantProtectedRoute>
               } 
             />
             
@@ -434,7 +534,6 @@ const AtomicAppRouter = () => {
                 </Routes>
                 <Toaster />
                 </div>
-              </AtomicAuthProvider>
             </ShopifyEmbeddedErrorBoundary>
           </AppBridgeProvider>
         </BrowserRouter>

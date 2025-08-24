@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { useMerchantProfile } from '@/hooks/useMerchantProfile';
 
 interface DashboardMetrics {
   totalMerchants: number;
@@ -20,6 +21,7 @@ interface DashboardMetrics {
 }
 
 export const useRealDashboardMetrics = () => {
+  const { profile } = useMerchantProfile();
   const [metrics, setMetrics] = useState<DashboardMetrics | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -28,11 +30,19 @@ export const useRealDashboardMetrics = () => {
     setLoading(true);
     setError(null);
 
+    const merchantId = profile?.merchant_id;
+
+    if (!merchantId) {
+      setError('No merchant context available');
+      setLoading(false);
+      return;
+    }
+
     try {
-      // Get real data from multiple tables
+      // SECURITY FIX: Add merchant_id filtering to ALL queries
       const [merchantsResult, returnsResult, systemHealthResult] = await Promise.all([
-        supabase.from('merchants').select('id, created_at, plan_type').order('created_at', { ascending: false }),
-        supabase.from('returns').select('id, total_amount, created_at, merchant_id').order('created_at', { ascending: false }),
+        supabase.from('merchants').select('id, created_at, plan_type').eq('id', merchantId).order('created_at', { ascending: false }),
+        supabase.from('returns').select('id, total_amount, created_at, merchant_id').eq('merchant_id', merchantId).order('created_at', { ascending: false }),
         supabase.functions.invoke('system-health-check')
       ]);
 
@@ -134,11 +144,13 @@ export const useRealDashboardMetrics = () => {
   };
 
   useEffect(() => {
-    fetchMetrics();
+    if (profile?.merchant_id) {
+      fetchMetrics();
+    }
     
     // Set up real-time updates for key tables
     const channel = supabase
-      .channel('dashboard-metrics')
+      .channel(`dashboard-metrics-${profile?.merchant_id}`)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'merchants' }, fetchMetrics)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'returns' }, fetchMetrics)
       .subscribe();
@@ -146,7 +158,7 @@ export const useRealDashboardMetrics = () => {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, []);
+  }, [profile?.merchant_id]);
 
   return {
     metrics,

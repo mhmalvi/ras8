@@ -1,0 +1,262 @@
+--- a/supabase/functions/shopify-oauth-callback/index.ts
++++ b/supabase/functions/shopify-oauth-callback/index.ts
+@@ -152,15 +152,39 @@ serve(async (req) => {
+         }
+       });
+ 
+-    // Redirect to top-level re-embed page (required for third-party cookie support)
+-    // The host parameter must be the base64-encoded shop domain + '/admin'
+-    const hostParam = btoa(`${shop}/admin`).replace(/=/g, '');
+-    const appUrl = Deno.env.get('VITE_APP_URL') || 'https://930f8f163c65.ngrok-free.app';
+-    const redirectUrl = `${appUrl}/auth/inline?shop=${encodeURIComponent(shop)}&host=${encodeURIComponent(hostParam)}`;
++    // Get the host parameter from session storage if available, otherwise construct it
++    // This preserves the original host parameter from the OAuth flow
++    let hostParam: string;
++    
++    // Check if host was stored during OAuth initiation
++    const storedHost = req.headers.get('x-shopify-oauth-host');
++    
++    if (storedHost) {
++      hostParam = storedHost;
++    } else {
++      // Fallback: construct host parameter (base64 encoded shop/admin)
++      hostParam = btoa(`${shop}/admin`).replace(/=/g, '');
++    }
++    
++    const appUrl = Deno.env.get('VITE_APP_URL') || 'https://9b75bb04db41.ngrok-free.app';
++    
++    // Trigger initial data sync for new merchant
++    if (merchant) {
++      try {
++        // Call initial sync function (you'll need to implement this)
++        await fetch(`${appUrl}/functions/v1/initial-merchant-sync`, {
++          method: 'POST',
++          headers: {
++            'Content-Type': 'application/json',
++            'Authorization': `Bearer ${Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')}`
++          },
++          body: JSON.stringify({
++            merchant_id: merchant.id,
++            shop_domain: shop,
++            access_token: encryptedToken
++          })
++        });
++        
++        console.log('✅ Initial sync triggered for merchant:', merchant.id);
++      } catch (syncError) {
++        console.error('⚠️  Initial sync failed (non-blocking):', syncError);
++        // Don't fail the installation if sync fails
++      }
++    }
++    
++    const redirectUrl = `${appUrl}/auth/inline?shop=${encodeURIComponent(shop)}&host=${encodeURIComponent(hostParam)}`;
+     
+     const topLevelRedirectHtml = `
+     <!DOCTYPE html>
+@@ -168,6 +192,7 @@ serve(async (req) => {
+     <head>
+       <title>H5 - Installation Complete</title>
+       <meta http-equiv="refresh" content="0;url=${redirectUrl}">
++      <meta http-equiv="Content-Security-Policy" content="frame-ancestors 'self' https://*.shopify.com https://*.shopifycloud.com;">
+       <style>
+         body { font-family: Arial, sans-serif; text-align: center; padding: 50px; background: #f8fafc; }
+         .success { color: #10B981; font-size: 24px; margin-bottom: 20px; }
+@@ -176,11 +201,18 @@ serve(async (req) => {
+     </head>
+     <body>
+       <div class="success">✅ Installation Successful!</div>
+-      <div class="info">Redirecting you to the app...</div>
++      <div class="info">Setting up your returns automation...</div>
++      <div style="color: #64748B; font-size: 14px; margin-top: 15px;">
++        • Syncing your store data<br>
++        • Configuring AI automation<br>
++        • Preparing your dashboard
++      </div>
+       <script>
+-        window.location.href = "${redirectUrl}";
++        // Add a small delay to show the success message
++        setTimeout(() => {
++          window.location.href = "${redirectUrl}";
++        }, 2000);
+       </script>
+     </body>
+     </html>`;
+
+--- /dev/null
++++ b/supabase/functions/initial-merchant-sync/index.ts
+@@ -0,0 +1,150 @@
++/**
++ * Initial Merchant Data Sync
++ * Triggered after successful OAuth to populate essential store data
++ */
++
++import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
++import { createClient } from "https://cdn.skypack.dev/@supabase/supabase-js@2.45.0?dts";
++
++const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
++const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
++
++const corsHeaders = {
++  'Access-Control-Allow-Origin': '*',
++  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
++};
++
++// Decrypt access token (reverse of encryption in oauth-callback)
++async function decryptToken(encryptedToken: string, secret: string): Promise<string> {
++  const combined = new Uint8Array(
++    atob(encryptedToken)
++      .split('')
++      .map(char => char.charCodeAt(0))
++  );
++  
++  const iv = combined.slice(0, 12);
++  const encrypted = combined.slice(12);
++  
++  const encoder = new TextEncoder();
++  const key = await crypto.subtle.importKey(
++    'raw',
++    encoder.encode(secret.substring(0, 32).padEnd(32, '0')),
++    { name: 'AES-GCM' },
++    false,
++    ['decrypt']
++  );
++  
++  const decrypted = await crypto.subtle.decrypt(
++    { name: 'AES-GCM', iv },
++    key,
++    encrypted
++  );
++  
++  return new TextDecoder().decode(decrypted);
++}
++
++serve(async (req) => {
++  if (req.method === 'OPTIONS') {
++    return new Response(null, { headers: corsHeaders });
++  }
++
++  if (req.method !== 'POST') {
++    return new Response('Method not allowed', { status: 405, headers: corsHeaders });
++  }
++
++  try {
++    const { merchant_id, shop_domain, access_token: encrypted_token } = await req.json();
++    
++    if (!merchant_id || !shop_domain || !encrypted_token) {
++      throw new Error('Missing required parameters');
++    }
++
++    console.log('🔄 Starting initial sync for merchant:', merchant_id, shop_domain);
++    
++    const supabase = createClient(supabaseUrl, supabaseServiceKey);
++    const shopifyClientSecret = Deno.env.get('SHOPIFY_CLIENT_SECRET')!;
++    
++    // Decrypt the access token
++    const accessToken = await decryptToken(encrypted_token, shopifyClientSecret);
++    
++    // 1. Sync basic shop information
++    const shopResponse = await fetch(`https://${shop_domain}/admin/api/2024-01/shop.json`, {
++      headers: {
++        'X-Shopify-Access-Token': accessToken,
++      },
++    });
++    
++    if (!shopResponse.ok) {
++      throw new Error(`Failed to fetch shop data: ${shopResponse.statusText}`);
++    }
++    
++    const shopData = await shopResponse.json();
++    const shop = shopData.shop;
++    
++    // Update merchant record with shop details
++    await supabase
++      .from('merchants')
++      .update({
++        settings: {
++          ...shop,
++          sync_completed_at: new Date().toISOString(),
++          initial_sync_version: '1.0'
++        }
++      })
++      .eq('id', merchant_id);
++    
++    console.log('✅ Shop data synced:', shop.name);
++    
++    // 2. Sync recent orders (last 50 for initial data)
++    const ordersResponse = await fetch(
++      `https://${shop_domain}/admin/api/2024-01/orders.json?limit=50&status=any`,
++      {
++        headers: {
++          'X-Shopify-Access-Token': accessToken,
++        },
++      }
++    );
++    
++    if (ordersResponse.ok) {
++      const ordersData = await ordersResponse.json();
++      console.log(`📦 Fetched ${ordersData.orders.length} recent orders`);
++      
++      // Store essential order data - you can expand this based on your needs
++      const orderInserts = ordersData.orders.slice(0, 25).map((order: any) => ({
++        merchant_id,
++        shopify_order_id: order.id.toString(),
++        order_number: order.order_number,
++        customer_email: order.email,
++        total_amount: parseFloat(order.total_price || '0'),
++        currency: order.currency,
++        created_at: order.created_at,
++        updated_at: order.updated_at,
++        raw_data: order
++      }));
++      
++      if (orderInserts.length > 0) {
++        await supabase
++          .from('orders')  // You may need to create this table
++          .upsert(orderInserts, { onConflict: 'shopify_order_id,merchant_id' });
++        
++        console.log(`✅ Synced ${orderInserts.length} orders`);
++      }
++    }
++    
++    // 3. Log successful sync
++    await supabase
++      .from('analytics_events')
++      .insert({
++        merchant_id,
++        event_type: 'initial_sync_completed',
++        event_data: {
++          shop_name: shop.name,
++          shop_domain,
++          orders_synced: ordersResponse.ok ? (await ordersResponse.clone().json()).orders.length : 0,
++          sync_timestamp: new Date().toISOString()
++        }
++      });
++    
++    console.log('✅ Initial sync completed for merchant:', merchant_id);
++    
++    return new Response(JSON.stringify({
++      success: true,
++      message: 'Initial sync completed successfully',
++      merchant_id
++    }), {
++      headers: {
++        ...corsHeaders,
++        'Content-Type': 'application/json',
++      },
++    });
++    
++  } catch (error) {
++    console.error('❌ Initial sync failed:', error);
++    
++    return new Response(JSON.stringify({
++      success: false,
++      error: error.message
++    }), {
++      status: 500,
++      headers: {
++        ...corsHeaders,
++        'Content-Type': 'application/json',
++      },
++    });
++  }
++});

@@ -16,7 +16,7 @@ export class EdgeFunctionSecurity {
     
     // Security headers
     secureHeaders.set('X-Content-Type-Options', 'nosniff');
-    secureHeaders.set('X-Frame-Options', 'DENY');
+    secureHeaders.set('X-Frame-Options', 'SAMEORIGIN');
     secureHeaders.set('X-XSS-Protection', '1; mode=block');
     secureHeaders.set('Referrer-Policy', 'strict-origin-when-cross-origin');
     secureHeaders.set('Permissions-Policy', 'geolocation=(), microphone=(), camera=()');

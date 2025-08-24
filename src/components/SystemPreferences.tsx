@@ -3,10 +3,12 @@ import { Separator } from "@/components/ui/separator";
 import { Settings, CheckCircle } from "lucide-react";
 import SystemSetup from "@/components/SystemSetup";
 import EmailNotificationSettings from "@/components/EmailNotificationSettings";
+import { BackButton } from "@/components/ui/back-button";
 
 const SystemPreferences = () => {
   return (
     <div className="space-y-6">
+      <BackButton to="/settings">Back to Settings</BackButton>
       <div className="flex items-center space-x-2 mb-6">
         <Settings className="h-6 w-6 text-primary" />
         <div>

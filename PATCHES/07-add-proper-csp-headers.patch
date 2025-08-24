@@ -1,0 +1,125 @@
+--- a/index.html
++++ b/index.html
+@@ -2,12 +2,19 @@
+ <html lang="en">
+   <head>
+     <meta charset="UTF-8" />
++    <meta http-equiv="Content-Security-Policy" content="
++      default-src 'self'; 
++      script-src 'self' 'unsafe-inline' 'unsafe-eval' https://js.stripe.com https://checkout.stripe.com https://cdn.shopify.com; 
++      style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; 
++      font-src 'self' https://fonts.gstatic.com; 
++      img-src 'self' data: https: blob:; 
++      connect-src 'self' https: wss: https://*.supabase.co wss://*.supabase.co https://*.shopify.com https://*.shopifycloud.com; 
++      frame-ancestors 'self' https://*.shopify.com https://*.shopifycloud.com;
++      object-src 'none'; 
++      base-uri 'self';">
+     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+     <title>H5</title>
+     <meta name="description" content="H5 - Advanced Returns Management System" />
+     <meta name="author" content="H5" />
+
+-    <meta property="og:title" content="H5" />
+-    <meta property="og:description" content="H5 - Advanced Returns Management System" />
+-    <meta property="og:type" content="website" />
+-    <meta property="og:image" content="https://lovable.dev/opengraph-image-p98pqg.png" />
+
+--- a/src/middleware/securityHeaders.ts
++++ b/src/middleware/securityHeaders.ts
+@@ -22,10 +22,13 @@ class SecurityHeadersManager {
+     this.config = {
+       contentSecurityPolicy: {
+         directives: {
+           'default-src': ["'self'"],
+-          'script-src': ["'self'", "'unsafe-inline'", "'unsafe-eval'", 'https://js.stripe.com', 'https://checkout.stripe.com'],
++          'script-src': ["'self'", "'unsafe-inline'", "'unsafe-eval'", 'https://js.stripe.com', 'https://checkout.stripe.com', 'https://cdn.shopify.com'],
+           'style-src': ["'self'", "'unsafe-inline'", 'https://fonts.googleapis.com'],
+           'font-src': ["'self'", 'https://fonts.gstatic.com'],
+           'img-src': ["'self'", 'data:', 'https:', 'blob:'],
++          'media-src': ["'self'"],
++          'object-src': ["'none'"],
++          'base-uri': ["'self'"],
++          'form-action': ["'self'"],
++          'frame-ancestors': ["'self'", "https://*.shopify.com", "https://*.shopifycloud.com"],
++          'upgrade-insecure-requests': [],
++          'connect-src': ["'self'", 'https:', 'wss:', 'https://*.supabase.co', 'wss://*.supabase.co', 'https://*.shopify.com', 'https://*.shopifycloud.com']
+-          'media-src': ["'self'"],
+-          'object-src': ["'none'"],
+-          'base-uri': ["'self'"],
+-          'form-action': ["'self'"],
+-          'frame-ancestors': ["'self'", "https://*.shopify.com", "https://*.shopifycloud.com"],
+-          'upgrade-insecure-requests': [],
+-          'connect-src': ["'self'", 'https://api.openai.com', 'https://api.stripe.com', 'wss://*.supabase.co', 'https://*.supabase.co', 'wss://*.shopifycloud.com', 'https://*.shopifycloud.com']
+         },
+         reportOnly: false
+       },
+@@ -101,7 +104,8 @@ class SecurityHeadersManager {
+ 
+     // Security Headers
+     headers['X-Content-Type-Options'] = 'nosniff';
+-    headers['X-Frame-Options'] = 'SAMEORIGIN';
++    // Remove X-Frame-Options as it conflicts with CSP frame-ancestors
++    // headers['X-Frame-Options'] = 'SAMEORIGIN';
+     headers['X-XSS-Protection'] = '1; mode=block';
+
+--- /dev/null
++++ b/src/utils/cspHelpers.ts
+@@ -0,0 +1,47 @@
++/**
++ * CSP Helpers for Shopify Embedded Apps
++ * Utilities for managing Content Security Policy in embedded context
++ */
++
++/**
++ * Check if current context allows embedded app features
++ */
++export const isEmbeddedContextAllowed = (): boolean => {
++  try {
++    // Check if we're in an iframe
++    const inIframe = window !== window.top;
++    
++    if (!inIframe) {
++      return true; // Not in iframe, allowed
++    }
++
++    // Check if parent origin is Shopify
++    const referrer = document.referrer;
++    const isShopifyReferrer = referrer.includes('shopify.com') || referrer.includes('shopifycloud.com');
++    
++    return isShopifyReferrer;
++  } catch (error) {
++    // Cross-origin error means we're in iframe but can't access parent
++    // This is expected in embedded apps
++    return true;
++  }
++};
++
++/**
++ * Validate that CSP allows Shopify embedding
++ */
++export const validateCSPForEmbedding = (): { valid: boolean; issues: string[] } => {
++  const issues: string[] = [];
++  
++  // Check if CSP headers exist
++  const metaTags = document.querySelectorAll('meta[http-equiv="Content-Security-Policy"]');
++  
++  if (metaTags.length === 0) {
++    issues.push('No CSP meta tag found');
++    return { valid: false, issues };
++  }
++
++  const cspContent = metaTags[0].getAttribute('content') || '';
++  
++  if (!cspContent.includes('frame-ancestors')) {
++    issues.push('CSP missing frame-ancestors directive');
++  }
++  
++  if (!cspContent.includes('shopify.com')) {
++    issues.push('CSP frame-ancestors does not include shopify.com');
++  }
++
++  return {
++    valid: issues.length === 0,
++    issues
++  };
++};

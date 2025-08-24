@@ -1,0 +1,61 @@
+--- a/src/components/AtomicAppRouter.tsx
++++ b/src/components/AtomicAppRouter.tsx
+@@ -68,30 +68,43 @@ const ErrorFallback = ({ error, resetErrorBoundary }: { error: Error; resetErr
+   </div>
+ );
+ 
+-// Component that checks if we're in Shopify and redirects appropriately
++// Component that handles proper embedded app OAuth flow
+ const AppBridgeAwareRoute = ({ children }: { children: React.ReactNode }) => {
+   const { isEmbedded, loading } = useAppBridge();
+   
+   if (loading) {
+     return (
+       <div className="min-h-screen flex items-center justify-center">
+         <div className="flex flex-col items-center gap-4">
+           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+           <span className="text-muted-foreground">Loading...</span>
+         </div>
+       </div>
+     );
+   }
+   
+-  // If we're embedded in Shopify, redirect to dashboard with preserved parameters
++  const urlParams = new URLSearchParams(window.location.search);
++  const shop = urlParams.get('shop');
++  const host = urlParams.get('host');
++  
++  // If we're embedded in Shopify but on root path, initiate proper OAuth flow
+   if (isEmbedded && window.location.pathname === '/') {
+-    const urlParams = new URLSearchParams(window.location.search);
+-    const shop = urlParams.get('shop');
+-    const host = urlParams.get('host');
++    if (shop && host) {
++      // Check if we have a valid Shopify session - for now redirect to install flow
++      console.log('🔄 Embedded app detected on root, redirecting to install flow');
++      const installUrl = `/shopify/install?shop=${encodeURIComponent(shop)}&host=${encodeURIComponent(host)}`;
++      return <Navigate to={installUrl} replace />;
++    } else {
++      // Missing required parameters, show error
++      return (
++        <div className="min-h-screen flex items-center justify-center">
++          <div className="text-center text-red-600">
++            <h2 className="text-xl font-semibold mb-2">Invalid Installation</h2>
++            <p>Missing required shop or host parameters. Please install from Shopify Admin.</p>
++          </div>
++        </div>
++      );
++    }
++  }
+     
+-    // Preserve shop and host parameters in redirect
+-    const dashboardUrl = `/dashboard${shop || host ? '?' : ''}${shop ? `shop=${encodeURIComponent(shop)}` : ''}${shop && host ? '&' : ''}${host ? `host=${encodeURIComponent(host)}` : ''}`;
+-    
+-    console.log('🔄 Embedded app detected, redirecting to dashboard:', { shop, host, url: dashboardUrl });
+-    return <Navigate to={dashboardUrl} replace />;
+-  }
+-  
+   // If not embedded, show landing page only for root path
+   if (!isEmbedded && window.location.pathname === '/') {
+     return <>{children}</>;
+   }

@@ -19,7 +19,7 @@ import { SubscriptionInfo } from '@/components/SubscriptionInfo';
 const mockEnv = {
   VITE_SHOPIFY_CLIENT_ID: '2da34c83e89f6645ad1fb2028c7532dd',
   SHOPIFY_CLIENT_SECRET: 'e993e23eed15e1cef5bd22b300fd062f',
-  VITE_APP_URL: 'https://test.ngrok-free.app',
+  VITE_APP_URL: 'https://ras-5.vercel.app',
   SHOPIFY_WEBHOOK_SECRET: 'test-webhook-secret',
   VITE_DEV_MODE: 'true'
 };

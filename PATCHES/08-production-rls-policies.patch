@@ -1,0 +1,173 @@
+-- Production-ready Row Level Security (RLS) Policies
+-- Apply these to your Supabase database for proper tenant isolation
+
+-- 1. Enable RLS on all merchant-related tables
+ALTER TABLE merchants ENABLE ROW LEVEL SECURITY;
+ALTER TABLE returns ENABLE ROW LEVEL SECURITY;
+ALTER TABLE return_items ENABLE ROW LEVEL SECURITY;
+ALTER TABLE ai_suggestions ENABLE ROW LEVEL SECURITY;
+ALTER TABLE analytics_events ENABLE ROW LEVEL SECURITY;
+ALTER TABLE orders ENABLE ROW LEVEL SECURITY; -- If you create this table
+
+-- 2. Create secure policies for merchants table
+-- Merchants can only see their own record
+CREATE POLICY "Merchants can view own record" ON merchants
+  FOR SELECT USING (
+    auth.jwt() ->> 'shop' = shop_domain OR
+    auth.role() = 'service_role'
+  );
+
+CREATE POLICY "Merchants can update own record" ON merchants  
+  FOR UPDATE USING (
+    auth.jwt() ->> 'shop' = shop_domain OR
+    auth.role() = 'service_role'
+  );
+
+-- Service role can insert new merchants (during OAuth)
+CREATE POLICY "Service can insert merchants" ON merchants
+  FOR INSERT WITH CHECK (auth.role() = 'service_role');
+
+-- 3. Create secure policies for returns table
+CREATE POLICY "Merchants can view own returns" ON returns
+  FOR SELECT USING (
+    merchant_id IN (
+      SELECT id FROM merchants 
+      WHERE shop_domain = auth.jwt() ->> 'shop'
+    ) OR auth.role() = 'service_role'
+  );
+
+CREATE POLICY "Merchants can insert own returns" ON returns
+  FOR INSERT WITH CHECK (
+    merchant_id IN (
+      SELECT id FROM merchants 
+      WHERE shop_domain = auth.jwt() ->> 'shop'
+    ) OR auth.role() = 'service_role'
+  );
+
+CREATE POLICY "Merchants can update own returns" ON returns
+  FOR UPDATE USING (
+    merchant_id IN (
+      SELECT id FROM merchants 
+      WHERE shop_domain = auth.jwt() ->> 'shop'
+    ) OR auth.role() = 'service_role'
+  );
+
+-- 4. Create secure policies for return_items table  
+CREATE POLICY "Merchants can view own return items" ON return_items
+  FOR SELECT USING (
+    return_id IN (
+      SELECT r.id FROM returns r 
+      JOIN merchants m ON r.merchant_id = m.id 
+      WHERE m.shop_domain = auth.jwt() ->> 'shop'
+    ) OR auth.role() = 'service_role'
+  );
+
+CREATE POLICY "Merchants can modify own return items" ON return_items
+  FOR ALL USING (
+    return_id IN (
+      SELECT r.id FROM returns r 
+      JOIN merchants m ON r.merchant_id = m.id 
+      WHERE m.shop_domain = auth.jwt() ->> 'shop'
+    ) OR auth.role() = 'service_role'
+  );
+
+-- 5. Create secure policies for ai_suggestions table
+CREATE POLICY "Merchants can view own AI suggestions" ON ai_suggestions
+  FOR SELECT USING (
+    merchant_id IN (
+      SELECT id FROM merchants 
+      WHERE shop_domain = auth.jwt() ->> 'shop'
+    ) OR auth.role() = 'service_role'
+  );
+
+CREATE POLICY "Service can insert AI suggestions" ON ai_suggestions
+  FOR INSERT WITH CHECK (auth.role() = 'service_role');
+
+-- 6. Create secure policies for analytics_events table
+CREATE POLICY "Merchants can view own analytics" ON analytics_events
+  FOR SELECT USING (
+    merchant_id IN (
+      SELECT id FROM merchants 
+      WHERE shop_domain = auth.jwt() ->> 'shop'
+    ) OR auth.role() = 'service_role'
+  );
+
+CREATE POLICY "Service can insert analytics events" ON analytics_events
+  FOR INSERT WITH CHECK (auth.role() = 'service_role');
+
+-- 7. Create helper function for getting current merchant ID
+CREATE OR REPLACE FUNCTION get_current_merchant_id()
+RETURNS UUID
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+DECLARE
+  merchant_id UUID;
+BEGIN
+  -- For service role, allow access
+  IF auth.role() = 'service_role' THEN
+    RETURN NULL; -- Service role bypasses merchant-specific filtering
+  END IF;
+  
+  -- Get merchant ID from shop domain in JWT
+  SELECT id INTO merchant_id 
+  FROM merchants 
+  WHERE shop_domain = auth.jwt() ->> 'shop';
+  
+  RETURN merchant_id;
+END;
+$$;
+
+-- 8. Create audit trigger for sensitive operations
+CREATE OR REPLACE FUNCTION audit_merchant_operations()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+AS $$
+BEGIN
+  -- Log all sensitive operations to analytics_events
+  INSERT INTO analytics_events (
+    merchant_id,
+    event_type,
+    event_data,
+    created_at
+  ) VALUES (
+    COALESCE(NEW.merchant_id, OLD.merchant_id),
+    TG_OP || '_' || TG_TABLE_NAME,
+    jsonb_build_object(
+      'table', TG_TABLE_NAME,
+      'operation', TG_OP,
+      'user_role', auth.role(),
+      'jwt_shop', auth.jwt() ->> 'shop',
+      'timestamp', NOW()
+    ),
+    NOW()
+  );
+  
+  RETURN COALESCE(NEW, OLD);
+END;
+$$;
+
+-- Apply audit trigger to sensitive tables
+CREATE TRIGGER audit_returns_operations
+  AFTER INSERT OR UPDATE OR DELETE ON returns
+  FOR EACH ROW EXECUTE FUNCTION audit_merchant_operations();
+
+CREATE TRIGGER audit_merchants_operations
+  AFTER UPDATE ON merchants
+  FOR EACH ROW EXECUTE FUNCTION audit_merchant_operations();
+
+-- 9. Create indexes for performance with RLS
+CREATE INDEX IF NOT EXISTS idx_returns_merchant_id ON returns(merchant_id);
+CREATE INDEX IF NOT EXISTS idx_analytics_events_merchant_id ON analytics_events(merchant_id);
+CREATE INDEX IF NOT EXISTS idx_merchants_shop_domain ON merchants(shop_domain);
+
+-- 10. Grant necessary permissions
+-- These are handled by Supabase automatically, but included for completeness
+
+-- IMPORTANT: Test these policies thoroughly in your development environment
+-- before applying to production. Each policy should be tested with different
+-- JWT payloads to ensure proper isolation.
+
+-- To test a policy:
+-- SELECT set_config('request.jwt.claims', '{"shop": "test-shop.myshopify.com"}', true);
+-- Then run your queries to ensure they only return appropriate data.

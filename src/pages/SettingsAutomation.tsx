@@ -5,22 +5,26 @@ import { Badge } from "@/components/ui/badge";
 import { Activity, Settings, Server, Key, Webhook, AlertCircle } from "lucide-react";
 import AutomationSettings from "@/components/AutomationSettings";
 import N8nConnectionSetup from "@/components/N8nConnectionSetup";
+import { BackButton } from "@/components/ui/back-button";
 
 const SettingsAutomation = () => {
   return (
     <AppLayout>
       <div className="space-y-8 animate-fade-in">
         {/* Header */}
-        <div>
-          <div className="flex items-center space-x-2 mb-2">
-            <Settings className="h-6 w-6 text-primary" />
-            <h1 className="text-3xl font-bold bg-gradient-to-r from-primary to-blue-600 bg-clip-text text-transparent">
-              Automation Configuration
-            </h1>
+        <div className="space-y-4">
+          <BackButton to="/settings">Back to Settings</BackButton>
+          <div>
+            <div className="flex items-center space-x-2 mb-2">
+              <Settings className="h-6 w-6 text-primary" />
+              <h1 className="text-3xl font-bold bg-gradient-to-r from-primary to-blue-600 bg-clip-text text-transparent">
+                Automation Configuration
+              </h1>
+            </div>
+            <p className="text-muted-foreground text-lg">
+              Set up and configure your automation infrastructure, servers, and API connections
+            </p>
           </div>
-          <p className="text-muted-foreground text-lg">
-            Set up and configure your automation infrastructure, servers, and API connections
-          </p>
         </div>
 
         {/* Navigation hint */}

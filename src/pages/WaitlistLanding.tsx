@@ -285,7 +285,22 @@ const { toast } = useToast();
                   >
                     <Button 
                       size="lg" 
-                      className="px-10 py-4 text-lg bg-primary hover:bg-primary/90 text-primary-foreground shadow-2xl glow transition-all duration-300"
+                      className="px-10 py-4 text-lg bg-green-600 hover:bg-green-700 text-white shadow-2xl glow transition-all duration-300"
+                      onClick={() => window.location.href = '/install'}
+                    >
+                      <Building2 className="mr-2 h-5 w-5" />
+                      Install on Shopify
+                    </Button>
+                  </motion.div>
+                  
+                  <motion.div
+                    whileHover={{ scale: 1.05, y: -2 }}
+                    whileTap={{ scale: 0.95 }}
+                  >
+                    <Button 
+                      size="lg" 
+                      variant="outline"
+                      className="px-10 py-4 text-lg border-border hover:bg-muted/50 transition-all duration-300"
                       onClick={() => {
                         const form = document.querySelector('form');
                         form?.scrollIntoView({ behavior: 'smooth' });
@@ -296,7 +311,7 @@ const { toast } = useToast();
                     </Button>
                   </motion.div>
                   
-<Button 
+                  <Button 
                     variant="outline" 
                     size="lg" 
                     className="px-10 py-4 text-lg border-border hover:bg-muted/50 transition-all duration-300"

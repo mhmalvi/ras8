@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { useMerchantProfile } from '@/hooks/useMerchantProfile';
 
 interface MasterAdminStats {
   totalMerchants: number;
@@ -42,6 +43,7 @@ interface SystemHealth {
 }
 
 export const useMasterAdminData = () => {
+  const { profile } = useMerchantProfile();
   const [stats, setStats] = useState<MasterAdminStats | null>(null);
   const [merchants, setMerchants] = useState<Merchant[]>([]);
   const [systemHealth, setSystemHealth] = useState<SystemHealth | null>(null);
@@ -49,20 +51,29 @@ export const useMasterAdminData = () => {
   const [error, setError] = useState<string | null>(null);
 
   const fetchStats = async () => {
+    // SECURITY FIX: Only allow system admins to access master admin data
+    if (profile?.role !== 'master_admin') {
+      throw new Error('Unauthorized: Admin access required');
+    }
+
     try {
       console.log('🔄 Fetching master admin stats...');
       
-      // Get total merchants
+      // SECURITY FIX: Even admins should have scoped access in most cases
       const { data: merchantsData, error: merchantsError } = await supabase
         .from('merchants')
-        .select('*');
+        .select('id, shop_domain, plan_type, created_at')  // Limit fields
+        .order('created_at', { ascending: false })
+        .limit(100);  // Add reasonable limits
 
       if (merchantsError) throw merchantsError;
 
-      // Get total returns
+      // SECURITY FIX: Limit returns data access for admins
       const { data: returnsData, error: returnsError } = await supabase
         .from('returns')
-        .select('total_amount, created_at');
+        .select('total_amount, created_at, merchant_id')
+        .order('created_at', { ascending: false })
+        .limit(1000);  // Add reasonable limits
 
       if (returnsError) throw returnsError;
 
@@ -110,12 +121,20 @@ export const useMasterAdminData = () => {
   };
 
   const fetchMerchants = async () => {
+    // SECURITY FIX: Only allow system admins to access merchant data
+    if (profile?.role !== 'master_admin') {
+      throw new Error('Unauthorized: Admin access required');
+    }
+
     try {
       console.log('🔄 Fetching merchants with returns data...');
       
+      // SECURITY FIX: Limit merchant data fields and scope
       const { data: merchantsData, error: merchantsError } = await supabase
         .from('merchants')
-        .select('*');
+        .select('id, shop_domain, plan_type, created_at, updated_at')
+        .order('created_at', { ascending: false })
+        .limit(50);  // Reasonable limit for admin view
 
       if (merchantsError) throw merchantsError;
 
@@ -215,8 +234,14 @@ export const useMasterAdminData = () => {
   };
 
   useEffect(() => {
-    refreshData();
-  }, []);
+    // Only fetch data if user is authenticated and has admin role
+    if (profile?.role === 'master_admin') {
+      refreshData();
+    } else if (profile && profile.role !== 'master_admin') {
+      setError('Access denied: Admin privileges required');
+      setLoading(false);
+    }
+  }, [profile]);
 
   return {
     stats,

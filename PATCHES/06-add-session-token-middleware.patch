@@ -1,0 +1,264 @@
+--- /dev/null
++++ b/src/middleware/sessionTokenMiddleware.ts
+@@ -0,0 +1,156 @@
++/**
++ * Shopify Session Token Middleware
++ * Validates App Bridge session tokens for API calls
++ */
++
++import jwt from 'jsonwebtoken';
++
++export interface ShopifySessionPayload {
++  iss: string;        // https://shop-domain.myshopify.com/admin
++  dest: string;       // https://shop-domain.myshopify.com
++  aud: string;        // Shopify API key
++  sub: string;        // User ID
++  exp: number;        // Expiration
++  nbf: number;        // Not before
++  iat: number;        // Issued at
++  jti: string;        // JWT ID
++  sid: string;        // Session ID
++}
++
++export interface ValidatedSession {
++  shop: string;
++  userId: string;
++  sessionId: string;
++  payload: ShopifySessionPayload;
++}
++
++/**
++ * Extract session token from App Bridge
++ * Call this from your React components
++ */
++export const getSessionToken = async (app: any): Promise<string | null> => {
++  try {
++    if (!app) {
++      console.error('App Bridge instance not available');
++      return null;
++    }
++
++    // Get session token from App Bridge
++    const token = await app.idToken();
++    
++    if (!token) {
++      console.error('No session token available from App Bridge');
++      return null;
++    }
++
++    return token;
++  } catch (error) {
++    console.error('Failed to get session token:', error);
++    return null;
++  }
++};
++
++/**
++ * Validate Shopify session token (server-side)
++ */
++export const validateSessionToken = async (
++  token: string,
++  shopifyClientSecret: string
++): Promise<ValidatedSession | null> => {
++  try {
++    // Decode without verification first to get the payload
++    const decoded = jwt.decode(token, { complete: true }) as any;
++    
++    if (!decoded || !decoded.payload) {
++      console.error('Invalid JWT structure');
++      return null;
++    }
++
++    const payload = decoded.payload as ShopifySessionPayload;
++    
++    // Extract shop domain from iss claim
++    const issMatch = payload.iss.match(/https:\/\/([^\/]+)\/admin/);
++    if (!issMatch) {
++      console.error('Invalid iss claim in JWT');
++      return null;
++    }
++    
++    const shop = issMatch[1];
++
++    // Verify the JWT signature
++    try {
++      jwt.verify(token, shopifyClientSecret, {
++        audience: payload.aud,
++        issuer: payload.iss,
++        algorithms: ['HS256']
++      });
++    } catch (jwtError) {
++      console.error('JWT verification failed:', jwtError);
++      return null;
++    }
++
++    // Check expiration
++    if (Date.now() >= payload.exp * 1000) {
++      console.error('Session token expired');
++      return null;
++    }
++
++    return {
++      shop,
++      userId: payload.sub,
++      sessionId: payload.sid,
++      payload
++    };
++    
++  } catch (error) {
++    console.error('Session token validation error:', error);
++    return null;
++  }
++};
++
++/**
++ * Express/Edge Function middleware for session token validation
++ */
++export const sessionTokenMiddleware = (shopifyClientSecret: string) => {
++  return async (req: Request): Promise<{ session: ValidatedSession | null; error?: string }> => {
++    const authHeader = req.headers.get('Authorization');
++    
++    if (!authHeader || !authHeader.startsWith('Bearer ')) {
++      return {
++        session: null,
++        error: 'Missing or invalid Authorization header'
++      };
++    }
++
++    const token = authHeader.substring(7); // Remove 'Bearer ' prefix
++    
++    const validatedSession = await validateSessionToken(token, shopifyClientSecret);
++    
++    if (!validatedSession) {
++      return {
++        session: null,
++        error: 'Invalid session token'
++      };
++    }
++
++    return { session: validatedSession };
++  };
++};
++
++/**
++ * React hook for making authenticated API calls with session tokens
++ */
++export const useShopifyAPI = () => {
++  const { app } = useAppBridge();
++  
++  const makeAuthenticatedRequest = async (url: string, options: RequestInit = {}) => {
++    const sessionToken = await getSessionToken(app);
++    
++    if (!sessionToken) {
++      throw new Error('No session token available');
++    }
++
++    return fetch(url, {
++      ...options,
++      headers: {
++        ...options.headers,
++        'Authorization': `Bearer ${sessionToken}`,
++        'Content-Type': 'application/json'
++      }
++    });
++  };
++
++  return { makeAuthenticatedRequest };
++};
++
++// Add required imports for the hook
++import { useAppBridge } from '@/components/AppBridgeProvider';
+
+--- /dev/null
++++ b/supabase/functions/api-with-session-validation/index.ts
+@@ -0,0 +1,68 @@
++/**
++ * Example API endpoint with session token validation
++ * Use this pattern for all API endpoints that need Shopify authentication
++ */
++
++import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
++import { createClient } from "https://cdn.skypack.dev/@supabase/supabase-js@2.45.0?dts";
++
++// Import session validation (you'll need to adapt this for Deno)
++import { sessionTokenMiddleware } from '../shared/sessionTokenMiddleware.ts';
++
++const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
++const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
++const shopifyClientSecret = Deno.env.get('SHOPIFY_CLIENT_SECRET')!;
++
++const corsHeaders = {
++  'Access-Control-Allow-Origin': '*',
++  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
++};
++
++serve(async (req) => {
++  if (req.method === 'OPTIONS') {
++    return new Response(null, { headers: corsHeaders });
++  }
++
++  try {
++    // Validate session token
++    const sessionMiddleware = sessionTokenMiddleware(shopifyClientSecret);
++    const { session, error } = await sessionMiddleware(req);
++    
++    if (!session) {
++      return new Response(JSON.stringify({ 
++        error: 'Authentication required', 
++        details: error 
++      }), {
++        status: 401,
++        headers: {
++          ...corsHeaders,
++          'Content-Type': 'application/json'
++        }
++      });
++    }
++
++    // Get merchant record based on session shop
++    const supabase = createClient(supabaseUrl, supabaseServiceKey);
++    
++    const { data: merchant } = await supabase
++      .from('merchants')
++      .select('id, shop_domain, settings')
++      .eq('shop_domain', session.shop)
++      .single();
++      
++    if (!merchant) {
++      return new Response(JSON.stringify({ 
++        error: 'Merchant not found' 
++      }), {
++        status: 404,
++        headers: {
++          ...corsHeaders,
++          'Content-Type': 'application/json'
++        }
++      });
++    }
++
++    // Your API logic here - merchant is authenticated and validated
++    return new Response(JSON.stringify({
++      success: true,
++      merchant_id: merchant.id,
++      shop: session.shop,
++      user_id: session.userId
++    }), {
++      headers: {
++        ...corsHeaders,
++        'Content-Type': 'application/json'
++      }
++    });
++
++  } catch (error) {
++    console.error('API error:', error);
++    return new Response(JSON.stringify({ 
++      error: 'Internal server error' 
++    }), {
++      status: 500,
++      headers: {
++        ...corsHeaders,
++        'Content-Type': 'application/json'
++      }
++    });
++  }
++});

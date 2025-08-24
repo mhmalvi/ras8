@@ -20,6 +20,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
 import AppLayout from "@/components/AppLayout";
+import { BackButton } from "@/components/ui/back-button";
 
 const SettingsBilling = () => {
   const { toast } = useToast();
@@ -118,13 +119,16 @@ const SettingsBilling = () => {
     <AppLayout>
       <div className="space-y-8 animate-fade-in">
         {/* Header */}
-        <div>
-          <h1 className="text-3xl font-bold bg-gradient-to-r from-primary to-blue-600 bg-clip-text text-transparent">
-            Billing & Subscription
-          </h1>
-          <p className="text-muted-foreground mt-2 text-lg">
-            Manage your plan, usage, and billing information
-          </p>
+        <div className="space-y-4">
+          <BackButton to="/settings">Back to Settings</BackButton>
+          <div>
+            <h1 className="text-3xl font-bold bg-gradient-to-r from-primary to-blue-600 bg-clip-text text-transparent">
+              Billing & Subscription
+            </h1>
+            <p className="text-muted-foreground mt-2 text-lg">
+              Manage your plan, usage, and billing information
+            </p>
+          </div>
         </div>
 
         {/* Current Plan Overview */}

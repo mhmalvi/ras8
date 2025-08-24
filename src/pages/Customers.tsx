@@ -11,6 +11,7 @@ import { Search, User, Mail, Calendar, TrendingUp, Eye, Package, DollarSign, Use
 import AppLayout from "@/components/AppLayout";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
+import { useMerchantProfile } from "@/hooks/useMerchantProfile";
 
 interface Customer {
   email: string;
@@ -22,6 +23,7 @@ interface Customer {
 }
 
 const Customers = () => {
+  const { profile } = useMerchantProfile();
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
@@ -30,14 +32,26 @@ const Customers = () => {
   const [returnsLoading, setReturnsLoading] = useState(false);
 
   useEffect(() => {
-    fetchCustomers();
-  }, []);
+    if (profile?.merchant_id) {
+      fetchCustomers();
+    }
+  }, [profile?.merchant_id]);
 
   const fetchCustomers = async () => {
+    const merchantId = profile?.merchant_id;
+
+    if (!merchantId) {
+      console.error('No merchant context available');
+      setLoading(false);
+      return;
+    }
+
     try {
+      // SECURITY FIX: Add merchant_id filtering to prevent cross-tenant data exposure
       const { data: returns, error } = await supabase
         .from('returns')
-        .select('customer_email, total_amount, created_at');
+        .select('customer_email, total_amount, created_at, merchant_id')
+        .eq('merchant_id', merchantId);
 
       if (error) throw error;
 
@@ -85,8 +99,17 @@ const Customers = () => {
   };
 
   const fetchCustomerReturns = async (customerEmail: string) => {
+    const merchantId = profile?.merchant_id;
+
+    if (!merchantId) {
+      console.error('No merchant context available');
+      setReturnsLoading(false);
+      return;
+    }
+
     setReturnsLoading(true);
     try {
+      // SECURITY FIX: Add merchant_id filtering to customer return details
       const { data: returns, error } = await supabase
         .from('returns')
         .select(`
@@ -96,6 +119,7 @@ const Customers = () => {
           )
         `)
         .eq('customer_email', customerEmail)
+        .eq('merchant_id', merchantId)
         .order('created_at', { ascending: false });
 
       if (error) throw error;

@@ -1,6 +1,6 @@
 
 import { AppSidebar } from "@/components/AppSidebar";
-import { SidebarProvider } from "@/components/ui/sidebar";
+import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import UserMenu from "@/components/UserMenu";
 import { NotificationDropdown } from "@/components/NotificationDropdown";
 import { useMerchantProfile } from "@/hooks/useMerchantProfile";
@@ -94,26 +94,32 @@ const AppLayout = ({ children }: AppLayoutProps) => {
           {/* Header - modified for embedded mode */}
           {!isEmbedded && (
             <header className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 px-8 py-6">
-              <div className="flex items-center justify-end space-x-4">
-                <NotificationDropdown />
-                <Button 
-                  variant="ghost" 
-                  size="icon"
-                  onClick={() => navigate('/support')}
-                  className="relative"
-                >
-                  <HelpCircle className="h-5 w-5" />
-                </Button>
-                <UserMenu />
+              <div className="flex items-center justify-between">
+                <SidebarTrigger className="hover:bg-gray-100 border-0" />
+                <div className="flex items-center space-x-4">
+                  <NotificationDropdown />
+                  <Button 
+                    variant="ghost" 
+                    size="icon"
+                    onClick={() => navigate('/support')}
+                    className="relative"
+                  >
+                    <HelpCircle className="h-5 w-5" />
+                  </Button>
+                  <UserMenu />
+                </div>
               </div>
             </header>
           )}
 
           {/* Embedded mode header - minimal */}
           {isEmbedded && (
-            <header className="border-b bg-background px-4 py-3">
+            <header className="border-b bg-background px-4 py-3 relative z-50">
               <div className="flex items-center justify-between">
-                <h1 className="font-semibold text-lg">Returns Automation</h1>
+                <div className="flex items-center space-x-3">
+                  <SidebarTrigger className="z-50 bg-background border shadow-sm hover:bg-gray-50" />
+                  <h1 className="font-semibold text-lg">Returns Automation</h1>
+                </div>
                 <div className="flex items-center space-x-2">
                   <NotificationDropdown />
                   <UserMenu />

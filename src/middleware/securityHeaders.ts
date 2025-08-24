@@ -23,7 +23,7 @@ class SecurityHeadersManager {
       contentSecurityPolicy: {
         directives: {
           'default-src': ["'self'"],
-          'script-src': ["'self'", "'unsafe-inline'", "'unsafe-eval'", 'https://js.stripe.com', 'https://checkout.stripe.com'],
+          'script-src': ["'self'", "'unsafe-inline'", "'unsafe-eval'", 'https://js.stripe.com', 'https://checkout.stripe.com', 'https://cdn.shopify.com'],
           'style-src': ["'self'", "'unsafe-inline'", 'https://fonts.googleapis.com'],
           'font-src': ["'self'", 'https://fonts.gstatic.com'],
           'img-src': ["'self'", 'data:', 'https:', 'blob:'],
@@ -31,9 +31,9 @@ class SecurityHeadersManager {
           'object-src': ["'none'"],
           'base-uri': ["'self'"],
           'form-action': ["'self'"],
-          'frame-ancestors': ["'none'"],
+          'frame-ancestors': ["'self'", "https://*.shopify.com", "https://*.shopifycloud.com"],
           'upgrade-insecure-requests': [],
-          'connect-src': ["'self'", 'https://api.openai.com', 'https://api.stripe.com', 'wss://*.supabase.co', 'https://*.supabase.co']
+          'connect-src': ["'self'", 'https:', 'wss:', 'https://*.supabase.co', 'wss://*.supabase.co', 'https://*.shopify.com', 'https://*.shopifycloud.com']
         },
         reportOnly: false
       },
@@ -101,7 +101,8 @@ class SecurityHeadersManager {
 
     // Security Headers
     headers['X-Content-Type-Options'] = 'nosniff';
-    headers['X-Frame-Options'] = 'DENY';
+    // Remove X-Frame-Options as it conflicts with CSP frame-ancestors
+    // headers['X-Frame-Options'] = 'SAMEORIGIN';
     headers['X-XSS-Protection'] = '1; mode=block';
 
     // Permissions Policy
@@ -206,9 +207,9 @@ const productionSecurityHeaders = new SecurityHeadersManager({
       'object-src': ["'none'"],
       'base-uri': ["'self'"],
       'form-action': ["'self'"],
-      'frame-ancestors': ["'none'"],
+      'frame-ancestors': ["'self'", "https://*.shopify.com", "https://*.shopifycloud.com"],
       'upgrade-insecure-requests': [],
-      'connect-src': ["'self'", 'https://api.openai.com', 'https://api.stripe.com', 'wss://*.supabase.co', 'https://*.supabase.co']
+      'connect-src': ["'self'", 'https://api.openai.com', 'https://api.stripe.com', 'wss://*.supabase.co', 'https://*.supabase.co', 'wss://*.shopifycloud.com', 'https://*.shopifycloud.com']
     },
     reportOnly: false
   }

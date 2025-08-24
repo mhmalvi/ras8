@@ -73,28 +73,42 @@ export function AppSidebar() {
 
   return (
     <Sidebar
-      className={isCollapsed ? "w-14" : isEmbedded ? "w-52" : "w-60"}
+      className={cn(
+        "transition-all duration-200 ease-in-out",
+        isCollapsed ? "w-14" : isEmbedded ? "w-52" : "w-60"
+      )}
       collapsible="icon"
     >
-      <SidebarContent>
+      <SidebarContent className="gap-4">
         <SidebarGroup>
-          <SidebarGroupLabel>Returns Automation</SidebarGroupLabel>
+          <SidebarGroupLabel className={cn(
+            "transition-opacity duration-200",
+            isCollapsed ? "opacity-0 invisible" : "opacity-100"
+          )}>
+            H5
+          </SidebarGroupLabel>
 
           <SidebarGroupContent>
-            <SidebarMenu>
+            <SidebarMenu className="gap-2">
               {mainItems.map((item) => (
                 <SidebarMenuItem key={item.title}>
-                  <SidebarMenuButton asChild>
+                  <SidebarMenuButton asChild tooltip={isCollapsed ? item.title : undefined}>
                     <NavLink 
                       to={item.url} 
                       end 
                       className={({ isActive }) => cn(
-                        "flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-all hover:text-primary cursor-pointer",
-                        isActive ? "bg-muted text-primary font-medium" : "hover:bg-muted/50"
+                        "flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-all hover:text-primary cursor-pointer relative",
+                        isActive ? "bg-muted text-primary font-medium" : "hover:bg-muted/50",
+                        isCollapsed ? "justify-center" : ""
                       )}
                     >
-                      <item.icon className="h-4 w-4" />
-                      {!isCollapsed && <span>{item.title}</span>}
+                      <item.icon className={cn(
+                        "h-4 w-4 flex-shrink-0",
+                        isCollapsed ? "h-5 w-5" : ""
+                      )} />
+                      {!isCollapsed && (
+                        <span className="truncate">{item.title}</span>
+                      )}
                     </NavLink>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
@@ -106,8 +120,10 @@ export function AppSidebar() {
         {/* Usage Panel at Bottom */}
         <SidebarGroup className="mt-auto">
           <SidebarGroupContent>
-            {/* Subscription Usage Info */}
-            <SubscriptionInfo isCollapsed={isCollapsed} />
+            {/* Subscription Usage Info - only show when expanded */}
+            {!isCollapsed && (
+              <SubscriptionInfo isCollapsed={isCollapsed} />
+            )}
           </SidebarGroupContent>
         </SidebarGroup>
       </SidebarContent>

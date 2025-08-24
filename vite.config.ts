@@ -3,6 +3,8 @@ import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react-swc";
 import path from "path";
 import { componentTagger } from "lovable-tagger";
+import cspHeaderPlugin from "./vite-csp-plugin.js";
+import websocketPlugin from "./vite-websocket-plugin.js";
 
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => ({
@@ -13,6 +15,8 @@ export default defineConfig(({ mode }) => ({
   },
   plugins: [
     react(),
+    cspHeaderPlugin(),
+    websocketPlugin(),
     mode === 'development' &&
     componentTagger(),
   ].filter(Boolean),
