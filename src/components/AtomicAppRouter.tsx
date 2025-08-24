@@ -227,7 +227,6 @@ const AtomicAppRouter = () => {
             {/* OAuth callbacks - Partner Platform URLs */}
             <Route path="/auth/callback" element={<ShopifyAuthCallback />} />
             <Route path="/auth/shopify/callback" element={<ShopifyAuthCallback />} />
-            <Route path="/functions/v1/shopify-oauth-callback" element={<ShopifyOAuthCallback />} />
             
             {/* OAuth initiation endpoints */}
             <Route path="/functions/v1/shopify-oauth-start" element={<OAuthStart />} />

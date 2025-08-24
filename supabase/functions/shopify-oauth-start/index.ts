@@ -37,7 +37,7 @@ serve(async (req) => {
     ].join(',');
 
     // Generate OAuth URL - FIXED: Use correct redirect URI matching Partner Platform
-    const redirectUri = `${appUrl}/functions/v1/shopify-oauth-callback`;
+    const redirectUri = `https://pvadajelvewdazwmvppk.supabase.co/functions/v1/shopify-oauth-callback`;
     const state = crypto.randomUUID();
     
     const oauthUrl = new URL(`https://${shop}/admin/oauth/authorize`);
