@@ -181,16 +181,6 @@ docker-compose up n8n # or start hosted n8n
 * **Version Control**: GitHub Flow + PR reviews
 * **Contributions**: Fork → Branch → PR
 
----
 
-## 📚 References
-
-* \[Functional Requirements Spec]\[202]
-* \[Backend Guide]\[200]
-* \[Database Guide]\[197]
-* \[Deployment & Architecture Guide]\[199]
-* \[UX/UI Frontend Spec]\[204]
-* \[API Gateway & Middleware]\[205]
-* \[n8n Automation Spec]\[203]
 
 
