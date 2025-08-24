@@ -7,10 +7,10 @@
   "rewrites": [
     {
       "source": "/functions/v1/(.*)",
-      "destination": "/api/$1"
+      "destination": "https://pvadajelvewdazwmvppk.supabase.co/functions/v1/$1"
     },
     {
-      "source": "/((?!api/).*)",
+      "source": "/((?!functions/).*)",
       "destination": "/index.html"
     }
   ],
@@ -37,14 +37,6 @@
       ]
     }
   ],
-  "functions": {
-    "app/api/shopify-oauth-callback.js": {
-      "maxDuration": 30
-    },
-    "app/api/shopify-webhook.js": {
-      "maxDuration": 30
-    }
-  },
   "env": {
     "VITE_APP_URL": "https://ras-5.vercel.app"
   }
