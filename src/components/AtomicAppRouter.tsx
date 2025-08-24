@@ -206,7 +206,7 @@ const AtomicAppRouter = () => {
         console.error('💥 App Error:', error, errorInfo);
       }}
     >
-      <BrowserRouter>
+      <BrowserRouter future={{ v7_startTransition: true }}>
         <AppBridgeProvider>
           <ShopifyEmbeddedErrorBoundary>
             <div className="min-h-screen bg-background">

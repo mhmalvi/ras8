@@ -38,7 +38,7 @@ const DiagnosticTest = () => {
     // Test 4: Construct proper OAuth URL
     const testShop = 'test-store.myshopify.com';
     const clientId = import.meta.env.VITE_SHOPIFY_CLIENT_ID;
-    const redirectUri = `${window.location.origin}/functions/v1/shopify-oauth-callback`;
+    const redirectUri = `https://pvadajelvewdazwmvppk.supabase.co/functions/v1/shopify-oauth-callback`;
     const scopes = 'read_orders,write_orders,read_customers,read_products';
     
     diagnostics.oauthUrl = `https://${testShop}/admin/oauth/authorize?client_id=${clientId}&scope=${scopes}&redirect_uri=${encodeURIComponent(redirectUri)}&state=test`;
@@ -67,7 +67,7 @@ const DiagnosticTest = () => {
     if (!testShop) return;
 
     const clientId = import.meta.env.VITE_SHOPIFY_CLIENT_ID;
-    const redirectUri = `${window.location.origin}/functions/v1/shopify-oauth-callback`;
+    const redirectUri = `https://pvadajelvewdazwmvppk.supabase.co/functions/v1/shopify-oauth-callback`;
     const scopes = 'read_orders,write_orders,read_customers,read_products';
     
     const oauthUrl = `https://${testShop}/admin/oauth/authorize?client_id=${clientId}&scope=${scopes}&redirect_uri=${encodeURIComponent(redirectUri)}&state=diagnostic_test`;

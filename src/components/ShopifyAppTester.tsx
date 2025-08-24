@@ -101,7 +101,7 @@ const ShopifyAppTester: React.FC = () => {
     await new Promise(resolve => setTimeout(resolve, 500));
     
     try {
-      const callbackUrl = `${window.location.origin}/functions/v1/shopify-oauth-callback`;
+      const callbackUrl = `https://pvadajelvewdazwmvppk.supabase.co/functions/v1/shopify-oauth-callback`;
       const response = await fetch(callbackUrl, { method: 'OPTIONS' });
       
       if (response.ok) {

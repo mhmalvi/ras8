@@ -50,7 +50,7 @@ const HealthCheck: React.FC = () => {
           <h2 style={{ color: '#047857', fontSize: '18px' }}>Partner Platform URLs</h2>
           <p>✅ App URL: <code>https://ras-5.vercel.app/</code></p>
           <p>✅ Preferences: <code>https://ras-5.vercel.app/preferences</code></p>
-          <p>✅ OAuth Callback: <code>https://ras-5.vercel.app/functions/v1/shopify-oauth-callback</code></p>
+          <p>✅ OAuth Callback: <code>https://pvadajelvewdazwmvppk.supabase.co/functions/v1/shopify-oauth-callback</code></p>
         </div>
 
         <div style={{ 

@@ -6,7 +6,7 @@ const QuickTest = () => {
   
   const testUrls = {
     // OAuth URL for your real shop
-    oauthUrl: `https://${realShop}/admin/oauth/authorize?client_id=2da34c83e89f6645ad1fb2028c7532dd&scope=read_orders,write_orders,read_customers,read_products&redirect_uri=${encodeURIComponent(window.location.origin + '/functions/v1/shopify-oauth-callback')}&state=real_test`,
+    oauthUrl: `https://${realShop}/admin/oauth/authorize?client_id=2da34c83e89f6645ad1fb2028c7532dd&scope=read_orders,write_orders,read_customers,read_products&redirect_uri=${encodeURIComponent('https://pvadajelvewdazwmvppk.supabase.co/functions/v1/shopify-oauth-callback')}&state=real_test`,
     
     // Direct embed URL for your real shop
     embedUrl: `https://admin.shopify.com/store/${realShop.replace('.myshopify.com', '')}/apps/returns-automation?shop=${realShop}&host=${realHost}`,

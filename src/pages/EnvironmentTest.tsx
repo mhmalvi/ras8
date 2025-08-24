@@ -162,7 +162,7 @@ const EnvironmentTest: React.FC = () => {
             </div>
             <div>
               <strong>OAuth Callback:</strong>
-              <br />https://ras-5.vercel.app/functions/v1/shopify-oauth-callback
+              <br />https://pvadajelvewdazwmvppk.supabase.co/functions/v1/shopify-oauth-callback
             </div>
             <div>
               <strong>OAuth Start:</strong>
