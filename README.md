@@ -1,17 +1,22 @@
-###Returns Automation SaaS
-AI-Powered Returns & Exchanges Automation for Shopify Merchants
+# Returns Automation SaaS
 
-The Returns Automation SaaS platform provides a complete, secure, and scalable solution to streamline e-commerce returns, reduce refund rates, and increase exchanges using AI-powered decisioning, automation workflows, and real-time analytics.
+### AI-Powered Returns & Exchanges Automation for Shopify Merchants
 
-🏆 Core Value Proposition
+The **Returns Automation SaaS** platform provides a complete, secure, and scalable solution to **streamline e-commerce returns**, **reduce refund rates**, and **increase exchanges** using AI-powered decisioning, automation workflows, and real-time analytics.
 
-For Merchants: Lower refund leakage, gain actionable insights, automate manual workflows.
+---
 
-For Customers: Branded, self-service portal for seamless returns & exchanges.
+## 🏆 Core Value Proposition
 
-For the Platform: Enterprise-ready architecture with built-in scalability, multi-tenant security, and compliance with Shopify, GDPR, and payment standards.
+* **For Merchants**: Lower refund leakage, gain actionable insights, automate manual workflows.
+* **For Customers**: Branded, self-service portal for seamless returns & exchanges.
+* **For the Platform**: Enterprise-ready architecture with built-in scalability, multi-tenant security, and compliance with Shopify, GDPR, and payment standards.
 
-🏗️ High-Level System Architecture
+---
+
+## 🏗️ High-Level System Architecture
+
+```mermaid
 flowchart TD
     A[Shopify Platform] -->|Orders, Webhooks, OAuth| B[API Gateway]
     B --> C[Backend API - Node.js/Express]
@@ -26,112 +31,107 @@ flowchart TD
     G -->|AI| J[OpenAI API]
     G -->|Billing| K[Stripe]
     G -->|Email/SMS| L[SendGrid]
+```
 
+* **Frontend**: Returns Portal + Merchant/Admin Dashboards
+* **Backend**: API Gateway + Node.js services
+* **Database**: Supabase (Postgres + Auth + RLS)
+* **Automation Layer**: n8n for Shopify webhook orchestration, retention, and notifications
+* **External Services**: OpenAI (AI suggestions), Stripe (billing), SendGrid (emails)
 
-Frontend: Returns Portal + Merchant/Admin Dashboards
+📖 Detailed design references: \[Deployment Guide]\[199], \[Backend Guide]\[200], \[Frontend Guide]\[204], \[Database Guide]\[197], \[FRS]\[202].
 
-Backend: API Gateway + Node.js services
+---
 
-Database: Supabase (Postgres + Auth + RLS)
+## 🔑 System Modules
 
-Automation Layer: n8n for Shopify webhook orchestration, retention, and notifications
+### 1. **Frontend Applications**
 
-External Services: OpenAI (AI suggestions), Stripe (billing), SendGrid (emails)
+* **Customer Returns Portal**: Mobile-first, branded, self-service UI with AI suggestions
+* **Merchant Admin Dashboard**: Embedded in Shopify Admin; manage returns, monitor AI, handle billing
+* **Internal Admin Dashboard**: For system health, support, and compliance
 
-📖 Detailed design references: [Deployment Guide][199], [Backend Guide][200], [Frontend Guide][204], [Database Guide][197], [FRS][202].
+Stack: **Next.js, Tailwind CSS, shadcn/ui, Recharts, Framer Motion**
 
-🔑 System Modules
-1. Frontend Applications
+---
 
-Customer Returns Portal: Mobile-first, branded, self-service UI with AI suggestions
+### 2. **Backend API & Gateway**
 
-Merchant Admin Dashboard: Embedded in Shopify Admin; manage returns, monitor AI, handle billing
+* Central routing, HMAC validation, JWT auth, and RBAC enforcement
+* RESTful, versioned endpoints (`/api/v1/...`)
+* Middleware stack for logging, validation, rate-limiting, error handling
 
-Internal Admin Dashboard: For system health, support, and compliance
+Stack: **Node.js + Express, Zod/Joi, Winston, Sentry**
 
-Stack: Next.js, Tailwind CSS, shadcn/ui, Recharts, Framer Motion
+---
 
-2. Backend API & Gateway
+### 3. **Database Layer**
 
-Central routing, HMAC validation, JWT auth, and RBAC enforcement
+* Supabase (PostgreSQL) with **RLS for strict tenant isolation**
+* Core tables: `merchants`, `users`, `returns`, `return_items`, `ai_suggestions`, `analytics_events`, `billing`
+* Real-time updates via Supabase subscriptions
 
-RESTful, versioned endpoints (/api/v1/...)
+---
 
-Middleware stack for logging, validation, rate-limiting, error handling
+### 4. **Automation & Orchestration (n8n)**
 
-Stack: Node.js + Express, Zod/Joi, Winston, Sentry
+* Shopify webhook ingestion (HMAC validated)
+* Retention campaigns (AI-powered win-back flows)
+* Notifications (Slack, Email, SMS)
+* Scheduled jobs (token refresh, cleanup)
 
-3. Database Layer
+Stack: **n8n (Docker/Railway/Render)**
 
-Supabase (PostgreSQL) with RLS for strict tenant isolation
+---
 
-Core tables: merchants, users, returns, return_items, ai_suggestions, analytics_events, billing
+### 5. **AI Integration**
 
-Real-time updates via Supabase subscriptions
+* AI suggestions for exchanges (OpenAI API)
+* Confidence scores + merchant override loop
+* AI prompts logged for audit & transparency
+* Roadmap: LangChain, Pinecone vector DB, anomaly detection
 
-4. Automation & Orchestration (n8n)
+---
 
-Shopify webhook ingestion (HMAC validated)
+### 6. **Billing & Subscription**
 
-Retention campaigns (AI-powered win-back flows)
+* Stripe subscription plans: Starter, Growth, Pro
+* 14-day free trial; usage-based limits
+* Billing events logged in `billing` + Stripe webhooks
 
-Notifications (Slack, Email, SMS)
+---
 
-Scheduled jobs (token refresh, cleanup)
+## 🔐 Security & Compliance
 
-Stack: n8n (Docker/Railway/Render)
+* **Authentication**: Supabase Auth, JWT-based, short-lived tokens
+* **Data Isolation**: RLS on all merchant data tables
+* **Webhook Security**: Shopify HMAC signature validation
+* **Encryption**: Tokens encrypted at rest (Shopify/Stripe)
+* **Compliance**: GDPR, Shopify Partner policies, HTTPS enforced
 
-5. AI Integration
+---
 
-AI suggestions for exchanges (OpenAI API)
+## ⚙️ Developer Guide
 
-Confidence scores + merchant override loop
+### Prerequisites
 
-AI prompts logged for audit & transparency
+* Node.js 18+
+* Supabase project + keys
+* Stripe account (test mode)
+* OpenAI API key
+* n8n instance (Docker or hosted)
 
-Roadmap: LangChain, Pinecone vector DB, anomaly detection
+### Local Setup
 
-6. Billing & Subscription
-
-Stripe subscription plans: Starter, Growth, Pro
-
-14-day free trial; usage-based limits
-
-Billing events logged in billing + Stripe webhooks
-
-🔐 Security & Compliance
-
-Authentication: Supabase Auth, JWT-based, short-lived tokens
-
-Data Isolation: RLS on all merchant data tables
-
-Webhook Security: Shopify HMAC signature validation
-
-Encryption: Tokens encrypted at rest (Shopify/Stripe)
-
-Compliance: GDPR, Shopify Partner policies, HTTPS enforced
-
-⚙️ Developer Guide
-Prerequisites
-
-Node.js 18+
-
-Supabase project + keys
-
-Stripe account (test mode)
-
-OpenAI API key
-
-n8n instance (Docker or hosted)
-
-Local Setup
+```bash
 git clone https://github.com/mhmalvi/returns-flow-automator.git
 cd returns-flow-automator
 npm install
+```
 
+Add `.env.local`:
 
-Add .env.local:
-
+```env
 SUPABASE_URL=
 SUPABASE_ANON_KEY=
 SUPABASE_SERVICE_ROLE_KEY=
@@ -140,68 +140,57 @@ SHOPIFY_CLIENT_SECRET=
 SHOPIFY_WEBHOOK_SECRET=
 OPENAI_API_KEY=
 STRIPE_SECRET_KEY=
-
+```
 
 Run:
 
+```bash
 npm run dev      # Frontend
 npm run api      # Backend
 docker-compose up n8n # or start hosted n8n
+```
 
-🛠 CI/CD & Deployment
+---
 
-Frontend: Vercel (auto-deploy from GitHub)
+## 🛠 CI/CD & Deployment
 
-Backend API: Railway/Render/DO (stateless, horizontally scalable)
+* **Frontend**: Vercel (auto-deploy from GitHub)
+* **Backend API**: Railway/Render/DO (stateless, horizontally scalable)
+* **Database**: Supabase (auto-scaling, daily backups)
+* **Automations**: Dedicated n8n per environment
+* **Monitoring**: Sentry + LogRocket
 
-Database: Supabase (auto-scaling, daily backups)
+---
 
-Automations: Dedicated n8n per environment
+## 📈 Roadmap
 
-Monitoring: Sentry + LogRocket
+* [ ] Pinecone vector DB for AI-driven returns clustering
+* [ ] WooCommerce + BigCommerce integrations
+* [ ] Mobile merchant app
+* [ ] Loyalty/retention integrations
+* [ ] Multi-language support
+* [ ] AI anomaly detection & predictive insights
 
-📈 Roadmap
+---
 
- Pinecone vector DB for AI-driven returns clustering
+## 👥 Governance & Contribution
 
- WooCommerce + BigCommerce integrations
+* **Coding Standards**: ESLint, Prettier, TypeScript
+* **Testing**: Jest (unit + integration)
+* **Docs**: Swagger/OpenAPI for APIs
+* **Version Control**: GitHub Flow + PR reviews
+* **Contributions**: Fork → Branch → PR
 
- Mobile merchant app
+---
 
- Loyalty/retention integrations
+## 📚 References
 
- Multi-language support
+* \[Functional Requirements Spec]\[202]
+* \[Backend Guide]\[200]
+* \[Database Guide]\[197]
+* \[Deployment & Architecture Guide]\[199]
+* \[UX/UI Frontend Spec]\[204]
+* \[API Gateway & Middleware]\[205]
+* \[n8n Automation Spec]\[203]
 
- AI anomaly detection & predictive insights
 
-👥 Governance & Contribution
-
-Coding Standards: ESLint, Prettier, TypeScript
-
-Testing: Jest (unit + integration)
-
-Docs: Swagger/OpenAPI for APIs
-
-Version Control: GitHub Flow + PR reviews
-
-Contributions: Fork → Branch → PR
-
-📚 References
-
-[Functional Requirements Spec][202]
-
-[Backend Guide][200]
-
-[Database Guide][197]
-
-[Deployment & Architecture Guide][199]
-
-[UX/UI Frontend Spec][204]
-
-[API Gateway & Middleware][205]
-
-[n8n Automation Spec][203]
-
-📌 Summary
-
-This README is not just for developers — it positions the project as a scalable, AI-powered SaaS platform with enterprise-grade architecture. It explains the business value, while giving engineers concrete setup + architecture context.
