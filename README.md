@@ -1,73 +1,207 @@
-# Welcome to your Lovable project
+###Returns Automation SaaS
+AI-Powered Returns & Exchanges Automation for Shopify Merchants
 
-## Project info
+The Returns Automation SaaS platform provides a complete, secure, and scalable solution to streamline e-commerce returns, reduce refund rates, and increase exchanges using AI-powered decisioning, automation workflows, and real-time analytics.
 
-**URL**: https://lovable.dev/projects/ae225660-da98-4b24-902a-e3678e97e839
+🏆 Core Value Proposition
 
-## How can I edit this code?
+For Merchants: Lower refund leakage, gain actionable insights, automate manual workflows.
 
-There are several ways of editing your application.
+For Customers: Branded, self-service portal for seamless returns & exchanges.
 
-**Use Lovable**
+For the Platform: Enterprise-ready architecture with built-in scalability, multi-tenant security, and compliance with Shopify, GDPR, and payment standards.
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/ae225660-da98-4b24-902a-e3678e97e839) and start prompting.
+🏗️ High-Level System Architecture
+flowchart TD
+    A[Shopify Platform] -->|Orders, Webhooks, OAuth| B[API Gateway]
+    B --> C[Backend API - Node.js/Express]
+    B --> D[Frontend Apps - Next.js]
+    C --> E[Supabase - PostgreSQL + Auth]
+    C --> F[n8n Automation Server]
+    C --> G[External Services]
 
-Changes made via Lovable will be committed automatically to this repo.
+    D -->|Admin Dashboard| H[Merchants]
+    D -->|Returns Portal| I[Customers]
 
-**Use your preferred IDE**
+    G -->|AI| J[OpenAI API]
+    G -->|Billing| K[Stripe]
+    G -->|Email/SMS| L[SendGrid]
 
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
 
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
+Frontend: Returns Portal + Merchant/Admin Dashboards
 
-Follow these steps:
+Backend: API Gateway + Node.js services
 
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
+Database: Supabase (Postgres + Auth + RLS)
 
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
+Automation Layer: n8n for Shopify webhook orchestration, retention, and notifications
 
-# Step 3: Install the necessary dependencies.
-npm i
+External Services: OpenAI (AI suggestions), Stripe (billing), SendGrid (emails)
 
-# Step 4: Start the development server with auto-reloading and an instant preview.
-npm run dev
-```
+📖 Detailed design references: [Deployment Guide][199], [Backend Guide][200], [Frontend Guide][204], [Database Guide][197], [FRS][202].
 
-**Edit a file directly in GitHub**
+🔑 System Modules
+1. Frontend Applications
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+Customer Returns Portal: Mobile-first, branded, self-service UI with AI suggestions
 
-**Use GitHub Codespaces**
+Merchant Admin Dashboard: Embedded in Shopify Admin; manage returns, monitor AI, handle billing
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+Internal Admin Dashboard: For system health, support, and compliance
 
-## What technologies are used for this project?
+Stack: Next.js, Tailwind CSS, shadcn/ui, Recharts, Framer Motion
 
-This project is built with:
+2. Backend API & Gateway
 
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
+Central routing, HMAC validation, JWT auth, and RBAC enforcement
 
-## How can I deploy this project?
+RESTful, versioned endpoints (/api/v1/...)
 
-Simply open [Lovable](https://lovable.dev/projects/ae225660-da98-4b24-902a-e3678e97e839) and click on Share -> Publish.
+Middleware stack for logging, validation, rate-limiting, error handling
 
-## Can I connect a custom domain to my Lovable project?
+Stack: Node.js + Express, Zod/Joi, Winston, Sentry
 
-Yes, you can!
+3. Database Layer
 
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
+Supabase (PostgreSQL) with RLS for strict tenant isolation
 
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/tips-tricks/custom-domain#step-by-step-guide)
+Core tables: merchants, users, returns, return_items, ai_suggestions, analytics_events, billing
+
+Real-time updates via Supabase subscriptions
+
+4. Automation & Orchestration (n8n)
+
+Shopify webhook ingestion (HMAC validated)
+
+Retention campaigns (AI-powered win-back flows)
+
+Notifications (Slack, Email, SMS)
+
+Scheduled jobs (token refresh, cleanup)
+
+Stack: n8n (Docker/Railway/Render)
+
+5. AI Integration
+
+AI suggestions for exchanges (OpenAI API)
+
+Confidence scores + merchant override loop
+
+AI prompts logged for audit & transparency
+
+Roadmap: LangChain, Pinecone vector DB, anomaly detection
+
+6. Billing & Subscription
+
+Stripe subscription plans: Starter, Growth, Pro
+
+14-day free trial; usage-based limits
+
+Billing events logged in billing + Stripe webhooks
+
+🔐 Security & Compliance
+
+Authentication: Supabase Auth, JWT-based, short-lived tokens
+
+Data Isolation: RLS on all merchant data tables
+
+Webhook Security: Shopify HMAC signature validation
+
+Encryption: Tokens encrypted at rest (Shopify/Stripe)
+
+Compliance: GDPR, Shopify Partner policies, HTTPS enforced
+
+⚙️ Developer Guide
+Prerequisites
+
+Node.js 18+
+
+Supabase project + keys
+
+Stripe account (test mode)
+
+OpenAI API key
+
+n8n instance (Docker or hosted)
+
+Local Setup
+git clone https://github.com/mhmalvi/returns-flow-automator.git
+cd returns-flow-automator
+npm install
+
+
+Add .env.local:
+
+SUPABASE_URL=
+SUPABASE_ANON_KEY=
+SUPABASE_SERVICE_ROLE_KEY=
+SHOPIFY_CLIENT_ID=
+SHOPIFY_CLIENT_SECRET=
+SHOPIFY_WEBHOOK_SECRET=
+OPENAI_API_KEY=
+STRIPE_SECRET_KEY=
+
+
+Run:
+
+npm run dev      # Frontend
+npm run api      # Backend
+docker-compose up n8n # or start hosted n8n
+
+🛠 CI/CD & Deployment
+
+Frontend: Vercel (auto-deploy from GitHub)
+
+Backend API: Railway/Render/DO (stateless, horizontally scalable)
+
+Database: Supabase (auto-scaling, daily backups)
+
+Automations: Dedicated n8n per environment
+
+Monitoring: Sentry + LogRocket
+
+📈 Roadmap
+
+ Pinecone vector DB for AI-driven returns clustering
+
+ WooCommerce + BigCommerce integrations
+
+ Mobile merchant app
+
+ Loyalty/retention integrations
+
+ Multi-language support
+
+ AI anomaly detection & predictive insights
+
+👥 Governance & Contribution
+
+Coding Standards: ESLint, Prettier, TypeScript
+
+Testing: Jest (unit + integration)
+
+Docs: Swagger/OpenAPI for APIs
+
+Version Control: GitHub Flow + PR reviews
+
+Contributions: Fork → Branch → PR
+
+📚 References
+
+[Functional Requirements Spec][202]
+
+[Backend Guide][200]
+
+[Database Guide][197]
+
+[Deployment & Architecture Guide][199]
+
+[UX/UI Frontend Spec][204]
+
+[API Gateway & Middleware][205]
+
+[n8n Automation Spec][203]
+
+📌 Summary
+
+This README is not just for developers — it positions the project as a scalable, AI-powered SaaS platform with enterprise-grade architecture. It explains the business value, while giving engineers concrete setup + architecture context.
