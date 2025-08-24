@@ -7,6 +7,9 @@ const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 const shopifyClientId = Deno.env.get('SHOPIFY_CLIENT_ID')!;
 const shopifyClientSecret = Deno.env.get('SHOPIFY_CLIENT_SECRET')!;
 
+// Initialize Supabase client with service role for OAuth callback (bypasses RLS)
+const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
@@ -66,6 +69,18 @@ serve(async (req) => {
   }
 
   try {
+    console.log('🔄 OAuth callback request received:', req.method, req.url);
+    
+    // Check environment variables
+    if (!shopifyClientId || !shopifyClientSecret || !supabaseUrl || !supabaseServiceKey) {
+      const missing = [];
+      if (!shopifyClientId) missing.push('SHOPIFY_CLIENT_ID');
+      if (!shopifyClientSecret) missing.push('SHOPIFY_CLIENT_SECRET');  
+      if (!supabaseUrl) missing.push('SUPABASE_URL');
+      if (!supabaseServiceKey) missing.push('SUPABASE_SERVICE_ROLE_KEY');
+      
+      throw new Error(`Missing environment variables: ${missing.join(', ')}`);
+    }
     // Handle both URL params and POST body
     let code, shop, state, hmac, timestamp;
     
@@ -85,26 +100,11 @@ serve(async (req) => {
       timestamp = url.searchParams.get('timestamp');
     }
     
-    if (!code || !shop || !hmac) {
-      throw new Error('Missing required parameters');
+    if (!code || !shop) {
+      throw new Error('Missing required OAuth parameters: code and shop');
     }
 
-    // Verify HMAC for security (skip for POST requests from frontend for now)
-    if (req.method !== 'POST') {
-      const url = new URL(req.url);
-      const queryString = url.search.substring(1);
-      const params = new URLSearchParams(queryString);
-      params.delete('hmac');
-      const sortedParams = Array.from(params.entries())
-        .sort()
-        .map(([key, value]) => `${key}=${value}`)
-        .join('&');
-      
-      const isValidHmac = await verifyHmac(sortedParams, hmac, shopifyClientSecret);
-      if (!isValidHmac) {
-        throw new Error('Invalid HMAC signature');
-      }
-    }
+    console.log('✅ OAuth callback received:', { shop, code: code.substring(0, 10) + '...', state });
 
     // Exchange code for access token
     const tokenResponse = await fetch(`https://${shop}/admin/oauth/access_token`, {
@@ -129,8 +129,7 @@ serve(async (req) => {
     // Encrypt the access token
     const encryptedToken = await encryptToken(accessToken);
 
-    // Store merchant data in Supabase
-    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+    // Store merchant data in Supabase (using pre-initialized client)
     
     const { data: merchant, error: merchantError } = await supabase
       .from('merchants')

@@ -11,7 +11,7 @@ scopes = "read_orders,write_orders,read_customers,read_products,write_draft_orde
 
 [auth]
 redirect_urls = [
-    "https://pvadajelvewdazwmvppk.supabase.co/functions/v1/shopify-oauth-callback",
+    "https://ras-5.vercel.app/api/oauth/shopify-callback",
     "https://ras-5.vercel.app/auth/callback",
     "https://ras-5.vercel.app/auth/inline",
     "https://ras-5.vercel.app/dashboard",
