@@ -10,6 +10,9 @@
       "Bash(git commit:*)",
       "Bash(git push:*)"
     ],
-    "defaultMode": "acceptEdits"
+    "defaultMode": "acceptEdits",
+    "additionalDirectories": [
+      "I:\\I\\CYBERPUNK"
+    ]
   }
 }

@@ -1,19 +1,16 @@
-import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { createClient } from '@supabase/supabase-js';
 
-const supabaseUrl = process.env.VITE_SUPABASE_URL!;
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
-const shopifyClientId = process.env.VITE_SHOPIFY_CLIENT_ID || process.env.SHOPIFY_CLIENT_ID!;
-const shopifyClientSecret = process.env.SHOPIFY_CLIENT_SECRET!;
+const supabaseUrl = process.env.VITE_SUPABASE_URL;
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+const shopifyClientId = process.env.VITE_SHOPIFY_CLIENT_ID || process.env.SHOPIFY_CLIENT_ID;
+const shopifyClientSecret = process.env.SHOPIFY_CLIENT_SECRET;
 
-// Simple base64 encoding for access tokens (for now, can be enhanced later)
-function encryptToken(token: string): string {
-  // For production, you'd want proper AES encryption
-  // For now, using base64 encoding to get the installation working
+// Simple base64 encoding for access tokens
+function encryptToken(token) {
   return Buffer.from(token).toString('base64');
 }
 
-export default async function handler(req: VercelRequest, res: VercelResponse) {
+export default async function handler(req, res) {
   if (req.method !== 'GET') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
@@ -55,11 +52,18 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     if (!tokenResponse.ok) {
       console.error('❌ Token exchange failed:', tokenResponse.status);
+      const errorText = await tokenResponse.text();
+      console.error('Token exchange error details:', errorText);
       throw new Error('Failed to exchange code for access token');
     }
 
     const tokenData = await tokenResponse.json();
     const accessToken = tokenData.access_token;
+
+    if (!accessToken) {
+      console.error('❌ No access token in response:', tokenData);
+      throw new Error('No access token received from Shopify');
+    }
 
     // Encrypt the access token
     const encryptedToken = encryptToken(accessToken);
@@ -88,7 +92,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     if (merchantError) {
       console.error('❌ Error storing merchant:', merchantError);
-      throw new Error('Failed to store merchant data');
+      throw new Error('Failed to store merchant data: ' + merchantError.message);
     }
 
     // Log installation event
@@ -165,7 +169,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     console.error('❌ OAuth callback error:', error);
     return res.status(500).json({ 
       error: 'OAuth callback failed', 
-      details: error instanceof Error ? error.message : 'Unknown error' 
+      details: error.message || 'Unknown error' 
     });
   }
 }
