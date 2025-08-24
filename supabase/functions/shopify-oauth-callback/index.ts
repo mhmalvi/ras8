@@ -2,9 +2,9 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://cdn.skypack.dev/@supabase/supabase-js@2.45.0?dts";
 
-const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+const supabaseUrl = Deno.env.get('VITE_SUPABASE_URL') || Deno.env.get('SUPABASE_URL')!;
 const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-const shopifyClientId = Deno.env.get('SHOPIFY_CLIENT_ID')!;
+const shopifyClientId = Deno.env.get('VITE_SHOPIFY_CLIENT_ID') || Deno.env.get('SHOPIFY_CLIENT_ID')!;
 const shopifyClientSecret = Deno.env.get('SHOPIFY_CLIENT_SECRET')!;
 
 // Initialize Supabase client with service role for OAuth callback (bypasses RLS)
@@ -74,11 +74,12 @@ serve(async (req) => {
     // Check environment variables
     if (!shopifyClientId || !shopifyClientSecret || !supabaseUrl || !supabaseServiceKey) {
       const missing = [];
-      if (!shopifyClientId) missing.push('SHOPIFY_CLIENT_ID');
+      if (!shopifyClientId) missing.push('VITE_SHOPIFY_CLIENT_ID/SHOPIFY_CLIENT_ID');
       if (!shopifyClientSecret) missing.push('SHOPIFY_CLIENT_SECRET');  
-      if (!supabaseUrl) missing.push('SUPABASE_URL');
+      if (!supabaseUrl) missing.push('VITE_SUPABASE_URL/SUPABASE_URL');
       if (!supabaseServiceKey) missing.push('SUPABASE_SERVICE_ROLE_KEY');
       
+      console.error('❌ Missing environment variables in Supabase function:', missing);
       throw new Error(`Missing environment variables: ${missing.join(', ')}`);
     }
     // Handle both URL params and POST body

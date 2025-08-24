@@ -3,7 +3,7 @@ import { createClient } from '@supabase/supabase-js';
 
 const supabaseUrl = process.env.VITE_SUPABASE_URL!;
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
-const shopifyClientId = process.env.SHOPIFY_CLIENT_ID!;
+const shopifyClientId = process.env.VITE_SHOPIFY_CLIENT_ID || process.env.SHOPIFY_CLIENT_ID!;
 const shopifyClientSecret = process.env.SHOPIFY_CLIENT_SECRET!;
 
 // Simple base64 encoding for access tokens (for now, can be enhanced later)
@@ -19,6 +19,18 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   try {
+    // Check environment variables first
+    if (!supabaseUrl || !supabaseServiceKey || !shopifyClientId || !shopifyClientSecret) {
+      const missing = [];
+      if (!supabaseUrl) missing.push('VITE_SUPABASE_URL');
+      if (!supabaseServiceKey) missing.push('SUPABASE_SERVICE_ROLE_KEY');  
+      if (!shopifyClientId) missing.push('VITE_SHOPIFY_CLIENT_ID/SHOPIFY_CLIENT_ID');
+      if (!shopifyClientSecret) missing.push('SHOPIFY_CLIENT_SECRET');
+      
+      console.error('❌ Missing environment variables:', missing);
+      return res.status(500).json({ error: `Missing environment variables: ${missing.join(', ')}` });
+    }
+
     const { code, shop, state } = req.query;
     
     if (!code || !shop) {
