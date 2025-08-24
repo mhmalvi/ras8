@@ -115,7 +115,7 @@ export default async function handler(req, res) {
     const appUrl = process.env.VITE_APP_URL || 'https://ras-5.vercel.app';
     
     // Redirect back to the app with proper parameters
-    const redirectUrl = `${appUrl}/?shop=${encodeURIComponent(String(shop))}&host=${encodeURIComponent(hostParam)}`;
+    const redirectUrl = `${appUrl}/auth/inline?shop=${encodeURIComponent(String(shop))}&host=${encodeURIComponent(hostParam)}`;
     
     console.log('🔄 Redirecting to:', redirectUrl);
     
@@ -140,7 +140,7 @@ export default async function handler(req, res) {
               });
               
               app.dispatch(window.ShopifyApp.actions.Redirect.create(window.ShopifyApp.Group.App, {
-                path: '/?shop=${encodeURIComponent(String(shop))}&host=${encodeURIComponent(hostParam)}'
+                path: '/auth/inline?shop=${encodeURIComponent(String(shop))}&host=${encodeURIComponent(hostParam)}'
               }));
               
               return;
