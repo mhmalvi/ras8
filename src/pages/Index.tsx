@@ -1,5 +1,6 @@
 
 import React, { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { detectShopDomain } from '@/utils/shopifyInstallation';
 import WaitlistLanding from './WaitlistLanding';
 import ShopifyInstallEnhanced from './ShopifyInstallEnhanced';
@@ -7,18 +8,31 @@ import ShopifyInstallEnhanced from './ShopifyInstallEnhanced';
 const Index = () => {
   const [shopDetected, setShopDetected] = useState(false);
   const [loading, setLoading] = useState(true);
+  const navigate = useNavigate();
 
   useEffect(() => {
-    // Check if user is coming from Shopify or has shop parameter
+    const urlParams = new URLSearchParams(window.location.search);
     const shopInfo = detectShopDomain();
-    const hasShopParam = new URLSearchParams(window.location.search).has('shop');
+    const hasShopParam = urlParams.has('shop');
+    const justInstalled = urlParams.has('installed');
+    const shop = urlParams.get('shop');
+    const host = urlParams.get('host');
     
+    // If user just completed installation, redirect to dashboard
+    if (justInstalled && shop && host) {
+      console.log('🎉 Installation completed, redirecting to dashboard');
+      const dashboardUrl = `/dashboard?shop=${encodeURIComponent(shop)}&host=${encodeURIComponent(host)}`;
+      navigate(dashboardUrl, { replace: true });
+      return;
+    }
+    
+    // If shop is detected but not just installed, show installation page
     if (shopInfo || hasShopParam) {
       setShopDetected(true);
     }
     
     setLoading(false);
-  }, []);
+  }, [navigate]);
 
   if (loading) {
     return (

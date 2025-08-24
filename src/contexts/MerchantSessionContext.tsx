@@ -1,4 +1,6 @@
 import React, { createContext, useContext, useEffect, useState, ReactNode } from 'react';
+import createApp from '@shopify/app-bridge';
+import { getSessionToken } from '@shopify/app-bridge-utils';
 
 interface MerchantSessionData {
   merchantId: string;
@@ -27,17 +29,60 @@ export function MerchantSessionProvider({ children }: MerchantSessionProviderPro
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  // Get App Bridge session token
+  const getAppBridgeSessionToken = async (): Promise<string | null> => {
+    try {
+      const urlParams = new URLSearchParams(window.location.search);
+      const shop = urlParams.get('shop');
+      const host = urlParams.get('host');
+
+      if (!shop || !host) {
+        console.log('Missing shop or host parameters for App Bridge');
+        return null;
+      }
+
+      const app = createApp({
+        apiKey: import.meta.env.VITE_SHOPIFY_CLIENT_ID!,
+        host: host,
+        forceRedirect: true
+      });
+
+      const sessionToken = await getSessionToken(app);
+      console.log('✅ App Bridge session token obtained');
+      return sessionToken;
+    } catch (error) {
+      console.error('❌ Failed to get App Bridge session token:', error);
+      return null;
+    }
+  };
+
   const validateSession = async (): Promise<void> => {
     try {
       setLoading(true);
       setError(null);
 
+      // Get session token from App Bridge
+      const sessionToken = await getAppBridgeSessionToken();
+      
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json'
+      };
+
+      // Add session token if available
+      if (sessionToken) {
+        headers['Authorization'] = `Bearer ${sessionToken}`;
+      }
+
+      // Also add shop parameter from URL
+      const shop = new URLSearchParams(window.location.search).get('shop');
+      if (shop) {
+        headers['Shop'] = shop;
+      }
+
       const response = await fetch('/api/session/me', {
         method: 'GET',
         credentials: 'include', // Include cookies
-        headers: {
-          'Content-Type': 'application/json'
-        }
+        headers
       });
 
       const data = await response.json();

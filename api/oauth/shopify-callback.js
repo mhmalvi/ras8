@@ -115,7 +115,8 @@ export default async function handler(req, res) {
     const appUrl = process.env.VITE_APP_URL || 'https://ras-5.vercel.app';
     
     // Redirect back to the app with proper parameters
-    const redirectUrl = `${appUrl}/auth/inline?shop=${encodeURIComponent(String(shop))}&host=${encodeURIComponent(hostParam)}`;
+    // Use root path to avoid any routing issues in Partner Dashboard
+    const redirectUrl = `${appUrl}/?shop=${encodeURIComponent(String(shop))}&host=${encodeURIComponent(hostParam)}&installed=true`;
     
     console.log('🔄 Redirecting to:', redirectUrl);
     
@@ -140,7 +141,7 @@ export default async function handler(req, res) {
               });
               
               app.dispatch(window.ShopifyApp.actions.Redirect.create(window.ShopifyApp.Group.App, {
-                path: '/auth/inline?shop=${encodeURIComponent(String(shop))}&host=${encodeURIComponent(hostParam)}'
+                path: '/?shop=${encodeURIComponent(String(shop))}&host=${encodeURIComponent(hostParam)}&installed=true'
               }));
               
               return;

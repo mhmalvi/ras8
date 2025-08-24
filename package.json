@@ -42,6 +42,7 @@
     "@sentry/react": "^9.42.0",
     "@sentry/tracing": "^7.120.3",
     "@shopify/app-bridge": "^3.7.10",
+    "@shopify/app-bridge-utils": "^3.5.1",
     "@supabase/supabase-js": "^2.50.2",
     "@tanstack/react-query": "^5.56.2",
     "@testing-library/dom": "^10.4.0",
