@@ -29,7 +29,15 @@ api_version = "2024-01"
   uri = "https://pvadajelvewdazwmvppk.supabase.co/functions/v1/enhanced-shopify-webhook"
 
   [[webhooks.subscriptions]]
-  topics = [ "customers/data_request", "customers/redact", "shop/redact" ]
+  topics = [ "customers/data_request" ]
+  uri = "https://pvadajelvewdazwmvppk.supabase.co/functions/v1/shopify-gdpr-webhooks"
+
+  [[webhooks.subscriptions]]
+  topics = [ "customers/redact" ]
+  uri = "https://pvadajelvewdazwmvppk.supabase.co/functions/v1/shopify-gdpr-webhooks"
+
+  [[webhooks.subscriptions]]
+  topics = [ "shop/redact" ]
   uri = "https://pvadajelvewdazwmvppk.supabase.co/functions/v1/shopify-gdpr-webhooks"
 
 [app_proxy]
