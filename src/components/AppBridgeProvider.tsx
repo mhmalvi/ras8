@@ -42,7 +42,11 @@ export const AppBridgeProvider: React.FC<AppBridgeProviderProps> = ({ children }
         const host = urlParams.get('host');
         const shop = urlParams.get('shop');
         
-        if (host || shop) {
+        // Don't initialize App Bridge on installation pages
+        const isInstallationPage = window.location.pathname.includes('/install') || 
+                                   window.location.pathname.includes('/auth/');
+        
+        if ((host || shop) && !isInstallationPage) {
           setIsEmbedded(true);
           
           // Use the configured Shopify Client ID from environment
@@ -90,7 +94,11 @@ export const AppBridgeProvider: React.FC<AppBridgeProviderProps> = ({ children }
             // Redirect to OAuth if auth fails
             const currentShop = new URLSearchParams(window.location.search).get('shop');
             if (currentShop) {
-              window.location.href = `/auth/start?shop=${encodeURIComponent(currentShop)}&host=${encodeURIComponent(validHost)}`;
+              // Ensure shop domain has .myshopify.com suffix
+              const shopDomain = currentShop.includes('.myshopify.com') 
+                ? currentShop 
+                : `${currentShop}.myshopify.com`;
+              window.location.href = `/auth/start?shop=${encodeURIComponent(shopDomain)}&host=${encodeURIComponent(validHost)}`;
             }
           });
 
