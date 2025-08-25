@@ -114,8 +114,8 @@ export default async function handler(req, res) {
     const hostParam = btoa(`${shop}/admin`).replace(/=/g, '');
     const appUrl = process.env.VITE_APP_URL || 'https://ras-5.vercel.app';
     
-    // Redirect back to the app with proper parameters
-    const redirectUrl = `${appUrl}/?shop=${encodeURIComponent(String(shop))}&host=${encodeURIComponent(hostParam)}&installed=true`;
+    // Redirect back to the app via auth/inline for proper re-embedding
+    const redirectUrl = `${appUrl}/auth/inline?shop=${encodeURIComponent(String(shop))}&host=${encodeURIComponent(hostParam)}&installed=true`;
     
     console.log('🔄 Redirecting to:', redirectUrl);
     
@@ -139,8 +139,9 @@ export default async function handler(req, res) {
                 host: '${hostParam}'
               });
               
+              // For embedded apps, redirect to auth/inline to re-embed properly
               app.dispatch(window.ShopifyApp.actions.Redirect.create(window.ShopifyApp.Group.App, {
-                path: '/?shop=${encodeURIComponent(String(shop))}&host=${encodeURIComponent(hostParam)}&installed=true'
+                path: '/auth/inline?shop=${encodeURIComponent(String(shop))}&host=${encodeURIComponent(hostParam)}&installed=true'
               }));
             } catch (e) {
               console.log('App Bridge redirect failed, using window redirect:', e);

@@ -6,16 +6,13 @@ import RealDashboardStats from "@/components/RealDashboardStats";
 import RealReturnsTable from "@/components/RealReturnsTable";
 import AIInsightsCard from "@/components/AIInsightsCard";
 import AppLayout from "@/components/AppLayout";
-import { useAtomicAuth } from "@/contexts/AtomicAuthContext";
-import { useMerchantProfile } from "@/hooks/useMerchantProfile";
+import { useMerchantSession } from "@/contexts/MerchantSessionContext";
 import { useAppBridge } from "@/components/AppBridgeProvider";
-import MerchantAssignment from "@/components/MerchantAssignment";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Info } from "lucide-react";
 
 const Dashboard: React.FC = () => {
-  const { user, loading } = useAtomicAuth();
-  const { profile, loading: profileLoading, error: profileError } = useMerchantProfile();
+  const { session, isAuthenticated, loading, error } = useMerchantSession();
   const { isEmbedded } = useAppBridge();
   
   // Get shop parameter for embedded apps
@@ -25,19 +22,20 @@ const Dashboard: React.FC = () => {
 
   useEffect(() => {
     console.log('🏠 Dashboard mounted:', { 
-      user: !!user, 
-      profile, 
-      loading, 
-      profileLoading, 
-      profileError,
+      session: !!session,
+      isAuthenticated,
+      loading,
+      error,
       isEmbedded,
       shop,
       host,
+      merchantId: session?.merchantId,
+      shopDomain: session?.shopDomain,
       currentPath: window.location.pathname
     });
-  }, [user, profile, loading, profileLoading, profileError, isEmbedded, shop, host]);
+  }, [session, isAuthenticated, loading, error, isEmbedded, shop, host]);
 
-  if (loading || profileLoading) {
+  if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="flex flex-col items-center gap-4">
@@ -48,20 +46,23 @@ const Dashboard: React.FC = () => {
     );
   }
 
-  // For embedded apps with shop parameter, allow access even without traditional auth
-  if (!user && !(isEmbedded && shop)) {
+  // Check merchant session authentication
+  if (!isAuthenticated && !(isEmbedded && shop)) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="text-center">
           <h2 className="text-xl font-semibold text-foreground mb-2">Authentication Required</h2>
-          <p className="text-muted-foreground">Please sign in to access the dashboard.</p>
+          <p className="text-muted-foreground">Please complete the installation process.</p>
+          {error && (
+            <p className="text-red-500 text-sm mt-2">Error: {error}</p>
+          )}
         </div>
       </div>
     );
   }
 
-  // For embedded apps without user profile, show Shopify-specific dashboard
-  if (isEmbedded && shop && !user) {
+  // For embedded apps with merchant session, show Shopify-specific dashboard
+  if (isEmbedded && shop && session) {
     return (
       <AppLayout>
         <div className="max-w-4xl mx-auto space-y-6">
@@ -137,23 +138,15 @@ const Dashboard: React.FC = () => {
     );
   }
 
-  // If user doesn't have a merchant assigned, show setup screen
-  if (!profile?.merchant_id) {
+  // If no merchant session, redirect to auth
+  if (!session) {
     return (
-      <AppLayout>
-        <div className="max-w-4xl mx-auto space-y-6">
-          <Alert>
-            <Info className="h-4 w-4" />
-            <AlertDescription>
-              Welcome! To get started, assign yourself to an existing merchant to explore the platform.
-            </AlertDescription>
-          </Alert>
-          
-          <div className="grid grid-cols-1 gap-6">
-            <MerchantAssignment />
-          </div>
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="text-center">
+          <h2 className="text-xl font-semibold text-foreground mb-2">Setting up your account...</h2>
+          <p className="text-muted-foreground">Please wait while we initialize your session.</p>
         </div>
-      </AppLayout>
+      </div>
     );
   }
 
