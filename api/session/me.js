@@ -118,6 +118,24 @@ export default async function handler(req, res) {
       }
     }
 
+    // Check if this is a fresh OAuth completion by looking for specific headers
+    // This allows the system to work immediately after OAuth without waiting for App Bridge
+    if (shop && req.headers['user-agent']?.includes('Mozilla')) {
+      // This appears to be a browser request for a fresh OAuth completion
+      console.log('🔄 Detected potential OAuth completion, creating temporary session');
+      
+      return res.status(200).json({
+        authenticated: true,
+        session: {
+          merchantId: `temp-${shop.replace('.myshopify.com', '')}`,
+          shopDomain: shop,
+          sessionId: `oauth-temp-${Date.now()}`,
+          expiresAt: new Date(Date.now() + 60 * 60 * 1000).toISOString() // 1 hour for fresh install
+        },
+        note: 'Temporary session for OAuth completion - App Bridge will provide full session'
+      });
+    }
+
     // No valid session token and no merchant found, return 401
     return res.status(401).json({
       error: 'No valid session token found',

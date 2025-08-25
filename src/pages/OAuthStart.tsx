@@ -30,13 +30,56 @@ const OAuthStart = () => {
         
         setStatus('Redirecting to authorization...');
         
-        // Redirect to our OAuth start API endpoint which handles the complete flow
-        const authStartUrl = `/auth/start?shop=${encodeURIComponent(shop)}${host ? `&host=${encodeURIComponent(host)}` : ''}`;
-        console.log('🚀 Redirecting to OAuth start endpoint:', authStartUrl);
+        // Build OAuth URL directly
+        const shopifyClientId = import.meta.env.VITE_SHOPIFY_CLIENT_ID;
+        const appUrl = import.meta.env.VITE_APP_URL || window.location.origin;
+        
+        if (!shopifyClientId) {
+          throw new Error('Missing Shopify Client ID configuration');
+        }
+
+        const scopes = [
+          'read_orders',
+          'write_orders', 
+          'read_customers',
+          'read_products',
+          'write_draft_orders',
+          'read_inventory',
+          'read_locations'
+        ].join(',');
+
+        // Generate state for CSRF protection
+        const state = btoa(JSON.stringify({
+          shop,
+          host: host || '',
+          timestamp: Date.now(),
+          nonce: Math.random().toString(36).substring(7)
+        })).replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
+        
+        // Store state in sessionStorage for callback validation
+        sessionStorage.setItem('oauth_state', state);
+        sessionStorage.setItem('oauth_shop', shop);
+        if (host) {
+          sessionStorage.setItem('oauth_host', host);
+        }
+
+        const redirectUri = `${appUrl}/auth/callback`;
+        const oauthUrl = new URL(`https://${shop}/admin/oauth/authorize`);
+        oauthUrl.searchParams.set('client_id', shopifyClientId);
+        oauthUrl.searchParams.set('scope', scopes);
+        oauthUrl.searchParams.set('redirect_uri', redirectUri);
+        oauthUrl.searchParams.set('state', state);
+
+        console.log('🚀 Redirecting to OAuth URL:', oauthUrl.toString());
         
         // Small delay to show status
         setTimeout(() => {
-          window.location.href = authStartUrl;
+          // Force top-level navigation to break out of iframe
+          if (window.top && window.top !== window.self) {
+            window.top.location.href = oauthUrl.toString();
+          } else {
+            window.location.href = oauthUrl.toString();
+          }
         }, 1000);
         
       } catch (error) {
