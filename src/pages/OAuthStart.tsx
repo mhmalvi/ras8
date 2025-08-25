@@ -4,7 +4,6 @@
  */
 
 import React, { useEffect, useState } from 'react';
-import { generateOAuthUrl, validateShopDomain, ensureShopifyDomain } from '@/utils/shopifyInstallation';
 
 const OAuthStart = () => {
   const [status, setStatus] = useState('Initializing OAuth...');
@@ -21,32 +20,23 @@ const OAuthStart = () => {
           throw new Error('Missing shop parameter');
         }
 
-        if (!host) {
-          throw new Error('Missing host parameter');
-        }
-
-        const shopDomain = ensureShopifyDomain(shop);
-        
-        if (!validateShopDomain(shopDomain)) {
-          throw new Error(`Invalid shop domain: ${shopDomain}`);
+        // Basic shop domain validation
+        if (!shop.endsWith('.myshopify.com')) {
+          throw new Error(`Invalid shop domain: ${shop}`);
         }
 
         setStatus('Validating shop domain...');
-        console.log('🔐 Initiating OAuth for shop:', { shop: shopDomain, host });
-
-        // Store the host parameter to preserve it through OAuth flow
-        sessionStorage.setItem('shopify_oauth_host', host);
-        sessionStorage.setItem('shopify_oauth_shop', shopDomain);
+        console.log('🔐 Initiating OAuth for shop:', { shop, host });
         
-        setStatus('Redirecting to Shopify for authorization...');
+        setStatus('Redirecting to authorization...');
         
-        // Generate OAuth URL and redirect (top-level)
-        const oauthUrl = generateOAuthUrl(shopDomain);
-        console.log('🚀 Redirecting to OAuth URL:', oauthUrl.substring(0, 100) + '...');
+        // Redirect to our OAuth start API endpoint which handles the complete flow
+        const authStartUrl = `/auth/start?shop=${encodeURIComponent(shop)}${host ? `&host=${encodeURIComponent(host)}` : ''}`;
+        console.log('🚀 Redirecting to OAuth start endpoint:', authStartUrl);
         
         // Small delay to show status
         setTimeout(() => {
-          window.top!.location.href = oauthUrl;
+          window.location.href = authStartUrl;
         }, 1000);
         
       } catch (error) {

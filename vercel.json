@@ -6,6 +6,14 @@
   "framework": "vite",
   "rewrites": [
     {
+      "source": "/auth/start",
+      "destination": "/api/auth/start"
+    },
+    {
+      "source": "/auth/callback", 
+      "destination": "/api/auth/callback"
+    },
+    {
       "source": "/((?!api/).*)",
       "destination": "/index.html"
     }
@@ -34,8 +42,6 @@
     }
   ],
   "env": {
-    "VITE_APP_URL": "https://ras-8.vercel.app",
-    "JWT_SECRET_KEY": "h5-production-jwt-secret-key-change-this-in-production-2024",
-    "SUPABASE_SERVICE_ROLE_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InB2YWRhamVsdmV3ZGF6d212cHBrIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTcxOTc3OTQ5MSwiZXhwIjoyMDM1MzU1NDkxfQ.VL39cIE4zOy_e1JHJj0AXVK-4hZQbq6ZbPMnT6B26F0"
+    "VITE_APP_URL": "https://ras-8.vercel.app"
   }
 }
