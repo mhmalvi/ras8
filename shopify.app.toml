@@ -3,7 +3,7 @@
 name = "H5"
 handle = "ras"
 client_id = "2da34c83e89f6645ad1fb2028c7532dd"
-application_url = "https://ras-5.vercel.app"
+application_url = "https://returns-automation.vercel.app"
 embedded = true
 
 [access_scopes]
@@ -12,11 +12,11 @@ scopes = "read_orders,write_orders,read_customers,read_products,write_draft_orde
 
 [auth]
 redirect_urls = [
-    "https://ras-5.vercel.app/api/oauth/shopify-callback",
-    "https://ras-5.vercel.app/auth/callback",
-    "https://ras-5.vercel.app/auth/inline",
-    "https://ras-5.vercel.app/dashboard",
-    "https://ras-5.vercel.app/"
+    "https://returns-automation.vercel.app/api/oauth/shopify-callback",
+    "https://returns-automation.vercel.app/auth/callback",
+    "https://returns-automation.vercel.app/auth/inline",
+    "https://returns-automation.vercel.app/dashboard",
+    "https://returns-automation.vercel.app/"
   ]
 [webhooks]
 api_version = "2024-01"
