@@ -223,6 +223,12 @@ const AtomicAppRouter = () => {
             {/* App redirect handler for Partner Dashboard app URL redirects */}
             <Route path="/apps/ras" element={<AppRedirectHandler />} />
             <Route path="/apps/ras/*" element={<AppRedirectHandler />} />
+            {/* Handle client ID based URLs from Shopify Admin */}
+            <Route path="/apps/2da34c83e89f6645ad1fb2028c7532dd" element={<AppRedirectHandler />} />
+            <Route path="/apps/2da34c83e89f6645ad1fb2028c7532dd/*" element={<AppRedirectHandler />} />
+            {/* Generic pattern for any app client ID */}
+            <Route path="/apps/:clientId" element={<AppRedirectHandler />} />
+            <Route path="/apps/:clientId/*" element={<AppRedirectHandler />} />
             
             {/* OAuth callbacks - Partner Platform URLs */}
             <Route path="/auth/callback" element={<ShopifyAuthCallback />} />

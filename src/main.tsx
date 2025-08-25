@@ -135,16 +135,20 @@ window.addEventListener('unhandledrejection', (event) => {
   }
 });
 
-// Register service worker for caching
-registerSW({
-  onSuccess: () => {
-    console.log('✅ Service Worker: App cached for offline use');
-  },
-  onUpdate: () => {
-    console.log('🔄 Service Worker: New version available, please refresh');
-    // You could show a toast notification here
-  }
-});
+// Register service worker for caching (only in production and after auth)
+if (import.meta.env.VITE_DEV_MODE !== 'true' && !window.location.search.includes('shop=')) {
+  registerSW({
+    onSuccess: () => {
+      console.log('✅ Service Worker: App cached for offline use');
+    },
+    onUpdate: () => {
+      console.log('🔄 Service Worker: New version available, please refresh');
+      // You could show a toast notification here
+    }
+  });
+} else {
+  console.log('🚫 Service Worker: Disabled during development and auth flows');
+}
 
 const container = document.getElementById("root");
 if (!container) {
