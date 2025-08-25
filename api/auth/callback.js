@@ -96,32 +96,56 @@ export default async function handler(req, res) {
       return res.status(403).json({ error: 'Invalid request signature' });
     }
 
-    // If we have Supabase access, validate OAuth state
-    if (supabaseUrl && supabaseServiceKey) {
-      try {
-        const supabase = createClient(supabaseUrl, supabaseServiceKey);
-        const { data: oauthState, error: stateError } = await supabase
-          .from('oauth_states')
-          .select('*')
-          .eq('state', state)
-          .is('used_at', null)
-          .gte('expires_at', new Date().toISOString())
-          .single();
-
-        if (stateError || !oauthState) {
-          console.error('❌ Invalid or expired OAuth state:', stateError?.message);
-          return res.status(400).json({ error: 'Invalid or expired authentication state' });
-        }
-
-        // Mark state as used
-        await supabase
-          .from('oauth_states')
-          .update({ used_at: new Date().toISOString() })
-          .eq('id', oauthState.id);
-      } catch (dbError) {
-        console.warn('⚠️ OAuth state validation failed, continuing without DB validation:', dbError.message);
-        // Continue without state validation for fallback
+    // Validate OAuth state parameter 
+    try {
+      // Decode and validate the state parameter
+      const decodedState = JSON.parse(Buffer.from(state, 'base64').toString('utf8'));
+      console.log('🔍 Decoded OAuth state:', decodedState);
+      
+      // Validate state structure
+      if (!decodedState.shop || !decodedState.timestamp || !decodedState.nonce) {
+        throw new Error('Invalid state structure');
       }
+      
+      // Validate shop domain matches
+      if (decodedState.shop !== shop) {
+        throw new Error('Shop domain mismatch in state');
+      }
+      
+      // Check state timestamp (within last hour)
+      const stateTimestamp = parseInt(decodedState.timestamp);
+      const now = Date.now();
+      const oneHour = 60 * 60 * 1000;
+      
+      if (now - stateTimestamp > oneHour) {
+        throw new Error('OAuth state expired');
+      }
+      
+      console.log('✅ OAuth state validation passed');
+      
+      // If we have Supabase, try to mark as used (optional)
+      if (supabaseUrl && supabaseServiceKey) {
+        try {
+          const supabase = createClient(supabaseUrl, supabaseServiceKey);
+          await supabase
+            .from('oauth_states')
+            .insert({
+              state: state,
+              shop_domain: shop,
+              used_at: new Date().toISOString(),
+              expires_at: new Date(now + oneHour).toISOString()
+            });
+        } catch (dbError) {
+          console.warn('⚠️ Could not log OAuth state to database:', dbError.message);
+          // Continue anyway
+        }
+      }
+    } catch (stateError) {
+      console.error('❌ OAuth state validation failed:', stateError.message);
+      return res.status(400).json({ 
+        error: 'Invalid or expired authentication state',
+        details: stateError.message 
+      });
     }
 
     // Exchange authorization code for access token
