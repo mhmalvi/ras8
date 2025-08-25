@@ -87,12 +87,43 @@ export default async function handler(req, res) {
       }
     }
 
-    // No valid session token, return 401
+    // No valid session token - check if merchant exists in database
+    // For initial authentication check without App Bridge token
+    if (supabaseUrl && supabaseServiceKey) {
+      const supabase = createClient(supabaseUrl, supabaseServiceKey);
+      const { data: merchant } = await supabase
+        .from('merchants')
+        .select('id, shop_domain, settings')
+        .eq('shop_domain', shop)
+        .single();
+
+      if (merchant && merchant.settings?.oauth_completed) {
+        return res.status(200).json({
+          authenticated: true,
+          session: {
+            merchantId: merchant.id,
+            shopDomain: merchant.shop_domain,
+            sessionId: `legacy-${Date.now()}`,
+            expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString() // 24 hours from now
+          },
+          note: 'Merchant found, OAuth completed'
+        });
+      } else if (merchant) {
+        return res.status(401).json({
+          error: 'OAuth not completed for this merchant',
+          authenticated: false,
+          session: null,
+          merchant: { id: merchant.id, oauthCompleted: merchant.settings?.oauth_completed }
+        });
+      }
+    }
+
+    // No valid session token and no merchant found, return 401
     return res.status(401).json({
       error: 'No valid session token found',
       authenticated: false,
       session: null,
-      hint: 'App Bridge session token required for embedded apps'
+      hint: 'App Bridge session token required for embedded apps or OAuth not completed'
     });
 
   } catch (error) {

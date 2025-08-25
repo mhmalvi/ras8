@@ -1,6 +1,7 @@
 # Learn more about configuring your app at https://shopify.dev/docs/apps/tools/cli/configuration
 
 name = "H5"
+handle = "ras"
 client_id = "2da34c83e89f6645ad1fb2028c7532dd"
 application_url = "https://ras-5.vercel.app"
 embedded = true

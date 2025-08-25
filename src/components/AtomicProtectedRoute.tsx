@@ -4,7 +4,6 @@ import { Navigate, useLocation } from 'react-router-dom';
 import { useAtomicAuth } from '@/contexts/AtomicAuthContext';
 import { useMerchantProfile } from '@/hooks/useMerchantProfile';
 import { useAppBridge } from '@/components/AppBridgeProvider';
-import { supabase } from '@/integrations/supabase/client';
 
 interface AtomicProtectedRouteProps {
   children: ReactNode;
@@ -32,18 +31,23 @@ const AtomicProtectedRoute = ({ children }: AtomicProtectedRouteProps) => {
       }
       
       try {
-        // Check if we have a valid merchant record for this shop
-        const { data: merchant } = await supabase
-          .from('merchants')
-          .select('id, shop_domain, settings')
-          .eq('shop_domain', shop)
-          .single();
-          
-        if (merchant && merchant.settings?.oauth_completed) {
+        // Use the backend API endpoint to check merchant authentication
+        // This uses service role key and bypasses RLS issues
+        const response = await fetch(`/api/session/me?shop=${encodeURIComponent(shop)}`, {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          credentials: 'include'
+        });
+
+        const data = await response.json();
+        
+        if (response.ok && data.authenticated) {
           console.log('✅ Valid Shopify session found for shop:', shop);
           setShopifySessionValid(true);
         } else {
-          console.log('❌ No authenticated user - merchant record:', { merchant, hasSettings: !!merchant?.settings, oauthCompleted: merchant?.settings?.oauth_completed });
+          console.log('❌ No authenticated session:', data);
           setShopifySessionValid(false);
         }
       } catch (error) {
