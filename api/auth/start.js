@@ -1,12 +1,11 @@
-import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { createClient } from '@supabase/supabase-js';
 
-const supabaseUrl = process.env.VITE_SUPABASE_URL!;
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
-const shopifyClientId = process.env.VITE_SHOPIFY_CLIENT_ID!;
+const supabaseUrl = process.env.VITE_SUPABASE_URL;
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+const shopifyClientId = process.env.VITE_SHOPIFY_CLIENT_ID;
 const appUrl = process.env.VITE_APP_URL || 'https://ras-8.vercel.app';
 
-export default async function handler(req: VercelRequest, res: VercelResponse) {
+export default async function handler(req, res) {
   // Only allow GET requests
   if (req.method !== 'GET') {
     return res.status(405).json({ error: 'Method not allowed' });
@@ -20,7 +19,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
     // Validate shop domain
-    const shopDomain = shop as string;
+    const shopDomain = shop;
     if (!shopDomain.endsWith('.myshopify.com')) {
       return res.status(400).json({ error: 'Invalid shop domain' });
     }
@@ -28,23 +27,28 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     // Generate unique state parameter for CSRF protection
     const state = Buffer.from(JSON.stringify({
       shop: shopDomain,
-      host: host as string || '',
+      host: host || '',
       timestamp: Date.now(),
       nonce: Math.random().toString(36).substring(7)
     })).toString('base64url');
 
-    // Store state temporarily in Supabase for validation
-    const supabase = createClient(supabaseUrl, supabaseServiceKey);
-    await supabase
-      .from('oauth_states')
-      .insert({
-        state,
-        shop_domain: shopDomain,
-        host_param: host as string || '',
-        expires_at: new Date(Date.now() + 10 * 60 * 1000).toISOString() // 10 minutes
-      })
-      .select()
-      .single();
+    // Store state temporarily in Supabase for validation (if available)
+    if (supabaseUrl && supabaseServiceKey) {
+      try {
+        const supabase = createClient(supabaseUrl, supabaseServiceKey);
+        await supabase
+          .from('oauth_states')
+          .insert({
+            state,
+            shop_domain: shopDomain,
+            host_param: host || '',
+            expires_at: new Date(Date.now() + 10 * 60 * 1000).toISOString() // 10 minutes
+          });
+      } catch (dbError) {
+        console.warn('⚠️ Could not store OAuth state in database:', dbError.message);
+        // Continue without database storage for fallback
+      }
+    }
 
     // Required scopes matching shopify.app.toml
     const scopes = [
@@ -58,7 +62,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     ].join(',');
 
     // Build OAuth URL with correct redirect URI
-    const redirectUri = `${appUrl}/api/auth/callback`;
+    const redirectUri = `${appUrl}/auth/callback`;
     const oauthUrl = new URL(`https://${shopDomain}/admin/oauth/authorize`);
     oauthUrl.searchParams.set('client_id', shopifyClientId);
     oauthUrl.searchParams.set('scope', scopes);
@@ -136,7 +140,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     </body>
     </html>`;
 
-    return res.setHeader('Content-Type', 'text/html').send(breakoutHtml);
+    res.setHeader('Content-Type', 'text/html');
+    return res.status(200).send(breakoutHtml);
 
   } catch (error) {
     console.error('❌ OAuth start error:', error);
@@ -154,11 +159,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     <body>
       <h1>Installation Error</h1>
       <div class="error">Unable to start H5 app installation</div>
-      <p>Error: ${error instanceof Error ? error.message : 'Unknown error'}</p>
+      <p>Error: ${error.message || 'Unknown error'}</p>
       <button onclick="window.history.back()">Go Back</button>
     </body>
     </html>`;
 
-    return res.status(500).setHeader('Content-Type', 'text/html').send(errorHtml);
+    res.setHeader('Content-Type', 'text/html');
+    return res.status(500).send(errorHtml);
   }
 }
