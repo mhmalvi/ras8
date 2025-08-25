@@ -1,6 +1,20 @@
 import { createClient } from '@supabase/supabase-js';
 import jwt from 'jsonwebtoken';
 
+// Simple cookie parser utility
+function parseCookies(cookieString) {
+  const cookies = {};
+  if (cookieString) {
+    cookieString.split(';').forEach(cookie => {
+      const [name, value] = cookie.trim().split('=');
+      if (name && value) {
+        cookies[name] = decodeURIComponent(value);
+      }
+    });
+  }
+  return cookies;
+}
+
 const supabaseUrl = process.env.VITE_SUPABASE_URL;
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const shopifyClientSecret = process.env.SHOPIFY_CLIENT_SECRET;
@@ -15,11 +29,14 @@ export default async function handler(req, res) {
     // Extract shop from query parameters or headers
     const shop = req.query.shop || req.headers.shop;
     const authHeader = req.headers.authorization;
+    const cookies = parseCookies(req.headers.cookie);
+    const sessionCookie = cookies.sessionToken;
     
     console.log('🔍 Session validation request:', {
       shop: !!shop,
       hasAuthHeader: !!authHeader,
-      authHeaderType: authHeader ? authHeader.split(' ')[0] : 'none'
+      authHeaderType: authHeader ? authHeader.split(' ')[0] : 'none',
+      hasSessionCookie: !!sessionCookie
     });
 
     if (!shop) {
@@ -84,6 +101,39 @@ export default async function handler(req, res) {
         }
       } catch (tokenError) {
         console.error('❌ Session token validation failed:', tokenError);
+      }
+    }
+
+    // Check for session token cookie (from OAuth callback)
+    if (sessionCookie && shop) {
+      try {
+        // For simplicity, we'll decode the JWT manually (in production, use a proper JWT library)
+        const jwtSecret = process.env.JWT_SECRET_KEY || 'h5-production-jwt-secret-key-change-this-in-production-2024';
+        const decoded = jwt.verify(sessionCookie, jwtSecret);
+        
+        console.log('🍪 Session cookie validated:', {
+          merchantId: decoded.merchantId,
+          shopDomain: decoded.shopDomain,
+          exp: new Date(decoded.exp * 1000).toISOString()
+        });
+        
+        // Validate that the shop domain matches
+        if (decoded.shopDomain === shop) {
+          return res.status(200).json({
+            authenticated: true,
+            session: {
+              merchantId: decoded.merchantId,
+              shopDomain: decoded.shopDomain,
+              sessionId: decoded.sessionId,
+              expiresAt: new Date(decoded.exp * 1000).toISOString()
+            },
+            note: 'Session validated from OAuth callback cookie'
+          });
+        } else {
+          console.warn('⚠️ Shop domain mismatch in session cookie');
+        }
+      } catch (cookieError) {
+        console.error('❌ Session cookie validation failed:', cookieError.message);
       }
     }
 
