@@ -123,13 +123,13 @@ const ShopifyInstallEnhanced = () => {
     // Handle OAuth initiation using backend endpoint
     setTimeout(() => {
       const appUrl = import.meta.env.VITE_APP_URL;
-      let backendOAuthUrl = `${appUrl}/functions/v1/shopify-oauth-start?shop=${encodeURIComponent(shopDomain)}`;
+      let backendOAuthUrl = `${appUrl}/auth/start?shop=${encodeURIComponent(shopDomain)}`;
       
       if (currentHost) {
         backendOAuthUrl += `&host=${encodeURIComponent(currentHost)}`;
       }
       
-      console.log('🔄 Starting OAuth using backend endpoint:', backendOAuthUrl);
+      console.log('🔄 Starting OAuth using React route endpoint:', backendOAuthUrl);
       
       if (isEmbedded) {
         // For embedded apps, break out of iframe and redirect to backend OAuth

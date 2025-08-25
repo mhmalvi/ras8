@@ -3,6 +3,7 @@ import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AppBridgeProvider, useAppBridge } from '@/components/AppBridgeProvider';
 import { ShopifyEmbeddedErrorBoundary } from '@/components/ShopifyEmbeddedErrorBoundary';
+import { AtomicAuthProvider } from '@/contexts/AtomicAuthContext';
 import { Toaster } from "@/components/ui/toaster";
 import { ErrorBoundary } from 'react-error-boundary';
 import MerchantProtectedRoute from '@/components/MerchantProtectedRoute';
@@ -208,8 +209,9 @@ const AtomicAppRouter = () => {
     >
       <BrowserRouter future={{ v7_startTransition: true }}>
         <AppBridgeProvider>
-          <ShopifyEmbeddedErrorBoundary>
-            <div className="min-h-screen bg-background">
+          <AtomicAuthProvider>
+            <ShopifyEmbeddedErrorBoundary>
+              <div className="min-h-screen bg-background">
                 <Routes>
             {/* Public Routes */}
             <Route path="/landing" element={<Index />} />
@@ -541,8 +543,9 @@ const AtomicAppRouter = () => {
                 <Toaster />
                 </div>
             </ShopifyEmbeddedErrorBoundary>
-          </AppBridgeProvider>
-        </BrowserRouter>
+          </AtomicAuthProvider>
+        </AppBridgeProvider>
+      </BrowserRouter>
     </ErrorBoundary>
   );
 };
