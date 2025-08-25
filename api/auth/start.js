@@ -1,11 +1,11 @@
-const { createClient } = require('@supabase/supabase-js');
+import { createClient } from '@supabase/supabase-js';
 
 const supabaseUrl = process.env.VITE_SUPABASE_URL;
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const shopifyClientId = process.env.VITE_SHOPIFY_CLIENT_ID;
 const appUrl = process.env.VITE_APP_URL || 'https://ras-8.vercel.app';
 
-module.exports = async function handler(req, res) {
+export default async function handler(req, res) {
   // Only allow GET requests
   if (req.method !== 'GET') {
     return res.status(405).json({ error: 'Method not allowed' });
