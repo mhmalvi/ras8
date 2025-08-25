@@ -17,7 +17,8 @@ const AuthInline = () => {
       isAuthenticated,
       loading,
       merchantId: session?.merchantId,
-      shopDomain: session?.shopDomain
+      shopDomain: session?.shopDomain,
+      currentUrl: window.location.href
     });
 
     // If we're still loading, wait
