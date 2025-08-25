@@ -132,14 +132,16 @@ npm install
 Add `.env.local`:
 
 ```env
-SUPABASE_URL=
-SUPABASE_ANON_KEY=
-SUPABASE_SERVICE_ROLE_KEY=
-SHOPIFY_CLIENT_ID=
-SHOPIFY_CLIENT_SECRET=
-SHOPIFY_WEBHOOK_SECRET=
-OPENAI_API_KEY=
-STRIPE_SECRET_KEY=
+VITE_SHOPIFY_CLIENT_ID=2da34c83e89f6645ad1fb2028c7532dd
+VITE_APP_URL=https://ras-8.vercel.app
+VITE_SUPABASE_URL=https://pvadajelvewdazwmvppk.supabase.co
+VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
+VITE_DEV_MODE=true
+SUPABASE_SERVICE_ROLE_KEY=your_service_role_key
+SHOPIFY_CLIENT_SECRET=your_shopify_client_secret
+OPENAI_API_KEY=your_openai_api_key
+STRIPE_SECRET_KEY=your_stripe_secret_key
+JWT_SECRET_KEY=h5-production-jwt-secret-key-change-this-in-production-2024
 ```
 
 Run:
@@ -149,6 +151,22 @@ npm run dev      # Frontend
 npm run api      # Backend
 docker-compose up n8n # or start hosted n8n
 ```
+
+### Shopify App Installation
+
+The app is configured for **custom distribution** and can be installed using:
+
+**Install URL**: `https://ras-8.vercel.app/install?shop={SHOP_NAME}.myshopify.com`
+
+**Test Store**: `https://ras-8.vercel.app/install?shop=test-14fdgsdvvi0.myshopify.com`
+
+### OAuth Flow Status ✅
+
+- ✅ Custom distribution configured via Shopify CLI
+- ✅ OAuth flow fully functional for new store installations  
+- ✅ App Bridge integration with embedded mode
+- ✅ Session management with both App Bridge tokens and OAuth cookies
+- ✅ Proper error handling and authentication redirects
 
 ---
 
