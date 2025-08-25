@@ -1,5 +1,0 @@
-/*
-  X-Frame-Options: SAMEORIGIN
-  Content-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.shopify.com https://cdn.shopify.com/shopifycloud/partners/ https://*.shopifycloud.com https://*.shopifysvc.com https://ras-8.vercel.app; style-src 'self' 'unsafe-inline' https://cdn.shopify.com https://*.shopifycloud.com; img-src 'self' data: https: blob:; font-src 'self' https://cdn.shopify.com https://*.shopifycloud.com; connect-src 'self' https://*.shopify.com https://*.myshopify.com https://*.shopifycloud.com https://*.shopifysvc.com https://pvadajelvewdazwmvppk.supabase.co wss://*.shopifycloud.com wss://*.shopifysvc.com; frame-ancestors 'self' https://admin.shopify.com https://*.myshopify.com https://*.shopifycloud.com; object-src 'none'; base-uri 'self';
-  X-Content-Type-Options: nosniff
-  X-XSS-Protection: 1; mode=block
