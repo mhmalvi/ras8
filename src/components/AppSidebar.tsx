@@ -1,5 +1,5 @@
 
-import { Calendar, Home, Inbox, Search, Settings, User, Package, BarChart, Activity, Webhook, TrendingUp, Users, Bell, CreditCard, HelpCircle } from "lucide-react"
+import { Home, Package, BarChart, Activity, Webhook, TrendingUp, Users, Inbox } from "lucide-react"
 import { NavLink, useLocation } from "react-router-dom"
 import { cn } from "@/lib/utils"
 import { SubscriptionInfo } from "@/components/SubscriptionInfo"
@@ -65,18 +65,10 @@ export function AppSidebar() {
   const location = useLocation()
   const { isEmbedded } = useAppBridge()
   const currentPath = location.pathname
-
-  const isActive = (path: string) => currentPath === path
   const isCollapsed = state === "collapsed"
-  const getNavCls = ({ isActive }: { isActive: boolean }) =>
-    isActive ? "bg-muted text-primary font-medium" : "hover:bg-muted/50"
 
   return (
     <Sidebar
-      className={cn(
-        "transition-all duration-200 ease-in-out",
-        isCollapsed ? "w-14" : isEmbedded ? "w-52" : "w-60"
-      )}
       collapsible="icon"
     >
       <SidebarContent className="gap-4">
@@ -97,9 +89,9 @@ export function AppSidebar() {
                       to={item.url} 
                       end 
                       className={({ isActive }) => cn(
-                        "flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-all hover:text-primary cursor-pointer relative",
-                        isActive ? "bg-muted text-primary font-medium" : "hover:bg-muted/50",
-                        isCollapsed ? "justify-center" : ""
+                        "flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-all hover:text-primary cursor-pointer w-full",
+                        isActive ? "bg-muted text-primary font-medium" : "hover:bg-muted/50 text-muted-foreground",
+                        isCollapsed ? "justify-center px-2" : ""
                       )}
                     >
                       <item.icon className={cn(

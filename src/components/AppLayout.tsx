@@ -86,16 +86,15 @@ const AppLayout = ({ children }: AppLayoutProps) => {
   // User is authenticated with profile - show main app layout
   return (
     <SidebarProvider>
-      <div className={`${isEmbedded ? 'h-screen' : 'min-h-screen'} flex w-full bg-background ${isEmbedded ? 'overflow-hidden' : ''}`}>
-        {/* Show sidebar in both embedded and standalone modes */}
+      <div className={`${isEmbedded ? 'h-screen' : 'min-h-screen'} flex w-full bg-background`}>
         <AppSidebar />
         
         <div className="flex-1 flex flex-col">
           {/* Header - modified for embedded mode */}
           {!isEmbedded && (
-            <header className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 px-8 py-6">
+            <header className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 px-6 py-4">
               <div className="flex items-center justify-between">
-                <SidebarTrigger className="hover:bg-gray-100 border-0" />
+                <SidebarTrigger className="hover:bg-gray-100" />
                 <div className="flex items-center space-x-4">
                   <NotificationDropdown />
                   <Button 
@@ -114,10 +113,10 @@ const AppLayout = ({ children }: AppLayoutProps) => {
 
           {/* Embedded mode header - minimal */}
           {isEmbedded && (
-            <header className="border-b bg-background px-4 py-3 relative z-50">
+            <header className="border-b bg-background px-4 py-3">
               <div className="flex items-center justify-between">
                 <div className="flex items-center space-x-3">
-                  <SidebarTrigger className="z-50 bg-background border shadow-sm hover:bg-gray-50" />
+                  <SidebarTrigger className="hover:bg-gray-50" />
                   <h1 className="font-semibold text-lg">Returns Automation</h1>
                 </div>
                 <div className="flex items-center space-x-2">
@@ -129,8 +128,8 @@ const AppLayout = ({ children }: AppLayoutProps) => {
           )}
 
           {/* Main Content - adjusted for embedded mode */}
-          <main className={`flex-1 ${isEmbedded ? 'px-4 py-4 overflow-auto' : 'px-8 py-8'}`}>
-            <div className={`${isEmbedded ? 'max-w-none' : 'max-w-6xl'} mx-auto`}>
+          <main className={`flex-1 ${isEmbedded ? 'px-4 py-4 overflow-auto' : 'px-6 py-6'}`}>
+            <div className="w-full mx-auto">
               {/* Show merchant assignment alert if needed - hide in embedded mode */}
               {!isEmbedded && !profile.merchant_id && (
                 <Alert className="mb-8">
