@@ -7,6 +7,7 @@ import { AtomicAuthProvider } from '@/contexts/AtomicAuthContext';
 import { Toaster } from "@/components/ui/toaster";
 import { ErrorBoundary } from 'react-error-boundary';
 import MerchantProtectedRoute from '@/components/MerchantProtectedRoute';
+import AtomicProtectedRoute from '@/components/AtomicProtectedRoute';
 import AtomicPublicRoute from '@/components/AtomicPublicRoute';
 import Index from '@/pages/Index';
 import Dashboard from '@/pages/Dashboard';
@@ -345,157 +346,157 @@ const AtomicAppRouter = () => {
               }
             />
             
-            {/* Dashboard Route - Protected */}
+            {/* Dashboard Route - Protected (Smart routing for embedded vs standalone) */}
             <Route 
               path="/dashboard" 
               element={
-                <MerchantProtectedRoute>
+                <AtomicProtectedRoute>
                   <Dashboard />
-                </MerchantProtectedRoute>
+                </AtomicProtectedRoute>
               } 
             />
             <Route 
               path="/returns" 
               element={
-                <MerchantProtectedRoute>
+                <AtomicProtectedRoute>
                   <Returns />
-                </MerchantProtectedRoute>
+                </AtomicProtectedRoute>
               } 
             />
             <Route 
               path="/analytics" 
               element={
-                <MerchantProtectedRoute>
+                <AtomicProtectedRoute>
                   <Analytics />
-                </MerchantProtectedRoute>
+                </AtomicProtectedRoute>
               } 
             />
             <Route 
               path="/ai-insights" 
               element={
-                <MerchantProtectedRoute>
+                <AtomicProtectedRoute>
                   <AIInsights />
-                </MerchantProtectedRoute>
+                </AtomicProtectedRoute>
               } 
             />
             <Route 
               path="/customers" 
               element={
-                <MerchantProtectedRoute>
+                <AtomicProtectedRoute>
                   <Customers />
-                </MerchantProtectedRoute>
+                </AtomicProtectedRoute>
               } 
             />
             <Route 
               path="/products" 
               element={
-                <MerchantProtectedRoute>
+                <AtomicProtectedRoute>
                   <Products />
-                </MerchantProtectedRoute>
+                </AtomicProtectedRoute>
               } 
             />
             <Route 
               path="/performance" 
               element={
-                <MerchantProtectedRoute>
+                <AtomicProtectedRoute>
                   <Performance />
-                </MerchantProtectedRoute>
+                </AtomicProtectedRoute>
               } 
             />
             <Route 
               path="/billing" 
               element={
-                <MerchantProtectedRoute>
+                <AtomicProtectedRoute>
                   <Billing />
-                </MerchantProtectedRoute>
+                </AtomicProtectedRoute>
               } 
             />
             <Route 
               path="/settings" 
               element={
-                <MerchantProtectedRoute>
+                <AtomicProtectedRoute>
                   <Settings />
-                </MerchantProtectedRoute>
+                </AtomicProtectedRoute>
               } 
             />
             <Route 
               path="/settings/billing" 
               element={
-                <MerchantProtectedRoute>
+                <AtomicProtectedRoute>
                   <SettingsBilling />
-                </MerchantProtectedRoute>
+                </AtomicProtectedRoute>
               } 
             />
             <Route 
               path="/settings/webhooks" 
               element={
-                <MerchantProtectedRoute>
+                <AtomicProtectedRoute>
                   <SettingsWebhooks />
-                </MerchantProtectedRoute>
+                </AtomicProtectedRoute>
               } 
             />
             <Route 
               path="/settings/integrations" 
               element={
-                <MerchantProtectedRoute>
+                <AtomicProtectedRoute>
                   <SettingsIntegrations />
-                </MerchantProtectedRoute>
+                </AtomicProtectedRoute>
               } 
             />
             <Route 
               path="/settings/automation" 
               element={
-                <MerchantProtectedRoute>
+                <AtomicProtectedRoute>
                   <SettingsAutomation />
-                </MerchantProtectedRoute>
+                </AtomicProtectedRoute>
               } 
             />
             <Route 
               path="/settings/system" 
               element={
-                <MerchantProtectedRoute>
+                <AtomicProtectedRoute>
                   <SettingsSystem />
-                </MerchantProtectedRoute>
+                </AtomicProtectedRoute>
               } 
             />
             <Route 
               path="/notifications" 
               element={
-                <MerchantProtectedRoute>
+                <AtomicProtectedRoute>
                   <Notifications />
-                </MerchantProtectedRoute>
+                </AtomicProtectedRoute>
               } 
             />
             <Route 
               path="/automations" 
               element={
-                <MerchantProtectedRoute>
+                <AtomicProtectedRoute>
                   <Automations />
-                </MerchantProtectedRoute>
+                </AtomicProtectedRoute>
               } 
             />
             <Route 
               path="/security" 
               element={
-                <MerchantProtectedRoute>
+                <AtomicProtectedRoute>
                   <Security />
-                </MerchantProtectedRoute>
+                </AtomicProtectedRoute>
               } 
             />
             <Route 
               path="/integrations" 
               element={
-                <MerchantProtectedRoute>
+                <AtomicProtectedRoute>
                   <Integrations />
-                </MerchantProtectedRoute>
+                </AtomicProtectedRoute>
               } 
             />
             <Route 
               path="/webhooks" 
               element={
-                <MerchantProtectedRoute>
+                <AtomicProtectedRoute>
                   <Webhooks />
-                </MerchantProtectedRoute>
+                </AtomicProtectedRoute>
               } 
             />
             <Route 
