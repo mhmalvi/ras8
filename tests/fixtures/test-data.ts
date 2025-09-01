@@ -14,6 +14,54 @@ export const TEST_MERCHANTS = {
     shopId: 'test-shop-secondary',
     host: Buffer.from('test-store-secondary.myshopify.com/admin').toString('base64'),
     planType: 'growth'
+  },
+  testShop: {
+    shopDomain: 'test-66666666.myshopify.com',
+    shopId: 'test-66666666',
+    host: Buffer.from('test-66666666.myshopify.com/admin').toString('base64'),
+    planType: 'pro',
+    merchantId: 'test-66666666-e29b-41d4-a716-446655440000',
+    accessToken: 'shpat_test_66666666_access_token_for_testing',
+    // Real merchant data from database
+    dbRecord: {
+      idx: 1,
+      id: '511aabc6-90a8-4fb0-ab57-153dcb240962',
+      shop_domain: 'test-66666666.myshopify.com',
+      access_token: 'shpat_test_66666666_access_token_for_testing',
+      settings: '{}',
+      plan_type: 'pro',
+      created_at: '2025-09-01 03:39:02.046682+00',
+      updated_at: '2025-09-01 03:39:02.046682+00',
+      token_encrypted_at: null,
+      token_encryption_version: 1
+    },
+    testUsers: [
+      {
+        email: 'john.smith@test.com',
+        orderId: 'ORD-2024-TEST-001',
+        totalAmount: 299.97
+      },
+      {
+        email: 'sarah.johnson@test.com',
+        orderId: 'ORD-2024-TEST-002', 
+        totalAmount: 549.95
+      },
+      {
+        email: 'mike.chen@test.com',
+        orderId: 'ORD-2024-TEST-003',
+        totalAmount: 179.97
+      },
+      {
+        email: 'emma.wilson@test.com',
+        orderId: 'ORD-2024-TEST-004',
+        totalAmount: 129.98
+      },
+      {
+        email: 'david.brown@test.com',
+        orderId: 'ORD-2024-TEST-005',
+        totalAmount: 699.95
+      }
+    ]
   }
 };
 

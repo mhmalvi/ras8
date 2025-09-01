@@ -22,10 +22,16 @@ const AtomicPublicRoute = ({ children }: AtomicPublicRouteProps) => {
     );
   }
 
-  // If authenticated, redirect to dashboard (root)
+  // If authenticated, redirect appropriately based on context
   if (user) {
-    // User already authenticated, redirect to dashboard
-    return <Navigate to="/" replace />;
+    // For standalone users, redirect to dashboard instead of index to avoid Shopify detection
+    const urlParams = new URLSearchParams(window.location.search);
+    const hasShopifyParams = urlParams.has('shop') || urlParams.has('host');
+    
+    const redirectPath = hasShopifyParams ? '/' : '/dashboard';
+    console.log('🔄 AtomicPublicRoute: User authenticated, redirecting to:', redirectPath);
+    
+    return <Navigate to={redirectPath} replace />;
   }
 
   // User is not authenticated, render the public content

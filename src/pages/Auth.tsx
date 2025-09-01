@@ -33,18 +33,39 @@ const Auth = () => {
     lastName: ''
   });
 
-  const from = location.state?.from?.pathname || '/';
+  // For standalone users, redirect to dashboard instead of index page to avoid Shopify detection
+  const getRedirectPath = () => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const hasShopifyParams = urlParams.has('shop') || urlParams.has('host');
+    
+    // If user came from a specific path, respect that
+    if (location.state?.from?.pathname && location.state.from.pathname !== '/') {
+      return location.state.from.pathname;
+    }
+    
+    // For standalone users (no Shopify params), go directly to dashboard
+    if (!hasShopifyParams) {
+      return '/dashboard';
+    }
+    
+    // For Shopify embedded users, go to root which will handle shop detection
+    return '/';
+  };
 
-  // Handle redirect when user is authenticated - simplified logic
+  // Handle redirect when user is authenticated
   useEffect(() => {
+    console.log('🔍 Auth useEffect - user:', !!user, 'authLoading:', authLoading);
+    
     if (user && !authLoading) {
-      console.log('🔄 User authenticated, redirecting to:', from);
+      const redirectPath = getRedirectPath();
+      console.log('🔄 User authenticated, redirecting to:', redirectPath);
+      
       // Small delay to ensure all auth processes complete
       setTimeout(() => {
-        navigate(from, { replace: true });
+        navigate(redirectPath, { replace: true });
       }, 100);
     }
-  }, [user, authLoading, navigate, from]);
+  }, [user, authLoading, navigate, location.state]);
 
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
