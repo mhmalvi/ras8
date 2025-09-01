@@ -1,0 +1,257 @@
+{
+  "name": "shopify-mcp",
+  "description": "Shopify app and partner management for RAS8",
+  "version": "1.0.0",
+  "author": "RAS8 Development Team",
+  "tools": [
+    {
+      "name": "get-app-info",
+      "description": "Get Shopify app information and status",
+      "parameters": {
+        "appId": {
+          "type": "string",
+          "required": true,
+          "description": "Shopify app ID from Partner Dashboard"
+        },
+        "includeMetrics": {
+          "type": "boolean",
+          "default": false,
+          "description": "Include installation metrics"
+        }
+      }
+    },
+    {
+      "name": "rotate-client-secret",
+      "description": "Rotate Shopify app client secret",
+      "parameters": {
+        "appId": {
+          "type": "string",
+          "required": true,
+          "description": "Shopify app ID"
+        },
+        "updateVercel": {
+          "type": "boolean",
+          "default": true,
+          "description": "Automatically update Vercel environment variable"
+        }
+      }
+    },
+    {
+      "name": "update-app-urls",
+      "description": "Update Shopify app URLs after deployment",
+      "parameters": {
+        "appId": {
+          "type": "string",
+          "required": true,
+          "description": "Shopify app ID"
+        },
+        "appUrl": {
+          "type": "string",
+          "required": true,
+          "description": "Main application URL"
+        },
+        "redirectUrls": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "required": true,
+          "description": "OAuth redirect URLs"
+        },
+        "webhookEndpoint": {
+          "type": "string",
+          "description": "Webhook endpoint URL"
+        }
+      }
+    },
+    {
+      "name": "get-installations",
+      "description": "Get RAS8 app installations",
+      "parameters": {
+        "appId": {
+          "type": "string",
+          "required": true,
+          "description": "Shopify app ID"
+        },
+        "status": {
+          "type": "string",
+          "enum": ["active", "uninstalled", "suspended"],
+          "description": "Filter installations by status"
+        },
+        "limit": {
+          "type": "number",
+          "default": 20,
+          "minimum": 1,
+          "maximum": 100,
+          "description": "Maximum number of installations to return"
+        }
+      }
+    },
+    {
+      "name": "validate-webhook",
+      "description": "Validate incoming Shopify webhook",
+      "parameters": {
+        "payload": {
+          "type": "string",
+          "required": true,
+          "description": "Raw webhook payload"
+        },
+        "signature": {
+          "type": "string",
+          "required": true,
+          "description": "X-Shopify-Hmac-Sha256 header value"
+        },
+        "secret": {
+          "type": "string",
+          "required": true,
+          "description": "Webhook secret from app settings"
+        }
+      }
+    },
+    {
+      "name": "test-oauth-flow",
+      "description": "Test OAuth flow with development store",
+      "parameters": {
+        "shop": {
+          "type": "string",
+          "required": true,
+          "description": "Development store domain (e.g., test-store.myshopify.com)"
+        },
+        "scopes": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": ["read_products", "write_products", "read_orders", "write_orders", "read_customers", "write_customers", "read_inventory", "write_inventory"]
+          },
+          "description": "OAuth scopes to request"
+        },
+        "returnUrl": {
+          "type": "string",
+          "description": "Custom return URL after installation"
+        }
+      }
+    },
+    {
+      "name": "manage-webhooks",
+      "description": "Create, update, or delete webhooks",
+      "parameters": {
+        "action": {
+          "type": "string",
+          "enum": ["create", "update", "delete", "list"],
+          "required": true,
+          "description": "Webhook management action"
+        },
+        "topic": {
+          "type": "string",
+          "enum": ["app/uninstalled", "orders/create", "orders/updated", "customers/create", "products/create", "products/update"],
+          "description": "Webhook topic (required for create/update)"
+        },
+        "endpoint": {
+          "type": "string",
+          "description": "Webhook endpoint URL (required for create/update)"
+        },
+        "webhookId": {
+          "type": "string",
+          "description": "Webhook ID (required for update/delete)"
+        },
+        "shop": {
+          "type": "string",
+          "description": "Shop domain for shop-specific webhooks"
+        }
+      }
+    },
+    {
+      "name": "get-shop-info",
+      "description": "Get shop information for installed stores",
+      "parameters": {
+        "shop": {
+          "type": "string",
+          "required": true,
+          "description": "Shop domain"
+        },
+        "accessToken": {
+          "type": "string",
+          "required": true,
+          "description": "Shop access token"
+        },
+        "fields": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Specific shop fields to retrieve"
+        }
+      }
+    },
+    {
+      "name": "test-api-access",
+      "description": "Test API access with shop credentials",
+      "parameters": {
+        "shop": {
+          "type": "string",
+          "required": true,
+          "description": "Shop domain"
+        },
+        "accessToken": {
+          "type": "string",
+          "required": true,
+          "description": "Shop access token"
+        },
+        "endpoint": {
+          "type": "string",
+          "default": "shop.json",
+          "description": "API endpoint to test"
+        }
+      }
+    },
+    {
+      "name": "rotate-webhook-secret",
+      "description": "Rotate webhook verification secret",
+      "parameters": {
+        "appId": {
+          "type": "string",
+          "required": true,
+          "description": "Shopify app ID"
+        },
+        "updateVercel": {
+          "type": "boolean",
+          "default": true,
+          "description": "Update Vercel environment variable"
+        }
+      }
+    }
+  ],
+  "configuration": {
+    "appName": "RAS8",
+    "appVersion": "1.0.0",
+    "scopes": [
+      "read_products",
+      "write_products",
+      "read_orders",
+      "write_orders"
+    ],
+    "webhookTopics": [
+      "app/uninstalled",
+      "orders/create",
+      "orders/updated"
+    ],
+    "oauthSettings": {
+      "grantType": "authorization_code",
+      "responseType": "code",
+      "accessType": "online"
+    }
+  },
+  "endpoints": {
+    "install": "/install",
+    "auth": "/api/auth/start",
+    "callback": "/api/auth/callback",
+    "webhooks": "/api/webhooks/shopify",
+    "health": "/api/health"
+  },
+  "security": {
+    "validateWebhooks": true,
+    "validateOAuthState": true,
+    "enforceHttps": true,
+    "tokenStorage": "encrypted"
+  }
+}

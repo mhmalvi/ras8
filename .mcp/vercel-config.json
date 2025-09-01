@@ -1,0 +1,182 @@
+{
+  "name": "vercel-mcp",
+  "description": "Vercel deployment management for RAS8 project",
+  "version": "1.0.0",
+  "author": "RAS8 Development Team",
+  "tools": [
+    {
+      "name": "deploy",
+      "description": "Deploy RAS8 to Vercel environment",
+      "parameters": {
+        "environment": {
+          "type": "string",
+          "enum": ["production", "preview", "development"],
+          "default": "preview",
+          "description": "Target deployment environment"
+        },
+        "force": {
+          "type": "boolean",
+          "default": false,
+          "description": "Force deployment even if no changes detected"
+        },
+        "skipBuild": {
+          "type": "boolean",
+          "default": false,
+          "description": "Skip build step and deploy existing build"
+        }
+      }
+    },
+    {
+      "name": "get-deployments",
+      "description": "List recent RAS8 deployments",
+      "parameters": {
+        "limit": {
+          "type": "number",
+          "default": 10,
+          "minimum": 1,
+          "maximum": 100,
+          "description": "Number of deployments to retrieve"
+        },
+        "state": {
+          "type": "string",
+          "enum": ["BUILDING", "ERROR", "INITIALIZING", "QUEUED", "READY", "CANCELED"],
+          "description": "Filter deployments by state"
+        }
+      }
+    },
+    {
+      "name": "get-deployment-logs",
+      "description": "Get deployment logs for debugging",
+      "parameters": {
+        "deploymentId": {
+          "type": "string",
+          "required": true,
+          "description": "Vercel deployment ID"
+        },
+        "follow": {
+          "type": "boolean",
+          "default": false,
+          "description": "Follow logs in real-time"
+        }
+      }
+    },
+    {
+      "name": "set-env-var",
+      "description": "Set environment variable for RAS8",
+      "parameters": {
+        "key": {
+          "type": "string",
+          "required": true,
+          "description": "Environment variable name"
+        },
+        "value": {
+          "type": "string",
+          "required": true,
+          "description": "Environment variable value"
+        },
+        "environment": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": ["production", "preview", "development"]
+          },
+          "default": ["production"],
+          "description": "Target environments for the variable"
+        },
+        "sensitive": {
+          "type": "boolean",
+          "default": true,
+          "description": "Mark variable as sensitive (hidden in UI)"
+        }
+      }
+    },
+    {
+      "name": "get-env-vars",
+      "description": "List environment variables",
+      "parameters": {
+        "environment": {
+          "type": "string",
+          "enum": ["production", "preview", "development"],
+          "description": "Filter by environment"
+        }
+      }
+    },
+    {
+      "name": "delete-env-var",
+      "description": "Delete environment variable",
+      "parameters": {
+        "key": {
+          "type": "string",
+          "required": true,
+          "description": "Environment variable name to delete"
+        },
+        "environment": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": ["production", "preview", "development"]
+          },
+          "default": ["production"],
+          "description": "Target environments to delete from"
+        }
+      }
+    },
+    {
+      "name": "get-domains",
+      "description": "List RAS8 project domains",
+      "parameters": {
+        "limit": {
+          "type": "number",
+          "default": 20,
+          "description": "Maximum number of domains to return"
+        }
+      }
+    },
+    {
+      "name": "promote-deployment",
+      "description": "Promote deployment to production",
+      "parameters": {
+        "deploymentId": {
+          "type": "string",
+          "required": true,
+          "description": "Deployment ID to promote"
+        }
+      }
+    },
+    {
+      "name": "cancel-deployment",
+      "description": "Cancel a running deployment",
+      "parameters": {
+        "deploymentId": {
+          "type": "string",
+          "required": true,
+          "description": "Deployment ID to cancel"
+        }
+      }
+    },
+    {
+      "name": "get-project-info",
+      "description": "Get RAS8 project information",
+      "parameters": {}
+    }
+  ],
+  "configuration": {
+    "projectName": "ras8",
+    "productionDomain": "ras8.vercel.app",
+    "framework": "vite",
+    "buildCommand": "npm run build",
+    "outputDirectory": "dist",
+    "installCommand": "npm install",
+    "nodeVersion": "18.x"
+  },
+  "webhooks": [
+    {
+      "event": "deployment.created",
+      "url": "https://ras8.vercel.app/api/webhooks/vercel"
+    },
+    {
+      "event": "deployment.ready",
+      "url": "https://ras8.vercel.app/api/webhooks/vercel"
+    }
+  ]
+}

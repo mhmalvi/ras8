@@ -1,0 +1,241 @@
+{
+  "name": "git-mcp",
+  "description": "Git repository management for RAS8 project",
+  "version": "1.0.0",
+  "author": "RAS8 Development Team",
+  "tools": [
+    {
+      "name": "status",
+      "description": "Get current git repository status",
+      "parameters": {
+        "short": {
+          "type": "boolean",
+          "default": false,
+          "description": "Show short format status"
+        },
+        "branch": {
+          "type": "boolean",
+          "default": true,
+          "description": "Show branch information"
+        }
+      }
+    },
+    {
+      "name": "commit",
+      "description": "Create git commit with RAS8 conventions",
+      "parameters": {
+        "message": {
+          "type": "string",
+          "required": true,
+          "description": "Commit message following conventional commits"
+        },
+        "files": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Specific files to include in commit"
+        },
+        "type": {
+          "type": "string",
+          "enum": ["feat", "fix", "security", "refactor", "test", "docs", "chore"],
+          "default": "feat",
+          "description": "Conventional commit type"
+        }
+      }
+    },
+    {
+      "name": "push",
+      "description": "Push commits to remote repository",
+      "parameters": {
+        "branch": {
+          "type": "string",
+          "description": "Target branch (defaults to current)"
+        },
+        "force": {
+          "type": "boolean",
+          "default": false,
+          "description": "Force push (use with caution)"
+        },
+        "upstream": {
+          "type": "boolean",
+          "default": false,
+          "description": "Set upstream tracking for new branches"
+        }
+      }
+    },
+    {
+      "name": "create-branch",
+      "description": "Create new feature or fix branch",
+      "parameters": {
+        "name": {
+          "type": "string",
+          "required": true,
+          "description": "Branch name (will be prefixed with type/)"
+        },
+        "type": {
+          "type": "string",
+          "enum": ["feature", "fix", "security", "hotfix", "release"],
+          "default": "feature",
+          "description": "Branch type prefix"
+        },
+        "checkout": {
+          "type": "boolean",
+          "default": true,
+          "description": "Checkout new branch immediately"
+        },
+        "from": {
+          "type": "string",
+          "default": "main",
+          "description": "Source branch to create from"
+        }
+      }
+    },
+    {
+      "name": "merge",
+      "description": "Merge branch with RAS8 merge strategy",
+      "parameters": {
+        "branch": {
+          "type": "string",
+          "required": true,
+          "description": "Branch to merge into current branch"
+        },
+        "strategy": {
+          "type": "string",
+          "enum": ["merge", "squash", "rebase"],
+          "default": "squash",
+          "description": "Merge strategy for RAS8 project"
+        },
+        "message": {
+          "type": "string",
+          "description": "Custom merge commit message"
+        }
+      }
+    },
+    {
+      "name": "log",
+      "description": "Get git commit history",
+      "parameters": {
+        "limit": {
+          "type": "number",
+          "default": 10,
+          "minimum": 1,
+          "maximum": 50,
+          "description": "Number of commits to show"
+        },
+        "oneline": {
+          "type": "boolean",
+          "default": true,
+          "description": "Show commits in one line format"
+        },
+        "author": {
+          "type": "string",
+          "description": "Filter commits by author"
+        },
+        "since": {
+          "type": "string",
+          "description": "Show commits since date (e.g., '1 week ago')"
+        }
+      }
+    },
+    {
+      "name": "diff",
+      "description": "Show changes in repository",
+      "parameters": {
+        "staged": {
+          "type": "boolean",
+          "default": false,
+          "description": "Show staged changes only"
+        },
+        "file": {
+          "type": "string",
+          "description": "Show changes for specific file"
+        },
+        "branch": {
+          "type": "string",
+          "description": "Compare with specific branch"
+        }
+      }
+    },
+    {
+      "name": "stash",
+      "description": "Stash changes for later use",
+      "parameters": {
+        "action": {
+          "type": "string",
+          "enum": ["push", "pop", "list", "apply", "drop"],
+          "default": "push",
+          "description": "Stash operation to perform"
+        },
+        "message": {
+          "type": "string",
+          "description": "Stash message for identification"
+        },
+        "index": {
+          "type": "number",
+          "description": "Stash index for pop/apply/drop operations"
+        }
+      }
+    },
+    {
+      "name": "tag",
+      "description": "Create and manage git tags",
+      "parameters": {
+        "name": {
+          "type": "string",
+          "required": true,
+          "description": "Tag name (e.g., v1.0.0)"
+        },
+        "message": {
+          "type": "string",
+          "description": "Tag annotation message"
+        },
+        "push": {
+          "type": "boolean",
+          "default": false,
+          "description": "Push tag to remote after creation"
+        }
+      }
+    },
+    {
+      "name": "reset",
+      "description": "Reset repository state",
+      "parameters": {
+        "mode": {
+          "type": "string",
+          "enum": ["soft", "mixed", "hard"],
+          "default": "mixed",
+          "description": "Reset mode"
+        },
+        "commit": {
+          "type": "string",
+          "default": "HEAD~1",
+          "description": "Target commit for reset"
+        }
+      }
+    }
+  ],
+  "configuration": {
+    "repository": "ras8",
+    "defaultBranch": "main",
+    "commitConvention": "conventional",
+    "mergeStrategy": "squash",
+    "branchPrefixes": {
+      "feature": "feature/",
+      "fix": "fix/",
+      "security": "security/",
+      "hotfix": "hotfix/",
+      "release": "release/"
+    }
+  },
+  "hooks": [
+    {
+      "event": "pre-commit",
+      "action": "lint-staged"
+    },
+    {
+      "event": "commit-msg",
+      "action": "conventional-commit-validation"
+    }
+  ]
+}

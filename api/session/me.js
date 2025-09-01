@@ -108,7 +108,10 @@ export default async function handler(req, res) {
     if (sessionCookie && shop) {
       try {
         // For simplicity, we'll decode the JWT manually (in production, use a proper JWT library)
-        const jwtSecret = process.env.JWT_SECRET_KEY || 'h5-production-jwt-secret-key-change-this-in-production-2024';
+        const jwtSecret = process.env.JWT_SECRET_KEY || (() => {
+            console.error('SECURITY ERROR: JWT_SECRET_KEY not set in environment variables');
+            throw new Error('JWT_SECRET_KEY is required for secure operation');
+        })();
         const decoded = jwt.verify(sessionCookie, jwtSecret);
         
         console.log('🍪 Session cookie validated:', {

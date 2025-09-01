@@ -1,0 +1,70 @@
+{
+  "mcpVersion": "0.1.0",
+  "name": "ras8-mcp-server",
+  "description": "MCP server configuration for RAS8 project",
+  "servers": {
+    "vercel": {
+      "command": "node",
+      "args": [
+        "./node_modules/@anthropic/mcp-server-vercel/dist/index.js"
+      ],
+      "env": {
+        "VERCEL_TOKEN": "${VERCEL_TOKEN}",
+        "VERCEL_PROJECT_ID": "${VERCEL_PROJECT_ID}",
+        "VERCEL_TEAM_ID": "${VERCEL_TEAM_ID}"
+      },
+      "cwd": ".",
+      "timeout": 30000,
+      "retries": 3
+    },
+    "git": {
+      "command": "node", 
+      "args": [
+        "./node_modules/@anthropic/mcp-server-git/dist/index.js"
+      ],
+      "env": {
+        "GIT_AUTHOR_NAME": "RAS8 MCP",
+        "GIT_AUTHOR_EMAIL": "mcp@ras8.dev",
+        "GIT_COMMITTER_NAME": "RAS8 MCP",
+        "GIT_COMMITTER_EMAIL": "mcp@ras8.dev"
+      },
+      "cwd": ".",
+      "timeout": 15000,
+      "retries": 2
+    },
+    "shopify": {
+      "command": "node",
+      "args": [
+        "./node_modules/@anthropic/mcp-server-shopify/dist/index.js"
+      ],
+      "env": {
+        "SHOPIFY_PARTNER_ACCESS_TOKEN": "${SHOPIFY_PARTNER_ACCESS_TOKEN}",
+        "SHOPIFY_APP_ID": "${SHOPIFY_APP_ID}",
+        "SHOPIFY_CLIENT_ID": "${SHOPIFY_CLIENT_ID}",
+        "SHOPIFY_CLIENT_SECRET": "${SHOPIFY_CLIENT_SECRET}",
+        "SHOPIFY_WEBHOOK_SECRET": "${SHOPIFY_WEBHOOK_SECRET}"
+      },
+      "cwd": ".",
+      "timeout": 20000,
+      "retries": 3
+    }
+  },
+  "logging": {
+    "level": "info",
+    "file": ".mcp/logs/mcp-server.log",
+    "maxSize": "10MB",
+    "maxFiles": 5
+  },
+  "security": {
+    "allowedOrigins": [
+      "https://ras8.vercel.app",
+      "http://localhost:5173",
+      "http://localhost:3000"
+    ],
+    "rateLimiting": {
+      "enabled": true,
+      "maxRequests": 100,
+      "windowMs": 60000
+    }
+  }
+}

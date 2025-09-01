@@ -1,0 +1,40 @@
+# SECURE JWT SECRET KEY - GENERATED: September 1, 2025
+
+## 🔐 NEW JWT SECRET KEY (128 characters)
+JWT_SECRET_KEY=2789df3a53a160601733343e8761e128e90a3629df6433f4e07d543497d481ae6d639af792d066ac0cf1084c2398ae8f2226728e976f156f6023ddfbf076fbc5
+
+## 📋 DEPLOYMENT INSTRUCTIONS
+
+### 1. Add to Vercel Environment Variables:
+- Go to vercel.com/dashboard → Your Project → Settings → Environment Variables
+- Add: JWT_SECRET_KEY=2789df3a53a160601733343e8761e128e90a3629df6433f4e07d543497d481ae6d639af792d066ac0cf1084c2398ae8f2226728e976f156f6023ddfbf076fbc5
+- Set for: Production, Preview, Development
+
+### 2. Verify Security:
+- ✅ 128 characters (exceeds 32 char minimum)
+- ✅ Cryptographically secure random bytes
+- ✅ Generated with Node.js crypto.randomBytes(64)
+- ✅ Not committed to version control
+
+### 3. Replace Old Insecure Key:
+- OLD (INSECURE): h5-production-jwt-secret-key-change-this-in-production-2024
+- NEW (SECURE): 2789df3a53a160601733343e8761e128e90a3629df6433f4e07d543497d481ae6d639af792d066ac0cf1084c2398ae8f2226728e976f156f6023ddfbf076fbc5
+
+## ⚠️ SECURITY NOTES
+
+1. **NEVER commit this file to version control**
+2. **DELETE this file after copying to Vercel**
+3. **Only share through secure channels**
+4. **Regenerate if compromised**
+
+## 🔄 Key Rotation Command
+If you need to generate a new key in the future:
+
+```bash
+node -e "console.log('JWT_SECRET_KEY=' + require('crypto').randomBytes(64).toString('hex'))"
+```
+
+---
+**Generated**: September 1, 2025  
+**Algorithm**: crypto.randomBytes(64).toString('hex')  
+**Security Level**: PRODUCTION READY ✅

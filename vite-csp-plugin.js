@@ -21,11 +21,17 @@ export default function cspHeaderPlugin() {
           "base-uri 'self'"
         ].join('; '));
 
-        // Set X-Frame-Options for iframe compatibility
-        res.setHeader('X-Frame-Options', 'ALLOWALL');
-        
-        // Allow embedding in Shopify Admin
+        // Set comprehensive security headers
+        res.setHeader('X-Frame-Options', 'ALLOWALL'); // Allow Shopify embedding
         res.setHeader('X-Content-Type-Options', 'nosniff');
+        res.setHeader('X-XSS-Protection', '1; mode=block');
+        res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+        res.setHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
+        
+        // HSTS for HTTPS connections
+        if (req.headers['x-forwarded-proto'] === 'https' || req.connection.encrypted) {
+          res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains; preload');
+        }
         
         next();
       });

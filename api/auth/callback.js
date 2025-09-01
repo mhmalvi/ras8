@@ -6,7 +6,10 @@ const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const shopifyClientId = process.env.VITE_SHOPIFY_CLIENT_ID;
 const shopifyClientSecret = process.env.SHOPIFY_CLIENT_SECRET;
 const appUrl = process.env.VITE_APP_URL || 'https://ras-8.vercel.app';
-const jwtSecret = process.env.JWT_SECRET_KEY || 'h5-production-jwt-secret-key-change-this-in-production-2024';
+const jwtSecret = process.env.JWT_SECRET_KEY || (() => {
+    console.error('SECURITY ERROR: JWT_SECRET_KEY not set in environment variables');
+    throw new Error('JWT_SECRET_KEY is required for secure operation');
+})();
 
 // HMAC validation for Shopify requests
 function validateHmac(query, secret) {

@@ -3,8 +3,8 @@
 
 import { createClient } from '@supabase/supabase-js';
 
-const SUPABASE_URL = "https://pvadajelvewdazwmvppk.supabase.co";
-const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InB2YWRhamVsdmV3ZGF6d212cHBrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTEyMzI3NjMsImV4cCI6MjA2NjgwODc2M30.soX5LLfb_UxpyPuWNEYRTyQTFWjhfaNCVjIY8x_0HWA";
+const SUPABASE_URL = process.env.VITE_SUPABASE_URL || "REPLACE_WITH_YOUR_SUPABASE_URL";
+const SUPABASE_ANON_KEY = process.env.VITE_SUPABASE_ANON_KEY || "REPLACE_WITH_YOUR_SUPABASE_ANON_KEY";
 
 // Note: This will likely fail as we need service role key for DDL operations
 // But we'll try anyway and provide guidance

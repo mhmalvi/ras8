@@ -1,5 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { screen } from '@testing-library/react';
+import { renderWithProviders } from '@/test/providers/TestProviders';
 import AnalyticsDashboard from '../AnalyticsDashboard';
 
 // Mock the analytics hook
@@ -36,9 +37,24 @@ vi.mock('@/hooks/useRealAnalyticsData', () => ({
   })
 }));
 
+// Mock Chart components to avoid rendering issues in tests
+vi.mock('recharts', () => ({
+  ResponsiveContainer: ({ children }: { children: React.ReactNode }) => <div data-testid="chart-container">{children}</div>,
+  PieChart: () => <div data-testid="pie-chart" />,
+  Pie: () => <div data-testid="pie" />,
+  Cell: () => <div data-testid="cell" />,
+  Tooltip: () => <div data-testid="tooltip" />,
+  Legend: () => <div data-testid="legend" />,
+  LineChart: () => <div data-testid="line-chart" />,
+  Line: () => <div data-testid="line" />,
+  XAxis: () => <div data-testid="x-axis" />,
+  YAxis: () => <div data-testid="y-axis" />,
+  CartesianGrid: () => <div data-testid="cartesian-grid" />,
+}));
+
 describe('AnalyticsDashboard', () => {
   it('should render key metrics', () => {
-    render(<AnalyticsDashboard />);
+    renderWithProviders(<AnalyticsDashboard />);
     
     expect(screen.getByText('150')).toBeInTheDocument(); // Total returns
     expect(screen.getByText('$12,500')).toBeInTheDocument(); // Total revenue
@@ -47,46 +63,46 @@ describe('AnalyticsDashboard', () => {
   });
 
   it('should display returns by status chart', () => {
-    render(<AnalyticsDashboard />);
+    renderWithProviders(<AnalyticsDashboard />);
     
     expect(screen.getByText('Returns by Status')).toBeInTheDocument();
   });
 
   it('should show top return reasons', () => {
-    render(<AnalyticsDashboard />);
+    renderWithProviders(<AnalyticsDashboard />);
     
     expect(screen.getByText('Size issues')).toBeInTheDocument();
     expect(screen.getByText('Quality concerns')).toBeInTheDocument();
   });
 
   it('should display monthly trends chart', () => {
-    render(<AnalyticsDashboard />);
+    renderWithProviders(<AnalyticsDashboard />);
     
     expect(screen.getByText('Monthly Trends')).toBeInTheDocument();
   });
 
   it('should show loading state', () => {
-    const mockHook = vi.fn().mockReturnValue({
+    vi.mocked(vi.importActual('@/hooks/useRealAnalyticsData')).useRealAnalyticsData = vi.fn().mockReturnValue({
       analytics: null,
       loading: true,
       error: null,
       refetch: vi.fn()
     });
 
-    render(<AnalyticsDashboard />);
+    renderWithProviders(<AnalyticsDashboard />);
     
     expect(screen.getByText(/loading/i)).toBeInTheDocument();
   });
 
   it('should handle error state', () => {
-    const mockHook = vi.fn().mockReturnValue({
+    vi.mocked(vi.importActual('@/hooks/useRealAnalyticsData')).useRealAnalyticsData = vi.fn().mockReturnValue({
       analytics: null,
       loading: false,
       error: 'Failed to load analytics',
       refetch: vi.fn()
     });
 
-    render(<AnalyticsDashboard />);
+    renderWithProviders(<AnalyticsDashboard />);
     
     expect(screen.getByText('Failed to load analytics')).toBeInTheDocument();
   });

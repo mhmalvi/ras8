@@ -1,5 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { screen } from '@testing-library/react';
+import { renderWithProviders } from '@/test/providers/TestProviders';
 import ReturnManagement from '../ReturnManagement';
 
 // Mock the hooks
@@ -23,16 +24,26 @@ vi.mock('@/hooks/useReturnsManagement', () => ({
   })
 }));
 
+// Mock Recharts components
+vi.mock('recharts', () => ({
+  ResponsiveContainer: ({ children }: { children: React.ReactNode }) => <div data-testid="chart-container">{children}</div>,
+  PieChart: () => <div data-testid="pie-chart" />,
+  Pie: () => <div data-testid="pie" />,
+  Cell: () => <div data-testid="cell" />,
+  Tooltip: () => <div data-testid="tooltip" />,
+  Legend: () => <div data-testid="legend" />,
+}));
+
 describe('ReturnManagement', () => {
   it('should render returns list', () => {
-    render(<ReturnManagement customerEmail="" />);
+    renderWithProviders(<ReturnManagement customerEmail="" />);
     
     expect(screen.getByText('test@example.com')).toBeInTheDocument();
     expect(screen.getByText('Size too small')).toBeInTheDocument();
   });
 
   it('should show basic functionality', () => {
-    render(<ReturnManagement customerEmail="" />);
+    renderWithProviders(<ReturnManagement customerEmail="" />);
     
     expect(screen.getByText('test@example.com')).toBeInTheDocument();
   });
