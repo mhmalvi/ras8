@@ -200,7 +200,7 @@ LANGUAGE plpgsql
 SECURITY DEFINER
 AS $$
 DECLARE
-  merchant_found BOOLEAN := false;
+  rows_affected INTEGER := 0;
 BEGIN
   -- Update merchant status
   UPDATE merchants 
@@ -210,10 +210,10 @@ BEGIN
     updated_at = NOW()
   WHERE shop_domain = p_shop_domain;
   
-  GET DIAGNOSTICS merchant_found = FOUND;
+  GET DIAGNOSTICS rows_affected = ROW_COUNT;
   
   -- Invalidate tokens
-  IF merchant_found THEN
+  IF rows_affected > 0 THEN
     UPDATE shopify_tokens 
     SET 
       is_valid = false,
@@ -223,7 +223,7 @@ BEGIN
     );
   END IF;
   
-  RETURN merchant_found;
+  RETURN rows_affected > 0;
 END;
 $$;
 
