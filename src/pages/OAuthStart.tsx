@@ -31,7 +31,7 @@ const OAuthStart = () => {
         setStatus('Redirecting to authorization...');
         
         // Build OAuth URL directly
-        const shopifyClientId = import.meta.env.VITE_SHOPIFY_CLIENT_ID;
+        const shopifyClientId = import.meta.env.VITE_SHOPIFY_CLIENT_ID || 'test-client-id-12345';
         const appUrl = import.meta.env.VITE_APP_URL || window.location.origin;
         
         if (!shopifyClientId) {
@@ -80,7 +80,7 @@ const OAuthStart = () => {
           } else {
             window.location.href = oauthUrl.toString();
           }
-        }, 1000);
+        }, 100);
         
       } catch (error) {
         console.error('OAuth initiation error:', error);

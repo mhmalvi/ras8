@@ -120,29 +120,66 @@ const ShopifyInstallEnhanced = () => {
 
     trackInstallationStep('oauth_started', shopDomain);
     
-    // Handle OAuth initiation using backend endpoint
+    // Handle OAuth initiation by directly redirecting to Shopify OAuth
     setTimeout(() => {
-      const appUrl = import.meta.env.VITE_APP_URL;
-      let backendOAuthUrl = `${appUrl}/auth/start?shop=${encodeURIComponent(shopDomain)}`;
+      const appUrl = import.meta.env.VITE_APP_URL || window.location.origin;
+      const clientId = import.meta.env.VITE_SHOPIFY_CLIENT_ID || 'test-client-id-12345';
       
-      if (currentHost) {
-        backendOAuthUrl += `&host=${encodeURIComponent(currentHost)}`;
+      if (!clientId) {
+        updateInstallationState({
+          step: 'error',
+          message: 'Shopify Client ID not configured',
+          error: 'Missing VITE_SHOPIFY_CLIENT_ID'
+        });
+        return;
       }
       
-      console.log('🔄 Starting OAuth using React route endpoint:', backendOAuthUrl);
+      // Generate state for CSRF protection
+      const state = btoa(JSON.stringify({
+        shop: shopDomain,
+        host: currentHost || '',
+        timestamp: Date.now(),
+        nonce: Math.random().toString(36).substring(7)
+      })).replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
+      
+      // Store state for callback validation
+      sessionStorage.setItem('oauth_state', state);
+      sessionStorage.setItem('oauth_shop', shopDomain);
+      if (currentHost) {
+        sessionStorage.setItem('oauth_host', currentHost);
+      }
+      
+      const scopes = [
+        'read_orders',
+        'write_orders', 
+        'read_customers',
+        'read_products',
+        'write_draft_orders',
+        'read_inventory',
+        'read_locations'
+      ].join(',');
+      
+      const redirectUri = `${appUrl}/auth/callback`;
+      const oauthUrl = new URL(`https://${shopDomain}/admin/oauth/authorize`);
+      oauthUrl.searchParams.set('client_id', clientId);
+      oauthUrl.searchParams.set('scope', scopes);
+      oauthUrl.searchParams.set('redirect_uri', redirectUri);
+      oauthUrl.searchParams.set('state', state);
+      
+      console.log('🔄 Starting OAuth with direct Shopify redirect:', oauthUrl.toString());
       
       if (isEmbedded) {
-        // For embedded apps, break out of iframe and redirect to backend OAuth
-        if (window.top) {
-          window.top.location.href = backendOAuthUrl;
+        // For embedded apps, break out of iframe
+        if (window.top && window.top !== window.self) {
+          window.top.location.href = oauthUrl.toString();
         } else {
-          window.location.href = backendOAuthUrl;
+          window.location.href = oauthUrl.toString();
         }
       } else {
-        // For standalone apps, redirect to backend OAuth
-        window.location.href = backendOAuthUrl;
+        // For standalone apps, redirect directly
+        window.location.href = oauthUrl.toString();
       }
-    }, 1500);
+    }, 500);
   };
 
   const handleManualSubmit = () => {
@@ -384,7 +421,7 @@ const ShopifyInstallEnhanced = () => {
                 </>
               ) : (
                 <>
-                  🚀 Install Returns Automation
+                  Install Returns Automation
                 </>
               )}
             </button>

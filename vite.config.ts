@@ -5,6 +5,7 @@ import path from "path";
 import { componentTagger } from "lovable-tagger";
 import cspHeaderPlugin from "./vite-csp-plugin.js";
 import websocketPlugin from "./vite-websocket-plugin.js";
+import apiPlugin from "./vite-api-plugin.js";
 
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => ({
@@ -17,6 +18,7 @@ export default defineConfig(({ mode }) => ({
     react(),
     cspHeaderPlugin(),
     websocketPlugin(),
+    apiPlugin(),
     mode === 'development' &&
     componentTagger(),
   ].filter(Boolean),
