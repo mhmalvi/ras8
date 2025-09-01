@@ -1,0 +1,301 @@
+/**
+ * Landing Logic Resolver - Authoritative landing decision system
+ * 
+ * This module implements the centralized landing decision logic as specified
+ * in the audit report. It determines where authenticated users should be
+ * routed based on their merchant integration status.
+ */
+
+import { supabase } from '@/integrations/supabase/client';
+
+export type LandingDecision =
+  | { route: "/dashboard"; reason: "integrated-active" }
+  | { route: "/master-admin"; reason: "master-admin" }
+  | { route: "/reconnect"; reason: "uninstalled-or-invalid-token" }
+  | { route: "/connect-shopify"; reason: "no-merchant-link" }
+  | { route: "/error"; reason: "unexpected" | "no-profile" | "merchant-not-found" };
+
+export interface LandingContext {
+  userId: string;
+  isEmbedded?: boolean;
+  shopDomain?: string;
+  userAgent?: string;
+}
+
+export interface MerchantIntegrationStatus {
+  has_merchant_link: boolean;
+  merchant_status: string | null;
+  token_valid: boolean | null;
+  token_fresh: boolean | null;
+  integration_status: string;
+}
+
+export interface UserProfile {
+  id: string;
+  merchant_id: string | null;
+  email: string;
+  role: string;
+  first_name?: string;
+  last_name?: string;
+}
+
+/**
+ * Core landing resolution function
+ * 
+ * Implements the decision tree:
+ * 1. Check if user profile exists
+ * 2. Handle master admin special case
+ * 3. Check merchant link status
+ * 4. Validate merchant integration status
+ * 5. Return appropriate landing decision
+ */
+export async function resolveLandingRoute(context: LandingContext): Promise<LandingDecision> {
+  try {
+    console.log('🧭 Resolving landing route:', {
+      userId: context.userId,
+      isEmbedded: context.isEmbedded,
+      shopDomain: context.shopDomain
+    });
+
+    // 1. Get user profile
+    const profile = await getUserProfile(context.userId);
+    if (!profile) {
+      console.error('❌ No profile found for user:', context.userId);
+      return { route: "/error", reason: "no-profile" };
+    }
+
+    // 2. Handle master admin special case
+    if (profile.role === 'master_admin') {
+      console.log('👑 Master admin detected, routing to admin dashboard');
+      logLandingDecision({ route: "/master-admin", reason: "master-admin" }, context);
+      return { route: "/master-admin", reason: "master-admin" };
+    }
+
+    // 3. Check merchant integration status
+    const integrationStatus = await validateMerchantIntegration(context.userId);
+    
+    console.log('🔍 Integration status:', integrationStatus);
+
+    // 4. Apply decision logic based on integration status
+    const decision = mapIntegrationStatusToDecision(integrationStatus);
+    
+    // 5. Log decision for observability
+    logLandingDecision(decision, context, integrationStatus);
+    
+    console.log('✅ Landing decision:', decision);
+    return decision;
+
+  } catch (error) {
+    console.error('❌ Landing resolution error:', error);
+    const errorDecision: LandingDecision = { route: "/error", reason: "unexpected" };
+    logLandingDecision(errorDecision, context, undefined, error);
+    return errorDecision;
+  }
+}
+
+/**
+ * Get user profile with merchant relationship
+ */
+async function getUserProfile(userId: string): Promise<UserProfile | null> {
+  try {
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('id, merchant_id, email, role, first_name, last_name')
+      .eq('id', userId)
+      .single();
+
+    if (error) {
+      if (error.code === 'PGRST116') {
+        // No profile found
+        return null;
+      }
+      throw error;
+    }
+
+    return data;
+  } catch (error) {
+    console.error('Error fetching user profile:', error);
+    throw error;
+  }
+}
+
+/**
+ * Validate merchant integration status using database function
+ */
+async function validateMerchantIntegration(userId: string): Promise<MerchantIntegrationStatus> {
+  try {
+    const { data, error } = await supabase
+      .rpc('validate_merchant_integration', { p_user_id: userId })
+      .single();
+
+    if (error) {
+      throw error;
+    }
+
+    return data as MerchantIntegrationStatus;
+  } catch (error) {
+    console.error('Error validating merchant integration:', error);
+    // Return safe fallback
+    return {
+      has_merchant_link: false,
+      merchant_status: null,
+      token_valid: null,
+      token_fresh: null,
+      integration_status: 'unknown'
+    };
+  }
+}
+
+/**
+ * Map integration status to landing decision
+ */
+function mapIntegrationStatusToDecision(status: MerchantIntegrationStatus): LandingDecision {
+  switch (status.integration_status) {
+    case 'integrated-active':
+      return { route: "/dashboard", reason: "integrated-active" };
+    
+    case 'no-merchant-link':
+      return { route: "/connect-shopify", reason: "no-merchant-link" };
+    
+    case 'uninstalled':
+    case 'inactive':
+    case 'invalid-token':
+    case 'stale-token':
+      return { route: "/reconnect", reason: "uninstalled-or-invalid-token" };
+    
+    case 'unknown':
+    default:
+      console.warn('Unknown integration status:', status.integration_status);
+      return { route: "/error", reason: "unexpected" };
+  }
+}
+
+/**
+ * Enhanced logging for observability and debugging
+ */
+function logLandingDecision(
+  decision: LandingDecision,
+  context: LandingContext,
+  integrationStatus?: MerchantIntegrationStatus,
+  error?: any
+) {
+  const logData = {
+    decision: decision.reason,
+    route: decision.route,
+    context: {
+      userId: context.userId,
+      isEmbedded: Boolean(context.isEmbedded),
+      shopDomain: context.shopDomain,
+      userAgent: context.userAgent?.substring(0, 100) // Truncate for privacy
+    },
+    integrationStatus,
+    error: error?.message,
+    timestamp: new Date().toISOString()
+  };
+
+  // Structured logging for observability
+  console.log('LANDING_DECISION', logData);
+
+  // Analytics event (if available)
+  if (typeof window !== 'undefined' && (window as any).gtag) {
+    (window as any).gtag('event', 'landing_decision', {
+      decision_reason: decision.reason,
+      target_route: decision.route,
+      is_embedded: context.isEmbedded,
+      has_merchant_link: integrationStatus?.has_merchant_link,
+      merchant_status: integrationStatus?.merchant_status,
+      custom_parameters: {
+        integration_status: integrationStatus?.integration_status
+      }
+    });
+  }
+
+  // Store landing decision in local analytics (optional)
+  try {
+    const analyticsData = {
+      type: 'landing_decision',
+      ...logData
+    };
+    
+    // Could be sent to analytics service or stored locally
+    localStorage.setItem('last_landing_decision', JSON.stringify(analyticsData));
+  } catch (e) {
+    // Ignore localStorage errors
+  }
+}
+
+/**
+ * Utility function to check if embedded context
+ */
+export function detectEmbeddedContext(): boolean {
+  if (typeof window === 'undefined') return false;
+  
+  const urlParams = new URLSearchParams(window.location.search);
+  const hasShopParam = urlParams.has('shop');
+  const hasHostParam = urlParams.has('host');
+  const isInFrame = window.self !== window.top;
+  
+  return hasShopParam && (hasHostParam || isInFrame);
+}
+
+/**
+ * Extract shop domain from URL parameters
+ */
+export function extractShopDomain(): string | undefined {
+  if (typeof window === 'undefined') return undefined;
+  
+  const urlParams = new URLSearchParams(window.location.search);
+  return urlParams.get('shop') || undefined;
+}
+
+/**
+ * Simplified landing resolver for React components
+ */
+export async function resolveUserLanding(userId: string): Promise<LandingDecision> {
+  const isEmbedded = detectEmbeddedContext();
+  const shopDomain = extractShopDomain();
+  const userAgent = typeof navigator !== 'undefined' ? navigator.userAgent : undefined;
+
+  return resolveLandingRoute({
+    userId,
+    isEmbedded,
+    shopDomain,
+    userAgent
+  });
+}
+
+/**
+ * Check if a landing decision requires immediate redirect
+ */
+export function shouldRedirect(decision: LandingDecision, currentPath: string): boolean {
+  // Don't redirect if already on the target route
+  if (currentPath === decision.route) {
+    return false;
+  }
+
+  // Always redirect for error states
+  if (decision.reason === "unexpected" || decision.reason === "no-profile") {
+    return true;
+  }
+
+  // Don't redirect if on auth pages and decision is to go to auth
+  const authPages = ['/auth', '/login', '/signup'];
+  if (authPages.includes(currentPath) && decision.route === '/connect-shopify') {
+    return false;
+  }
+
+  return true;
+}
+
+/**
+ * Force refresh of merchant integration status (for reconnect scenarios)
+ */
+export async function refreshMerchantIntegration(userId: string): Promise<MerchantIntegrationStatus> {
+  try {
+    // Could add cache invalidation logic here
+    return await validateMerchantIntegration(userId);
+  } catch (error) {
+    console.error('Error refreshing merchant integration:', error);
+    throw error;
+  }
+}

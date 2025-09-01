@@ -186,44 +186,107 @@ export default async function handler(req, res) {
     if (supabaseUrl && supabaseServiceKey) {
       try {
         const supabase = createClient(supabaseUrl, supabaseServiceKey);
-        const { data: merchantData, error: merchantError } = await supabase
+        
+        // First, try to find existing merchant by shop_domain
+        const { data: existingMerchant } = await supabase
           .from('merchants')
-          .upsert({
-            shop_domain: shop,
-            access_token: encryptedToken,
-            token_encrypted_at: new Date().toISOString(),
-            token_encryption_version: 3,
-            plan_type: 'starter',
-            settings: {
-              installation_date: new Date().toISOString(),
-              app_version: '8.0.0',
-              oauth_completed: true,
-              last_oauth_at: new Date().toISOString()
-            }
-          }, {
-            onConflict: 'shop_domain'
-          })
-          .select()
+          .select('id, shop_domain, status')
+          .eq('shop_domain', shop)
           .single();
 
-        if (merchantError) {
-          console.error('❌ Failed to store merchant data:', merchantError);
-        } else {
-          merchant = merchantData;
+        if (existingMerchant) {
+          // Update existing merchant
+          console.log('📝 Updating existing merchant:', existingMerchant.id);
           
-          // Log successful installation
+          const { data: merchantData, error: merchantError } = await supabase
+            .from('merchants')
+            .update({
+              status: 'active',
+              installed_at: new Date().toISOString(),
+              settings: {
+                installation_date: existingMerchant.settings?.installation_date || new Date().toISOString(),
+                app_version: '8.0.0',
+                oauth_completed: true,
+                last_oauth_at: new Date().toISOString()
+              },
+              updated_at: new Date().toISOString()
+            })
+            .eq('id', existingMerchant.id)
+            .select()
+            .single();
+
+          if (merchantError) {
+            console.error('❌ Failed to update merchant:', merchantError);
+          } else {
+            merchant = merchantData;
+            
+            // Update/create token record
+            await supabase
+              .from('shopify_tokens')
+              .upsert({
+                merchant_id: merchant.id,
+                access_token: encryptedToken,
+                is_valid: true,
+                last_verified_at: new Date().toISOString()
+              }, {
+                onConflict: 'merchant_id'
+              });
+          }
+        } else {
+          // Create new merchant
+          console.log('➕ Creating new merchant for shop:', shop);
+          
+          const { data: merchantData, error: merchantError } = await supabase
+            .from('merchants')
+            .insert({
+              shop_domain: shop,
+              status: 'active',
+              installed_at: new Date().toISOString(),
+              plan_type: 'starter',
+              settings: {
+                installation_date: new Date().toISOString(),
+                app_version: '8.0.0',
+                oauth_completed: true,
+                last_oauth_at: new Date().toISOString()
+              }
+            })
+            .select()
+            .single();
+
+          if (merchantError) {
+            console.error('❌ Failed to create merchant:', merchantError);
+          } else {
+            merchant = merchantData;
+            
+            // Create token record
+            await supabase
+              .from('shopify_tokens')
+              .insert({
+                merchant_id: merchant.id,
+                access_token: encryptedToken,
+                is_valid: true,
+                last_verified_at: new Date().toISOString()
+              });
+          }
+        }
+
+        // Log successful installation/update if we have merchant data
+        if (merchant) {
           await supabase
             .from('analytics_events')
             .insert({
               merchant_id: merchant.id,
-              event_type: 'app_installed',
+              event_type: existingMerchant ? 'app_reconnected' : 'app_installed',
               event_data: {
                 shop_domain: shop,
                 installation_method: 'oauth_callback',
                 timestamp: new Date().toISOString(),
-                oauth_state: state
+                oauth_state: state,
+                existing_merchant: !!existingMerchant
               }
             });
+          
+          console.log('✅ OAuth completed successfully for merchant:', merchant.id);
         }
       } catch (dbError) {
         console.warn('⚠️ Database operations failed, continuing without storage:', dbError.message);

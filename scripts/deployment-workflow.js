@@ -135,12 +135,13 @@ switch (command) {
     });
     break;
     
-  case 'deploy':
+  case 'deploy': {
     const env = process.argv[3] || 'production';
     workflow.vercelDeploy(env).then(url => {
       console.log('Deployment URL:', url);
     });
     break;
+  }
     
   case 'shopify':
     workflow.shopifyInfo().then(info => {

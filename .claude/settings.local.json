@@ -31,7 +31,9 @@
       "mcp__vercel__get_project",
       "mcp__vercel__list_deployments",
       "Bash(npm run build:*)",
-      "mcp__vercel__deploy_to_vercel"
+      "mcp__vercel__deploy_to_vercel",
+      "mcp__vercel__get_deployment",
+      "Bash(npm run test:*)"
     ],
     "defaultMode": "acceptEdits",
     "additionalDirectories": [

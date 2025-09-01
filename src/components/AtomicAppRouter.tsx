@@ -9,6 +9,7 @@ import { ErrorBoundary } from 'react-error-boundary';
 import MerchantProtectedRoute from '@/components/MerchantProtectedRoute';
 import AtomicProtectedRoute from '@/components/AtomicProtectedRoute';
 import AtomicPublicRoute from '@/components/AtomicPublicRoute';
+import UnifiedProtectedRoute from '@/components/UnifiedProtectedRoute';
 import Index from '@/pages/Index';
 import Dashboard from '@/pages/Dashboard';
 import Returns from '@/pages/Returns';
@@ -58,6 +59,8 @@ import OAuthStart from '@/pages/OAuthStart';
 import PartnerPlatformTest from '@/pages/PartnerPlatformTest';
 import HealthCheck from '@/pages/HealthCheck';
 import EnvironmentTest from '@/pages/EnvironmentTest';
+import ConnectShopify from '@/pages/ConnectShopify';
+import Reconnect from '@/pages/Reconnect';
 
 const ErrorFallback = ({ error, resetErrorBoundary }: { error: Error; resetErrorBoundary: () => void }) => {
   const isHookError = error.message.includes('hook') || error.message.includes('Hook');
@@ -220,6 +223,18 @@ const AtomicAppRouter = () => {
             <Route path="/shopify/install" element={<ShopifyInstallEnhanced />} />
             <Route path="/install" element={<ShopifyInstallEnhanced />} />
             
+            {/* Landing Decision Routes */}
+            <Route path="/connect-shopify" element={
+              <UnifiedProtectedRoute bypassProtection={false}>
+                <ConnectShopify />
+              </UnifiedProtectedRoute>
+            } />
+            <Route path="/reconnect" element={
+              <UnifiedProtectedRoute bypassProtection={false}>
+                <Reconnect />
+              </UnifiedProtectedRoute>
+            } />
+            
             {/* Shopify Auth Inline - Top-level re-embed page */}
             <Route path="/auth/inline" element={<AuthInline />} />
             
@@ -346,77 +361,77 @@ const AtomicAppRouter = () => {
               }
             />
             
-            {/* Dashboard Route - Protected (Smart routing for embedded vs standalone) */}
+            {/* Dashboard Route - Protected (Unified routing for embedded vs standalone) */}
             <Route 
               path="/dashboard" 
               element={
-                <AtomicProtectedRoute>
+                <UnifiedProtectedRoute>
                   <Dashboard />
-                </AtomicProtectedRoute>
+                </UnifiedProtectedRoute>
               } 
             />
             <Route 
               path="/returns" 
               element={
-                <AtomicProtectedRoute>
+                <UnifiedProtectedRoute>
                   <Returns />
-                </AtomicProtectedRoute>
+                </UnifiedProtectedRoute>
               } 
             />
             <Route 
               path="/analytics" 
               element={
-                <AtomicProtectedRoute>
+                <UnifiedProtectedRoute>
                   <Analytics />
-                </AtomicProtectedRoute>
+                </UnifiedProtectedRoute>
               } 
             />
             <Route 
               path="/ai-insights" 
               element={
-                <AtomicProtectedRoute>
+                <UnifiedProtectedRoute>
                   <AIInsights />
-                </AtomicProtectedRoute>
+                </UnifiedProtectedRoute>
               } 
             />
             <Route 
               path="/customers" 
               element={
-                <AtomicProtectedRoute>
+                <UnifiedProtectedRoute>
                   <Customers />
-                </AtomicProtectedRoute>
+                </UnifiedProtectedRoute>
               } 
             />
             <Route 
               path="/products" 
               element={
-                <AtomicProtectedRoute>
+                <UnifiedProtectedRoute>
                   <Products />
-                </AtomicProtectedRoute>
+                </UnifiedProtectedRoute>
               } 
             />
             <Route 
               path="/performance" 
               element={
-                <AtomicProtectedRoute>
+                <UnifiedProtectedRoute>
                   <Performance />
-                </AtomicProtectedRoute>
+                </UnifiedProtectedRoute>
               } 
             />
             <Route 
               path="/billing" 
               element={
-                <AtomicProtectedRoute>
+                <UnifiedProtectedRoute>
                   <Billing />
-                </AtomicProtectedRoute>
+                </UnifiedProtectedRoute>
               } 
             />
             <Route 
               path="/settings" 
               element={
-                <AtomicProtectedRoute>
+                <UnifiedProtectedRoute>
                   <Settings />
-                </AtomicProtectedRoute>
+                </UnifiedProtectedRoute>
               } 
             />
             <Route 
