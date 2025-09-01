@@ -51,6 +51,8 @@
     }
   ],
   "env": {
-    "VITE_APP_URL": "https://ras-8.vercel.app"
+    "VITE_APP_URL": "https://ras8-q2zkjk9vq-info-quadquetechs-projects.vercel.app",
+    "NODE_ENV": "production",
+    "VITE_DEV_MODE": "false"
   }
 }

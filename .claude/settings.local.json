@@ -25,11 +25,21 @@
       "Bash(npx:*)",
       "Bash(git checkout:*)",
       "Bash(git reset:*)",
-      "Bash(git unstage:*)"
+      "Bash(git unstage:*)",
+      "mcp__vercel__list_teams",
+      "mcp__vercel__list_projects",
+      "mcp__vercel__get_project",
+      "mcp__vercel__list_deployments",
+      "Bash(npm run build:*)",
+      "mcp__vercel__deploy_to_vercel"
     ],
     "defaultMode": "acceptEdits",
     "additionalDirectories": [
       "I:\\I\\CYBERPUNK"
     ]
-  }
+  },
+  "enableAllProjectMcpServers": true,
+  "enabledMcpjsonServers": [
+    "shopify-dev-mcp"
+  ]
 }
