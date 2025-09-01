@@ -134,6 +134,41 @@ const Reconnect = () => {
       console.log('🔍 Checking merchant integration status...');
       
       if (user) {
+        // First try to refresh the token verification timestamp
+        try {
+          const response = await fetch('/api/auth/refresh-token', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ userId: user.id })
+          });
+
+          if (response.ok) {
+            const data = await response.json();
+            console.log('✅ Token verification refreshed:', data);
+            
+            // Check if the integration is now active
+            if (data.integrationStatus?.integration_status === 'integrated-active') {
+              toast({
+                title: "Connection restored!",
+                description: "Your store connection is now active. Redirecting to dashboard...",
+              });
+              
+              // Wait a moment then redirect
+              setTimeout(() => {
+                navigate('/dashboard');
+              }, 2000);
+              return;
+            }
+          } else {
+            console.log('⚠️ Token refresh failed, proceeding with status check');
+          }
+        } catch (refreshError) {
+          console.log('⚠️ Token refresh error, proceeding with status check:', refreshError);
+        }
+
+        // Fallback to regular status refresh
         await refreshMerchantIntegration(user.id);
         await refreshDecision();
         
