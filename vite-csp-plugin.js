@@ -14,6 +14,7 @@ export default function cspHeaderPlugin() {
           "font-src 'self' https://fonts.gstatic.com https://cdn.shopify.com",
           "img-src 'self' data: https: blob: https://cdn.shopify.com https://*.shopifycloud.com",
           "connect-src 'self' https: wss: ws: https://*.supabase.co wss://*.supabase.co https://*.shopify.com https://*.shopifycloud.com wss://*.shopifycloud.com https://ras-5.vercel.app ws://localhost:* wss://localhost:* https://partners.shopify.com",
+          "frame-src 'self' https://vercel.live https://*.shopify.com https://*.shopifycloud.com",
           "frame-ancestors 'self' https://*.shopify.com https://*.shopifycloud.com https://admin.shopify.com https://partners.shopify.com",
           "child-src 'self' https://*.shopify.com https://*.shopifycloud.com",
           "form-action 'self' https://*.shopify.com https://partners.shopify.com",
