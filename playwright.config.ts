@@ -65,7 +65,6 @@ export default defineConfig({
         contextOptions: {
           // Simulate iframe environment
           bypassCSP: false,
-          permissions: ['web-share'],
         }
       },
     }
