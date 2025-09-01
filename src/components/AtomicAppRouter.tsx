@@ -7,6 +7,7 @@ import { AtomicAuthProvider } from '@/contexts/AtomicAuthContext';
 import { Toaster } from "@/components/ui/toaster";
 import { ErrorBoundary } from 'react-error-boundary';
 import MerchantProtectedRoute from '@/components/MerchantProtectedRoute';
+import AtomicProtectedRoute from '@/components/AtomicProtectedRoute';
 import AtomicPublicRoute from '@/components/AtomicPublicRoute';
 import Index from '@/pages/Index';
 import Dashboard from '@/pages/Dashboard';
@@ -349,9 +350,9 @@ const AtomicAppRouter = () => {
             <Route 
               path="/dashboard" 
               element={
-                <MerchantProtectedRoute>
+                <AtomicProtectedRoute>
                   <Dashboard />
-                </MerchantProtectedRoute>
+                </AtomicProtectedRoute>
               } 
             />
             <Route 
