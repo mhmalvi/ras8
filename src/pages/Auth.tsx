@@ -33,7 +33,7 @@ const Auth = () => {
     lastName: ''
   });
 
-  const from = location.state?.from?.pathname || '/';
+  const from = location.state?.from?.pathname || '/dashboard';
 
   // Handle redirect when user is authenticated - simplified logic
   useEffect(() => {
