@@ -1,9 +1,9 @@
-
 import { ReactNode, useEffect, useState } from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
 import { useAtomicAuth } from '@/contexts/AtomicAuthContext';
 import { useMerchantProfile } from '@/hooks/useMerchantProfile';
 import { useAppBridge } from '@/components/AppBridgeProvider';
+import { validateMerchantSession, getRedirectTarget, MerchantLinkStatus } from '@/services/merchantLinkService';
 
 interface AtomicProtectedRouteProps {
   children: ReactNode;
@@ -13,53 +13,69 @@ const AtomicProtectedRoute = ({ children }: AtomicProtectedRouteProps) => {
   const { user, loading, initialized, error } = useAtomicAuth();
   const { isEmbedded } = useAppBridge();
   const location = useLocation();
-  const { profile } = useMerchantProfile(); // Move ALL hooks to the top
-  const [shopifySessionValid, setShopifySessionValid] = useState(false);
-  const [validatingShopifySession, setValidatingShopifySession] = useState(true);
+  const { profile } = useMerchantProfile();
+  const [merchantLinkStatus, setMerchantLinkStatus] = useState<MerchantLinkStatus | null>(null);
+  const [validatingMerchantLink, setValidatingMerchantLink] = useState(true);
   
   // For embedded apps, check if we have shop parameters
   const urlParams = new URLSearchParams(window.location.search);
   const shop = urlParams.get('shop');
   const host = urlParams.get('host');
 
-  // Validate Shopify session for embedded apps
+  // Unified merchant link validation
   useEffect(() => {
-    const validateShopifySession = async () => {
-      if (!isEmbedded || !shop) {
-        setValidatingShopifySession(false);
+    const validateMerchantLink = async () => {
+      // Skip validation if not authenticated or still loading
+      if (!initialized || loading || !user) {
+        setValidatingMerchantLink(false);
         return;
       }
-      
-      try {
-        // Use the backend API endpoint to check merchant authentication
-        // This uses service role key and bypasses RLS issues
-        const response = await fetch(`/api/session/me?shop=${encodeURIComponent(shop)}`, {
-          method: 'GET',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          credentials: 'include'
-        });
 
-        const data = await response.json();
+      try {
+        let status: MerchantLinkStatus;
         
-        if (response.ok && data.authenticated) {
-          console.log('✅ Valid Shopify session found for shop:', shop);
-          setShopifySessionValid(true);
+        // For embedded apps, validate session via API
+        if (isEmbedded && shop) {
+          const response = await fetch(`/api/session/me?shop=${encodeURIComponent(shop)}`, {
+            method: 'GET',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include'
+          });
+
+          if (response.ok) {
+            const sessionData = await response.json();
+            if (sessionData.authenticated && sessionData.session) {
+              status = await validateMerchantSession(sessionData.session, {
+                requireShopMatch: shop
+              });
+            } else {
+              status = { hasActiveMerchantLink: false, merchantStatus: 'none', reason: 'No session data' };
+            }
+          } else {
+            status = { hasActiveMerchantLink: false, merchantStatus: 'revoked', reason: 'Session API failed' };
+          }
         } else {
-          console.log('❌ No authenticated session:', data);
-          setShopifySessionValid(false);
+          // For standalone users, validate against user profile
+          // This will be enhanced when we implement the user-merchant link table
+          status = { hasActiveMerchantLink: false, merchantStatus: 'none', reason: 'Standalone user needs connection' };
         }
+
+        console.log('🔍 Merchant link validation result:', { status, isEmbedded, shop, user: !!user });
+        setMerchantLinkStatus(status);
       } catch (error) {
-        console.error('Error validating Shopify session:', error);
-        setShopifySessionValid(false);
+        console.error('Error validating merchant link:', error);
+        setMerchantLinkStatus({
+          hasActiveMerchantLink: false,
+          merchantStatus: 'none',
+          reason: error instanceof Error ? error.message : 'Unknown error'
+        });
       } finally {
-        setValidatingShopifySession(false);
+        setValidatingMerchantLink(false);
       }
     };
 
-    validateShopifySession();
-  }, [isEmbedded, shop]);
+    validateMerchantLink();
+  }, [initialized, loading, user, isEmbedded, shop]);
 
   // Show loading only while auth is initializing
   if (!initialized || loading) {
@@ -73,13 +89,13 @@ const AtomicProtectedRoute = ({ children }: AtomicProtectedRouteProps) => {
     );
   }
   
-  // Show loading while validating Shopify session for embedded apps
-  if (isEmbedded && validatingShopifySession) {
+  // Show loading while validating merchant link
+  if (validatingMerchantLink) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="flex flex-col items-center gap-4">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-          <span className="text-muted-foreground">Validating Shopify session...</span>
+          <span className="text-muted-foreground">Validating merchant connection...</span>
         </div>
       </div>
     );
@@ -91,22 +107,34 @@ const AtomicProtectedRoute = ({ children }: AtomicProtectedRouteProps) => {
     return <Navigate to="/auth" state={{ from: location, error }} replace />;
   }
 
-  // If not authenticated, handle differently for embedded vs standalone apps
+  // If not authenticated, redirect to auth
   if (!user) {
-    // For embedded apps with valid shop parameters AND valid Shopify session, allow access
-    if (isEmbedded && shop && shopifySessionValid) {
-      console.log('🏪 Embedded app with valid Shopify session, allowing access:', { shop, host });
-      return <>{children}</>;
-    }
-    
-    // For embedded apps without valid session, redirect to OAuth flow
-    if (isEmbedded && shop && !shopifySessionValid) {
-      const installUrl = `/shopify/install?shop=${encodeURIComponent(shop)}&host=${encodeURIComponent(host || '')}`;
-      return <Navigate to={installUrl} replace />;
-    }
-    
-    // For standalone apps or embedded apps without shop, require authentication
-    return <Navigate to="/auth" state={{ from: location }} replace />;
+    const next = `${location.pathname}${location.search}`;
+    const redirectTarget = getRedirectTarget(false, 
+      { hasActiveMerchantLink: false, merchantStatus: 'none' }, 
+      isEmbedded, shop, host, next
+    );
+    return <Navigate to={redirectTarget} replace />;
+  }
+  
+  // If authenticated but no merchant link validation yet, wait
+  if (!merchantLinkStatus) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="flex flex-col items-center gap-4">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+          <span className="text-muted-foreground">Validating access...</span>
+        </div>
+      </div>
+    );
+  }
+  
+  // If authenticated but no valid merchant link, redirect appropriately
+  if (!merchantLinkStatus.hasActiveMerchantLink) {
+    const next = `${location.pathname}${location.search}`;
+    const redirectTarget = getRedirectTarget(true, merchantLinkStatus, isEmbedded, shop, host, next);
+    console.log('🔄 Redirecting due to merchant link issue:', { merchantLinkStatus, redirectTarget });
+    return <Navigate to={redirectTarget} replace />;
   }
 
   // Special handling for master admin - ensure they go to master admin dashboard
@@ -121,8 +149,8 @@ const AtomicProtectedRoute = ({ children }: AtomicProtectedRouteProps) => {
     return <Navigate to="/master-admin" replace />;
   }
 
-  // User is authenticated, render the protected content
-  // User authenticated, render protected content
+  // User is authenticated and has valid merchant link, render the protected content
+  console.log('✅ Access granted:', { user: !!user, merchantLink: merchantLinkStatus.hasActiveMerchantLink, shop, currentPath });
   return <>{children}</>;
 };
 

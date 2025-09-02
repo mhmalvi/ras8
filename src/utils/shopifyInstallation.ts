@@ -168,23 +168,30 @@ export const generateState = (): string => {
 /**
  * Start OAuth flow with shop domain
  */
-export const startOAuthFlow = (shop: string): void => {
+export const startOAuthFlow = (shop: string, next?: string): void => {
   const shopInfo = {
     shop,
     domain: ensureShopifyDomain(shop),
     timestamp: new Date().toISOString(),
-    userAgent: navigator.userAgent
+    userAgent: navigator.userAgent,
+    next: next || ''
   };
 
   // Store shop info for callback
   localStorage.setItem('shopify_shop', shopInfo.domain);
   localStorage.setItem('shopify_install_info', JSON.stringify(shopInfo));
+  
+  // Store next parameter for OAuth callback
+  if (next) {
+    localStorage.setItem('oauth_next_url', next);
+  }
 
   // Generate OAuth URL and redirect
   const oauthUrl = generateOAuthUrl(shopInfo.domain);
   
   console.log('🚀 Starting OAuth flow:', {
     shop: shopInfo.domain,
+    next,
     oauthUrl: oauthUrl.substring(0, 100) + '...'
   });
 

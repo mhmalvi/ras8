@@ -15,6 +15,7 @@ const OAuthStart = () => {
         const urlParams = new URLSearchParams(window.location.search);
         const shop = urlParams.get('shop');
         const host = urlParams.get('host');
+        const next = urlParams.get('next');
 
         if (!shop) {
           throw new Error('Missing shop parameter');
@@ -52,6 +53,7 @@ const OAuthStart = () => {
         const state = btoa(JSON.stringify({
           shop,
           host: host || '',
+          next: next || '',
           timestamp: Date.now(),
           nonce: Math.random().toString(36).substring(7)
         })).replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
@@ -61,6 +63,9 @@ const OAuthStart = () => {
         sessionStorage.setItem('oauth_shop', shop);
         if (host) {
           sessionStorage.setItem('oauth_host', host);
+        }
+        if (next) {
+          sessionStorage.setItem('oauth_next', next);
         }
 
         const redirectUri = `${appUrl}/auth/callback`;

@@ -84,10 +84,11 @@ const ShopifyInstallEnhanced = () => {
   const handleInstallClick = async () => {
     const targetShop = shopInfo?.shop || manualShop;
     
-    // Get current URL parameters to preserve host
+    // Get current URL parameters to preserve host and next
     const urlParams = new URLSearchParams(window.location.search);
     const currentHost = urlParams.get('host');
     const currentShop = urlParams.get('shop') || targetShop;
+    const nextUrl = urlParams.get('next');
     
     if (!targetShop) {
       updateInstallationState({ 
@@ -127,6 +128,10 @@ const ShopifyInstallEnhanced = () => {
       
       if (currentHost) {
         backendOAuthUrl += `&host=${encodeURIComponent(currentHost)}`;
+      }
+      
+      if (nextUrl) {
+        backendOAuthUrl += `&next=${encodeURIComponent(nextUrl)}`;
       }
       
       console.log('🔄 Starting OAuth using React route endpoint:', backendOAuthUrl);

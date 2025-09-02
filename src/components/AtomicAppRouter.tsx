@@ -44,6 +44,8 @@ import ShopifyInstallEnhanced from '@/pages/ShopifyInstallEnhanced';
 import ShopifyTesting from '@/pages/ShopifyTesting';
 import ShopifyGDPRWebhooks from '@/pages/ShopifyGDPRWebhooks';
 import AuthInline from '@/pages/AuthInline';
+import ConnectShopify from '@/pages/ConnectShopify';
+import ReconnectShopify from '@/pages/ReconnectShopify';
 import DebugAuth from '@/pages/DebugAuth';
 import EmbedTest from '@/pages/EmbedTest';
 import ShopifyOAuthCallback from '@/pages/ShopifyOAuthCallback';
@@ -125,10 +127,11 @@ const ErrorFallback = ({ error, resetErrorBoundary }: { error: Error; resetError
   );
 };
 
-// Component that checks if we're in Shopify and redirects appropriately
+// Component that only handles App Bridge initialization - no routing logic
 const AppBridgeAwareRoute = ({ children }: { children: React.ReactNode }) => {
   const { isEmbedded, loading } = useAppBridge();
   
+  // Show loading only while App Bridge is initializing
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -140,62 +143,20 @@ const AppBridgeAwareRoute = ({ children }: { children: React.ReactNode }) => {
     );
   }
   
+  // Log App Bridge state for debugging but don't redirect
   const urlParams = new URLSearchParams(window.location.search);
   const shop = urlParams.get('shop');
   const host = urlParams.get('host');
   const currentPath = window.location.pathname;
   
-  // Enhanced logging for debugging
-  console.log('🔍 AppBridge Route Analysis:', {
+  console.log('🔍 AppBridge State:', {
     isEmbedded,
-    shop,
-    host: host ? 'present' : 'missing',
-    currentPath,
-    search: window.location.search
+    shop: !!shop,
+    host: !!host,
+    currentPath
   });
   
-  // If we're embedded in Shopify and have shop parameters, handle routing
-  if (isEmbedded && shop) {
-    // On root path with shop param, redirect to dashboard
-    if (currentPath === '/') {
-      console.log('🔄 Embedded app on root with shop param, redirecting to dashboard');
-      const redirectUrl = host 
-        ? `/dashboard?shop=${encodeURIComponent(shop)}&host=${encodeURIComponent(host)}`
-        : `/dashboard?shop=${encodeURIComponent(shop)}`;
-      return <Navigate to={redirectUrl} replace />;
-    }
-    
-    // For other paths, continue normally
-    return <>{children}</>;
-  }
-  
-  // If we're embedded but missing shop parameter, show helpful error
-  if (isEmbedded && currentPath === '/' && !shop) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
-        <div className="text-center max-w-md p-6">
-          <div className="text-4xl mb-4">🏪</div>
-          <h2 className="text-xl font-semibold text-red-600 mb-2">Installation Required</h2>
-          <p className="text-muted-foreground mb-4">
-            This app needs to be properly installed from your Shopify Admin panel.
-          </p>
-          <div className="bg-blue-50 border border-blue-200 rounded p-3 text-sm">
-            <p className="text-blue-800">
-              Please install this app through the Shopify App Store or Partner Dashboard.
-            </p>
-          </div>
-        </div>
-      </div>
-    );
-  }
-  
-  // For standalone access (not embedded), show normal content
-  if (!isEmbedded) {
-    console.log('📱 Standalone app access detected');
-    return <>{children}</>;
-  }
-  
-  // Default: render children
+  // Always render children - let AtomicProtectedRoute handle all routing logic
   return <>{children}</>;
 };
 
@@ -219,6 +180,10 @@ const AtomicAppRouter = () => {
             <Route path="/return-portal" element={<CustomerPortal />} />
             <Route path="/shopify/install" element={<ShopifyInstallEnhanced />} />
             <Route path="/install" element={<ShopifyInstallEnhanced />} />
+            
+            {/* Shopify Connection Routes */}
+            <Route path="/connect-shopify" element={<ConnectShopify />} />
+            <Route path="/reconnect" element={<ReconnectShopify />} />
             
             {/* Shopify Auth Inline - Top-level re-embed page */}
             <Route path="/auth/inline" element={<AuthInline />} />
@@ -336,13 +301,13 @@ const AtomicAppRouter = () => {
               } 
             />
             
-            {/* Shopify App Default Route - redirect to dashboard if embedded */}
+            {/* Shopify App Default Route - Protected routing handles both embedded and standalone */}
             <Route 
               path="/" 
               element={
-                <AppBridgeAwareRoute>
-                  <Index />
-                </AppBridgeAwareRoute>
+                <AtomicProtectedRoute>
+                  <Dashboard />
+                </AtomicProtectedRoute>
               }
             />
             

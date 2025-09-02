@@ -40,6 +40,19 @@ const ShopifyAuthCallback: React.FC = () => {
           throw new Error('Invalid state parameter - possible CSRF attack');
         }
 
+        // Extract next parameter from state or session storage
+        let nextUrl = sessionStorage.getItem('oauth_next') || '';
+        if (state) {
+          try {
+            const stateData = JSON.parse(atob(state.replace(/-/g, '+').replace(/_/g, '/')));
+            if (stateData.next) {
+              nextUrl = stateData.next;
+            }
+          } catch (e) {
+            console.warn('Failed to parse state parameter for next URL:', e);
+          }
+        }
+
         // Exchange code for access token by calling existing merchant creation process
         // Since we don't have a working OAuth callback API, we'll simulate successful completion
         console.log('✅ OAuth parameters validated, proceeding to setup merchant session');
@@ -51,8 +64,19 @@ const ShopifyAuthCallback: React.FC = () => {
         setStatus('success');
         setMessage('Authentication successful! Redirecting...');
 
-        // Redirect to dashboard with auth parameters
-        const redirectUrl = `/dashboard?shop=${encodeURIComponent(shop)}${host ? `&host=${encodeURIComponent(host)}` : ''}`;
+        // Redirect to next URL or dashboard with auth parameters
+        let redirectUrl = nextUrl || '/dashboard';
+        
+        // Ensure shop and host parameters are preserved for embedded apps
+        if (shop) {
+          const separator = redirectUrl.includes('?') ? '&' : '?';
+          redirectUrl += `${separator}shop=${encodeURIComponent(shop)}`;
+          if (host) {
+            redirectUrl += `&host=${encodeURIComponent(host)}`;
+          }
+        }
+        
+        console.log('🔄 Redirecting after OAuth success:', { nextUrl, redirectUrl });
         
         // Use setTimeout to show success message briefly
         setTimeout(() => {
