@@ -46,6 +46,7 @@ import ShopifyGDPRWebhooks from '@/pages/ShopifyGDPRWebhooks';
 import AuthInline from '@/pages/AuthInline';
 import ConnectShopify from '@/pages/ConnectShopify';
 import ReconnectShopify from '@/pages/ReconnectShopify';
+import ShopifyAccountCallback from '@/pages/ShopifyAccountCallback';
 import DebugAuth from '@/pages/DebugAuth';
 import EmbedTest from '@/pages/EmbedTest';
 import ShopifyOAuthCallback from '@/pages/ShopifyOAuthCallback';
@@ -201,6 +202,7 @@ const AtomicAppRouter = () => {
             {/* OAuth callbacks - Partner Platform URLs */}
             <Route path="/auth/callback" element={<ShopifyAuthCallback />} />
             <Route path="/auth/shopify/callback" element={<ShopifyAuthCallback />} />
+            <Route path="/auth/shopify-account/callback" element={<ShopifyAccountCallback />} />
             
             {/* OAuth initiation endpoints */}
             <Route path="/functions/v1/shopify-oauth-start" element={<OAuthStart />} />
