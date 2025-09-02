@@ -25,7 +25,8 @@
       "Bash(npx:*)",
       "Bash(git checkout:*)",
       "Bash(git reset:*)",
-      "Bash(git unstage:*)"
+      "Bash(git unstage:*)",
+      "mcp__vercel__deploy_to_vercel"
     ],
     "defaultMode": "acceptEdits",
     "additionalDirectories": [
