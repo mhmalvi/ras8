@@ -48,7 +48,13 @@
       "mcp__github__list_pull_requests",
       "mcp__github__search_repositories",
       "mcp__github__get_file_contents",
-      "mcp__vercel__get_deployment_build_logs"
+      "mcp__vercel__get_deployment_build_logs",
+      "mcp__shopify-dev-mcp__learn_shopify_api",
+      "mcp__shopify-dev-mcp__search_docs_chunks",
+      "mcp__shopify-dev-mcp__introspect_graphql_schema",
+      "mcp__shopify-dev-mcp__validate_graphql_codeblocks",
+      "mcp__vercel__get_access_to_vercel_url",
+      "mcp__vercel__web_fetch_vercel_url"
     ],
     "defaultMode": "acceptEdits",
     "additionalDirectories": [

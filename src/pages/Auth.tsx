@@ -1,5 +1,5 @@
 
-// Force cache invalidation - v1.0.1
+// Cache invalidation v2.0.0 - isInFrame scope fix
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAtomicAuth } from '@/contexts/AtomicAuthContext';
