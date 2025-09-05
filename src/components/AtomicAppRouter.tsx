@@ -172,8 +172,22 @@ const AppBridgeAwareRoute = ({ children }: { children: React.ReactNode }) => {
     return <>{children}</>;
   }
   
-  // If we're embedded but missing shop parameter, show helpful error
+  // IMPORTANT: Only show "Installation Required" for truly fresh installations
+  // Don't interfere with existing apps where users have signed out
   if (isEmbedded && currentPath === '/' && !shop) {
+    // Check if this might be a signed-out user vs a fresh install
+    // If we have any indication this is an existing app (stored data, etc.), 
+    // let the authentication system handle it instead of showing install screen
+    const hasSessionHistory = localStorage.getItem('last_landing_decision') || 
+                             sessionStorage.getItem('supabase.auth.token') ||
+                             document.cookie.includes('sb-');
+    
+    if (hasSessionHistory) {
+      console.log('🔄 Detected existing app session history, allowing auth flow instead of install screen');
+      return <>{children}</>;
+    }
+    
+    // Only show install screen for truly fresh installations
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="text-center max-w-md p-6">

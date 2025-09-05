@@ -252,20 +252,20 @@ AS $$
     WHERE p.id = p_user_id
   )
   SELECT 
-    has_merchant_link,
-    merchant_status,
-    token_valid,
-    token_fresh,
+    md.has_merchant_link,
+    md.merchant_status,
+    md.token_valid,
+    md.token_fresh,
     CASE 
-      WHEN NOT has_merchant_link THEN 'no-merchant-link'
-      WHEN merchant_status = 'uninstalled' THEN 'uninstalled'
-      WHEN merchant_status != 'active' THEN 'inactive'
-      WHEN NOT COALESCE(token_valid, false) THEN 'invalid-token'
-      WHEN NOT COALESCE(token_fresh, false) THEN 'stale-token'
-      WHEN merchant_status = 'active' AND COALESCE(token_valid, false) AND COALESCE(token_fresh, false) THEN 'integrated-active'
+      WHEN NOT md.has_merchant_link THEN 'no-merchant-link'
+      WHEN md.merchant_status = 'uninstalled' THEN 'uninstalled'
+      WHEN md.merchant_status != 'active' THEN 'inactive'
+      WHEN NOT COALESCE(md.token_valid, false) THEN 'invalid-token'
+      WHEN NOT COALESCE(md.token_fresh, false) THEN 'stale-token'
+      WHEN md.merchant_status = 'active' AND COALESCE(md.token_valid, false) AND COALESCE(md.token_fresh, false) THEN 'integrated-active'
       ELSE 'unknown'
     END as integration_status
-  FROM merchant_data;
+  FROM merchant_data md;
 $$;
 
 -- 13. Create webhook activity tracking (for observability)
