@@ -42,6 +42,7 @@
   },
   "enableAllProjectMcpServers": true,
   "enabledMcpjsonServers": [
-    "shopify-dev-mcp"
+    "shopify-dev-mcp",
+    "github"
   ]
 }
