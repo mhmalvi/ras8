@@ -38,87 +38,88 @@ const Auth = () => {
 
   // Handle redirect when user is authenticated with Shopify context preservation
   useEffect(() => {
-    if (user && !authLoading) {
-      // Save any pending embedded context to database
-      const pendingContext = localStorage.getItem('pending_embedded_context');
-      if (pendingContext) {
-        try {
-          const context = JSON.parse(pendingContext);
-          // Only process if timestamp is recent (within 5 minutes)
-          if (Date.now() - context.timestamp < 5 * 60 * 1000) {
-            supabase.rpc('update_embedded_context_from_auth', {
-              p_user_id: user.id,
-              p_shop_domain: context.shopDomain,
-              p_host_param: context.hostParam,
-              p_is_embedded: context.isEmbedded
-            }).then(({ error: contextError }) => {
-              if (contextError) {
-                console.warn('⚠️ Could not save embedded context:', contextError.message);
-              } else {
-                console.log('💾 Embedded context saved to database for user:', user.id);
-              }
-            });
-          }
-          // Clear the pending context
-          localStorage.removeItem('pending_embedded_context');
-        } catch (e) {
-          console.warn('Could not parse pending embedded context');
-          localStorage.removeItem('pending_embedded_context');
-        }
-      }
-
-      // Check if we need to preserve Shopify context from the original URL
-      const searchParams = new URLSearchParams(window.location.search);
-      const shopifyParams = new URLSearchParams();
-      
-      // Preserve shop and host parameters if they exist
-      if (searchParams.get('shop')) {
-        shopifyParams.set('shop', searchParams.get('shop')!);
-      }
-      if (searchParams.get('host')) {
-        shopifyParams.set('host', searchParams.get('host')!);
-      }
-      if (searchParams.get('embedded')) {
-        shopifyParams.set('embedded', searchParams.get('embedded')!);
-      }
-      
-      // Try to get shop from database or localStorage if not in URL (for embedded apps)
-      if (!searchParams.get('shop')) {
-        // First try database for this user
-        let shopFromStorage = null;
-        try {
-          const { data, error } = await supabase
-            .rpc('get_embedded_context', { p_user_id: user.id })
-            .single();
-          
-          if (!error && data?.shop_domain) {
-            shopFromStorage = data.shop_domain;
-            console.log('🗄️ Retrieved shop from database:', shopFromStorage);
-            
-            // Also get host param if available
-            if (data.host_param) {
-              searchParams.set('host', data.host_param);
-              console.log('🗄️ Retrieved host param from database:', data.host_param);
+    const handleRedirect = async () => {
+      if (user && !authLoading) {
+        // Save any pending embedded context to database
+        const pendingContext = localStorage.getItem('pending_embedded_context');
+        if (pendingContext) {
+          try {
+            const context = JSON.parse(pendingContext);
+            // Only process if timestamp is recent (within 5 minutes)
+            if (Date.now() - context.timestamp < 5 * 60 * 1000) {
+              supabase.rpc('update_embedded_context_from_auth', {
+                p_user_id: user.id,
+                p_shop_domain: context.shopDomain,
+                p_host_param: context.hostParam,
+                p_is_embedded: context.isEmbedded
+              }).then(({ error: contextError }) => {
+                if (contextError) {
+                  console.warn('⚠️ Could not save embedded context:', contextError.message);
+                } else {
+                  console.log('💾 Embedded context saved to database for user:', user.id);
+                }
+              });
             }
+            // Clear the pending context
+            localStorage.removeItem('pending_embedded_context');
+          } catch (e) {
+            console.warn('Could not parse pending embedded context');
+            localStorage.removeItem('pending_embedded_context');
           }
-        } catch (e) {
-          console.warn('Could not retrieve shop from database:', e);
+        }
+
+        // Check if we need to preserve Shopify context from the original URL
+        const searchParams = new URLSearchParams(window.location.search);
+        const shopifyParams = new URLSearchParams();
+        
+        // Preserve shop and host parameters if they exist
+        if (searchParams.get('shop')) {
+          shopifyParams.set('shop', searchParams.get('shop')!);
+        }
+        if (searchParams.get('host')) {
+          shopifyParams.set('host', searchParams.get('host')!);
+        }
+        if (searchParams.get('embedded')) {
+          shopifyParams.set('embedded', searchParams.get('embedded')!);
         }
         
-        // Fallback to localStorage
-        if (!shopFromStorage) {
-          const lastDecision = localStorage.getItem('last_landing_decision');
-          if (lastDecision) {
-            try {
-              const decision = JSON.parse(lastDecision);
-              if (decision.context?.shopDomain) {
-                shopFromStorage = decision.context.shopDomain;
+        // Try to get shop from database or localStorage if not in URL (for embedded apps)
+        if (!searchParams.get('shop')) {
+          // First try database for this user
+          let shopFromStorage = null;
+          try {
+            const { data, error } = await supabase
+              .rpc('get_embedded_context', { p_user_id: user.id })
+              .single();
+            
+            if (!error && data?.shop_domain) {
+              shopFromStorage = data.shop_domain;
+              console.log('🗄️ Retrieved shop from database:', shopFromStorage);
+              
+              // Also get host param if available
+              if (data.host_param) {
+                shopifyParams.set('host', data.host_param);
+                console.log('🗄️ Retrieved host param from database:', data.host_param);
               }
-            } catch (e) {
-              console.log('Could not parse last landing decision');
+            }
+          } catch (e) {
+            console.warn('Could not retrieve shop from database:', e);
+          }
+          
+          // Fallback to localStorage
+          if (!shopFromStorage) {
+            const lastDecision = localStorage.getItem('last_landing_decision');
+            if (lastDecision) {
+              try {
+                const decision = JSON.parse(lastDecision);
+                if (decision.context?.shopDomain) {
+                  shopFromStorage = decision.context.shopDomain;
+                }
+              } catch (e) {
+                console.log('Could not parse last landing decision');
+              }
             }
           }
-        }
         
         // Also check if we're in a frame (embedded context)
         const isInFrame = window.self !== window.top;
@@ -181,7 +182,9 @@ const Auth = () => {
           navigate(redirectUrl, { replace: true });
         }, 100);
       }
-    }
+    };
+
+    handleRedirect();
   }, [user, authLoading, navigate, from]);
 
   const handleSignIn = async (e: React.FormEvent) => {
