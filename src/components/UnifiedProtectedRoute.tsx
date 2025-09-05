@@ -112,10 +112,11 @@ const UnifiedProtectedRoute = ({
         setState(prev => ({ ...prev, loading: true, error: null }));
 
         // Build context for landing resolver
+        const shopDomain = await extractShopDomain(user.id);
         const context: LandingContext = {
           userId: user.id,
           isEmbedded: isEmbedded || detectEmbeddedContext(),
-          shopDomain: extractShopDomain(),
+          shopDomain,
           userAgent: typeof navigator !== 'undefined' ? navigator.userAgent : undefined
         };
 
@@ -286,10 +287,11 @@ export function useLandingDecision() {
     
     setLoading(true);
     try {
+      const shopDomain = await extractShopDomain(user.id);
       const context: LandingContext = {
         userId: user.id,
         isEmbedded: detectEmbeddedContext(),
-        shopDomain: extractShopDomain(),
+        shopDomain,
         userAgent: typeof navigator !== 'undefined' ? navigator.userAgent : undefined
       };
       
