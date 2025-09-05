@@ -35,13 +35,55 @@ const Auth = () => {
 
   const from = location.state?.from?.pathname || '/dashboard';
 
-  // Handle redirect when user is authenticated - simplified logic
+  // Handle redirect when user is authenticated with Shopify context preservation
   useEffect(() => {
     if (user && !authLoading) {
-      console.log('🔄 User authenticated, redirecting to:', from);
+      // Check if we need to preserve Shopify context from the original URL
+      const searchParams = new URLSearchParams(window.location.search);
+      const shopifyParams = new URLSearchParams();
+      
+      // Preserve shop and host parameters if they exist
+      if (searchParams.get('shop')) {
+        shopifyParams.set('shop', searchParams.get('shop')!);
+      }
+      if (searchParams.get('host')) {
+        shopifyParams.set('host', searchParams.get('host')!);
+      }
+      if (searchParams.get('embedded')) {
+        shopifyParams.set('embedded', searchParams.get('embedded')!);
+      }
+      
+      // Try to get shop from localStorage if not in URL (for embedded apps)
+      if (!searchParams.get('shop')) {
+        const lastDecision = localStorage.getItem('last_landing_decision');
+        if (lastDecision) {
+          try {
+            const decision = JSON.parse(lastDecision);
+            if (decision.context?.shopDomain) {
+              shopifyParams.set('shop', decision.context.shopDomain);
+              shopifyParams.set('embedded', '1');
+            }
+          } catch (e) {
+            console.log('Could not parse last landing decision');
+          }
+        }
+      }
+      
+      // Build redirect URL with preserved context
+      const redirectUrl = shopifyParams.toString() 
+        ? `${from}?${shopifyParams.toString()}`
+        : from;
+      
+      console.log('🔄 User authenticated, redirecting with Shopify context:', {
+        from,
+        redirectUrl,
+        hasShop: shopifyParams.has('shop'),
+        shopDomain: shopifyParams.get('shop')
+      });
+      
       // Small delay to ensure all auth processes complete
       setTimeout(() => {
-        navigate(from, { replace: true });
+        navigate(redirectUrl, { replace: true });
       }, 100);
     }
   }, [user, authLoading, navigate, from]);

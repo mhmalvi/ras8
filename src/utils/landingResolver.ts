@@ -334,18 +334,64 @@ export function detectEmbeddedContext(): boolean {
   const hasShopParam = urlParams.has('shop');
   const hasHostParam = urlParams.has('host');
   const isInFrame = window.self !== window.top;
+  const hasEmbeddedParam = urlParams.has('embedded');
   
-  return hasShopParam && (hasHostParam || isInFrame);
+  // Primary check: URL parameters
+  if (hasShopParam && (hasHostParam || isInFrame)) {
+    return true;
+  }
+  
+  // Secondary check: embedded parameter
+  if (hasEmbeddedParam) {
+    return true;
+  }
+  
+  // Tertiary check: localStorage indicates this was an embedded app
+  try {
+    const lastDecision = localStorage.getItem('last_landing_decision');
+    if (lastDecision) {
+      const decision = JSON.parse(lastDecision);
+      if (decision.context?.isEmbedded && decision.context?.shopDomain) {
+        console.log('📦 Detected embedded context from localStorage');
+        return true;
+      }
+    }
+  } catch (e) {
+    // Ignore localStorage errors
+  }
+  
+  return false;
 }
 
 /**
- * Extract shop domain from URL parameters
+ * Extract shop domain from URL parameters or localStorage
  */
 export function extractShopDomain(): string | undefined {
   if (typeof window === 'undefined') return undefined;
   
   const urlParams = new URLSearchParams(window.location.search);
-  return urlParams.get('shop') || undefined;
+  const shopFromUrl = urlParams.get('shop');
+  
+  // If we have shop from URL, use that
+  if (shopFromUrl) {
+    return shopFromUrl;
+  }
+  
+  // Otherwise, try to get it from localStorage for embedded apps
+  try {
+    const lastDecision = localStorage.getItem('last_landing_decision');
+    if (lastDecision) {
+      const decision = JSON.parse(lastDecision);
+      if (decision.context?.shopDomain) {
+        console.log('📦 Retrieved shop domain from localStorage:', decision.context.shopDomain);
+        return decision.context.shopDomain;
+      }
+    }
+  } catch (e) {
+    // Ignore localStorage errors
+  }
+  
+  return undefined;
 }
 
 /**
