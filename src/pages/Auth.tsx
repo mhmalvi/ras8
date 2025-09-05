@@ -93,27 +93,50 @@ const Auth = () => {
         // Try to get shop from database or localStorage if not in URL (for embedded apps)
         let shopFromStorage = null;
         if (!searchParams.get('shop')) {
-          // First try database for this user
+          // First try to get merchant data directly (fallback approach)
           try {
-            const { data, error } = await supabase
-              .rpc('get_embedded_context', { p_user_id: user.id })
+            const { data: profile, error: profileError } = await supabase
+              .from('profiles')
+              .select(`
+                merchant_id,
+                merchants!inner(
+                  shop_domain
+                )
+              `)
+              .eq('id', user.id)
               .single();
-            
-            if (!error && data?.shop_domain) {
-              shopFromStorage = data.shop_domain;
-              console.log('🗄️ Retrieved shop from database:', shopFromStorage);
               
-              // Also get host param if available
-              if (data.host_param) {
-                shopifyParams.set('host', data.host_param);
-                console.log('🗄️ Retrieved host param from database:', data.host_param);
-              }
+            if (!profileError && profile?.merchants?.shop_domain) {
+              shopFromStorage = profile.merchants.shop_domain;
+              console.log('🗄️ Retrieved shop from merchant data:', shopFromStorage);
             }
           } catch (e) {
-            console.warn('Could not retrieve shop from database:', e);
+            console.warn('Could not retrieve shop from merchant data:', e);
           }
           
-          // Fallback to localStorage
+          // Try new embedded context function if available
+          if (!shopFromStorage) {
+            try {
+              const { data, error } = await supabase
+                .rpc('get_embedded_context', { p_user_id: user.id })
+                .single();
+              
+              if (!error && data?.shop_domain) {
+                shopFromStorage = data.shop_domain;
+                console.log('🗄️ Retrieved shop from embedded context:', shopFromStorage);
+                
+                // Also get host param if available
+                if (data.host_param) {
+                  shopifyParams.set('host', data.host_param);
+                  console.log('🗄️ Retrieved host param from database:', data.host_param);
+                }
+              }
+            } catch (e) {
+              console.warn('Could not retrieve shop from embedded context function:', e);
+            }
+          }
+          
+          // Final fallback to localStorage
           if (!shopFromStorage) {
             const lastDecision = localStorage.getItem('last_landing_decision');
             if (lastDecision) {

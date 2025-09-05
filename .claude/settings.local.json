@@ -47,7 +47,8 @@
       "mcp__github__list_issues",
       "mcp__github__list_pull_requests",
       "mcp__github__search_repositories",
-      "mcp__github__get_file_contents"
+      "mcp__github__get_file_contents",
+      "mcp__vercel__get_deployment_build_logs"
     ],
     "defaultMode": "acceptEdits",
     "additionalDirectories": [
