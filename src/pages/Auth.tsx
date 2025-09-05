@@ -39,6 +39,13 @@ const Auth = () => {
   // Handle redirect when user is authenticated with Shopify context preservation
   useEffect(() => {
     const handleRedirect = async () => {
+      // Check if we're in a frame (embedded context) - move to top level
+      const isInFrame = window.self !== window.top;
+      const hasShopifyReferrer = document.referrer && (
+        document.referrer.includes('shopify.com') || 
+        document.referrer.includes('shopifycloud.com')
+      );
+
       if (user && !authLoading) {
         // Save any pending embedded context to database
         const pendingContext = localStorage.getItem('pending_embedded_context');
@@ -82,13 +89,6 @@ const Auth = () => {
         if (searchParams.get('embedded')) {
           shopifyParams.set('embedded', searchParams.get('embedded')!);
         }
-        
-        // Also check if we're in a frame (embedded context)
-        const isInFrame = window.self !== window.top;
-        const hasShopifyReferrer = document.referrer && (
-          document.referrer.includes('shopify.com') || 
-          document.referrer.includes('shopifycloud.com')
-        );
         
         // Try to get shop from database or localStorage if not in URL (for embedded apps)
         let shopFromStorage = null;
