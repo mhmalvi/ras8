@@ -83,10 +83,17 @@ const Auth = () => {
           shopifyParams.set('embedded', searchParams.get('embedded')!);
         }
         
+        // Also check if we're in a frame (embedded context)
+        const isInFrame = window.self !== window.top;
+        const hasShopifyReferrer = document.referrer && (
+          document.referrer.includes('shopify.com') || 
+          document.referrer.includes('shopifycloud.com')
+        );
+        
         // Try to get shop from database or localStorage if not in URL (for embedded apps)
+        let shopFromStorage = null;
         if (!searchParams.get('shop')) {
           // First try database for this user
-          let shopFromStorage = null;
           try {
             const { data, error } = await supabase
               .rpc('get_embedded_context', { p_user_id: user.id })
@@ -120,13 +127,7 @@ const Auth = () => {
               }
             }
           }
-        
-        // Also check if we're in a frame (embedded context)
-        const isInFrame = window.self !== window.top;
-        const hasShopifyReferrer = document.referrer && (
-          document.referrer.includes('shopify.com') || 
-          document.referrer.includes('shopifycloud.com')
-        );
+        }
         
         // If we detect embedded context, use stored shop or try to determine from referrer
         if (isInFrame || hasShopifyReferrer || shopFromStorage) {
