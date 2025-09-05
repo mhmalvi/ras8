@@ -47,10 +47,10 @@ export default defineConfig(({ mode }) => ({
           'react-vendor': ['react', 'react-dom'],
           'supabase-vendor': ['@supabase/supabase-js'],
         },
-        // Force unique build with timestamp - FINAL-v2
-        chunkFileNames: 'assets/js/[name]-[hash]-v2-fixed.js',
-        entryFileNames: 'assets/js/[name]-[hash]-v2-fixed.js',
-        assetFileNames: 'assets/[ext]/[name]-[hash]-v2-fixed.[ext]'
+        // Force unique build with timestamp - CACHE-BUST
+        chunkFileNames: `assets/js/[name]-[hash]-${Date.now()}.js`,
+        entryFileNames: `assets/js/[name]-[hash]-${Date.now()}.js`,
+        assetFileNames: `assets/[ext]/[name]-[hash]-${Date.now()}.[ext]`
       }
     },
     // Optimize bundle size

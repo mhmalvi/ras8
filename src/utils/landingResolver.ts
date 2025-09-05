@@ -58,13 +58,25 @@ export async function resolveLandingRoute(context: LandingContext): Promise<Land
       userAgent: context.userAgent?.substring(0, 50) + '...'
     });
 
-    // Quick check: If embedded and has previous session, go to dashboard
+    // CRITICAL FIX: Enhanced embedded context detection for Shopify apps
     if (context.isEmbedded && typeof window !== 'undefined') {
+      const urlParams = new URLSearchParams(window.location.search);
+      const shopFromUrl = urlParams.get('shop');
+      
+      // If we have shop in URL and we're embedded, treat as integrated for existing merchants
+      if (shopFromUrl && context.shopDomain) {
+        console.log('🚀 Embedded with shop context, fast-tracking to dashboard:', {
+          shopFromUrl,
+          contextShop: context.shopDomain
+        });
+        return { route: "/dashboard", reason: "integrated-active" };
+      }
+      
       const lastDecision = localStorage.getItem('last_landing_decision');
       if (lastDecision) {
         try {
           const decision = JSON.parse(lastDecision);
-          if (decision.decision === 'integrated-active') {
+          if (decision.decision === 'integrated-active' && decision.context?.shopDomain) {
             console.log('🚀 Fast-track: Using cached integrated-active decision for embedded app');
             return { route: "/dashboard", reason: "integrated-active" };
           }

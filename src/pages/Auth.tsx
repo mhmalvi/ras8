@@ -1,6 +1,6 @@
 
 // Cache invalidation v2.0.0 - isInFrame scope fix
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAtomicAuth } from '@/contexts/AtomicAuthContext';
 import { Button } from '@/components/ui/button';
@@ -22,6 +22,33 @@ const Auth = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   
+  // Fix scoping issue: Move isInFrame to component scope
+  const isInFrame = useMemo(() => 
+    typeof window !== 'undefined' && window.self !== window.top, 
+    []
+  );
+
+  // Fix scoping issue: Move shopifyParams to component scope
+  const shopifyParams = useMemo(() => {
+    if (typeof window === 'undefined') return new URLSearchParams();
+    
+    const searchParams = new URLSearchParams(window.location.search);
+    const params = new URLSearchParams();
+    
+    // Preserve shop and host parameters if they exist
+    if (searchParams.get('shop')) {
+      params.set('shop', searchParams.get('shop')!);
+    }
+    if (searchParams.get('host')) {
+      params.set('host', searchParams.get('host')!);
+    }
+    if (searchParams.get('embedded')) {
+      params.set('embedded', searchParams.get('embedded')!);
+    }
+    
+    return params;
+  }, []);
+  
   const [signInForm, setSignInForm] = useState({
     email: '',
     password: ''
@@ -37,17 +64,37 @@ const Auth = () => {
 
   const from = location.state?.from?.pathname || '/dashboard';
 
+  // Redirect loop prevention
+  const [redirectCount, setRedirectCount] = useState(0);
+  const MAX_REDIRECTS = 3;
+
   // Handle redirect when user is authenticated with Shopify context preservation
   useEffect(() => {
     const handleRedirect = async () => {
-      // Check if we're in a frame (embedded context) - move to top level
-      const isInFrame = window.self !== window.top;
+      // Circuit breaker: prevent infinite redirects
+      if (redirectCount >= MAX_REDIRECTS) {
+        console.warn('🛑 Redirect loop detected, staying on auth page');
+        return;
+      }
+      // Check if we're in a frame (embedded context) - now using component scope
       const hasShopifyReferrer = document.referrer && (
         document.referrer.includes('shopify.com') || 
         document.referrer.includes('shopifycloud.com')
       );
 
       if (user && !authLoading) {
+        // CRITICAL FIX: Check if user actually needs to connect Shopify first
+        // Don't auto-redirect if they need to go through merchant connection
+        const searchParams = new URLSearchParams(window.location.search);
+        const isFromConnectShopify = location.state?.from?.pathname === '/connect-shopify';
+        const needsMerchantConnection = location.state?.reason === 'no-merchant-link';
+        
+        if (needsMerchantConnection && !isFromConnectShopify) {
+          console.log('🔄 User needs merchant connection, redirecting to /connect-shopify');
+          setRedirectCount(prev => prev + 1);
+          navigate('/connect-shopify', { replace: true });
+          return;
+        }
         // Save any pending embedded context to database
         const pendingContext = localStorage.getItem('pending_embedded_context');
         if (pendingContext) {
@@ -76,20 +123,8 @@ const Auth = () => {
           }
         }
 
-        // Check if we need to preserve Shopify context from the original URL
+        // Check if we need to preserve Shopify context - now using component scope
         const searchParams = new URLSearchParams(window.location.search);
-        const shopifyParams = new URLSearchParams();
-        
-        // Preserve shop and host parameters if they exist
-        if (searchParams.get('shop')) {
-          shopifyParams.set('shop', searchParams.get('shop')!);
-        }
-        if (searchParams.get('host')) {
-          shopifyParams.set('host', searchParams.get('host')!);
-        }
-        if (searchParams.get('embedded')) {
-          shopifyParams.set('embedded', searchParams.get('embedded')!);
-        }
         
         // Try to get shop from database or localStorage if not in URL (for embedded apps)
         let shopFromStorage = null;
@@ -198,6 +233,9 @@ const Auth = () => {
         forceDashboard: isEmbeddedApp
       });
       
+      // Increment redirect counter before redirecting
+      setRedirectCount(prev => prev + 1);
+      
       // For embedded apps, use immediate redirect
       if (isEmbeddedApp) {
         navigate(redirectUrl, { replace: true });
@@ -210,7 +248,7 @@ const Auth = () => {
     };
 
     handleRedirect();
-  }, [user, authLoading, navigate, from]);
+  }, [user, authLoading, navigate, from, location.state, redirectCount]);
 
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();

@@ -40,7 +40,12 @@ interface ProtectionState {
   loading: boolean;
   error: string | null;
   initialized: boolean;
+  redirectCount: number;
 }
+
+// Circuit breaker to prevent infinite redirects
+const MAX_REDIRECTS = 3;
+const REDIRECT_HISTORY_KEY = 'redirect_history';
 
 const UnifiedProtectedRoute = ({ 
   children, 
@@ -56,7 +61,8 @@ const UnifiedProtectedRoute = ({
     decision: null,
     loading: true,
     error: null,
-    initialized: false
+    initialized: false,
+    redirectCount: 0
   });
 
   // Resolve landing decision when user authentication is ready
@@ -215,14 +221,52 @@ const UnifiedProtectedRoute = ({
     );
   }
 
+  // Circuit breaker: check redirect history to prevent loops
+  const checkRedirectHistory = () => {
+    const history = JSON.parse(localStorage.getItem(REDIRECT_HISTORY_KEY) || '[]');
+    const now = Date.now();
+    const recentRedirects = history.filter((entry: any) => now - entry.timestamp < 30000); // 30 seconds
+    
+    // Clean old entries
+    localStorage.setItem(REDIRECT_HISTORY_KEY, JSON.stringify(recentRedirects));
+    
+    return recentRedirects.length >= MAX_REDIRECTS;
+  };
+  
+  const addRedirectToHistory = (from: string, to: string, reason: string) => {
+    const history = JSON.parse(localStorage.getItem(REDIRECT_HISTORY_KEY) || '[]');
+    history.push({ from, to, reason, timestamp: Date.now() });
+    localStorage.setItem(REDIRECT_HISTORY_KEY, JSON.stringify(history));
+  };
+
   // Check if we need to redirect based on landing decision
   const { decision } = state;
   if (decision && shouldRedirect(decision, location.pathname)) {
+    // Circuit breaker: prevent redirect loops
+    if (checkRedirectHistory()) {
+      console.warn('🛑 Redirect loop detected, breaking circuit:', {
+        from: location.pathname,
+        to: decision.route,
+        reason: decision.reason
+      });
+      
+      // Stay on current page or go to safe fallback
+      const fallbackRoute = user ? '/dashboard' : '/auth';
+      if (location.pathname !== fallbackRoute) {
+        return <Navigate to={fallbackRoute} replace />;
+      }
+      // If already on fallback, render current page
+      return <>{children}</>;
+    }
+    
     console.log('🚀 Redirecting based on landing decision:', {
       from: location.pathname,
       to: decision.route,
       reason: decision.reason
     });
+    
+    // Record redirect in history
+    addRedirectToHistory(location.pathname, decision.route, decision.reason);
 
     // Special handling for auth redirect with state
     if (decision.route === '/auth') {
