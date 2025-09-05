@@ -54,7 +54,8 @@ export async function resolveLandingRoute(context: LandingContext): Promise<Land
     console.log('🧭 Resolving landing route:', {
       userId: context.userId,
       isEmbedded: context.isEmbedded,
-      shopDomain: context.shopDomain
+      shopDomain: context.shopDomain,
+      userAgent: context.userAgent?.substring(0, 50) + '...'
     });
 
     // Quick check: If embedded and has previous session, go to dashboard
@@ -140,6 +141,8 @@ async function getUserProfile(userId: string): Promise<UserProfile | null> {
  */
 async function validateMerchantIntegration(userId: string): Promise<MerchantIntegrationStatus> {
   try {
+    console.log('🔍 Validating merchant integration for userId:', userId);
+    
     // First try the database function
     const { data, error } = await supabase
       .rpc('validate_merchant_integration', { p_user_id: userId })
@@ -174,12 +177,16 @@ async function validateMerchantIntegration(userId: string): Promise<MerchantInte
  */
 async function validateMerchantIntegrationFallback(userId: string): Promise<MerchantIntegrationStatus> {
   try {
+    console.log('🔄 Using fallback validation for userId:', userId);
+    
     // Get user profile and merchant info directly
     const { data: profile, error: profileError } = await supabase
       .from('profiles')
       .select('merchant_id')
       .eq('id', userId)
       .single();
+      
+    console.log('👤 Profile query result:', { profile, profileError });
 
     if (profileError || !profile?.merchant_id) {
       return {

@@ -113,9 +113,10 @@ const UnifiedProtectedRoute = ({
 
         // Build context for landing resolver
         const shopDomain = await extractShopDomain(user.id);
+        const isEmbeddedContext = detectEmbeddedContext();
         const context: LandingContext = {
           userId: user.id,
-          isEmbedded: isEmbedded || detectEmbeddedContext(),
+          isEmbedded: isEmbeddedContext,
           shopDomain,
           userAgent: typeof navigator !== 'undefined' ? navigator.userAgent : undefined
         };
@@ -158,7 +159,7 @@ const UnifiedProtectedRoute = ({
     return () => {
       isMounted = false;
     };
-  }, [user, authLoading, authInitialized, authError, location.pathname, isEmbedded, bypassProtection]);
+  }, [user, authLoading, authInitialized, authError, location.pathname, bypassProtection]);
 
   // Show loading state
   if (!state.initialized || state.loading || authLoading || !authInitialized) {
