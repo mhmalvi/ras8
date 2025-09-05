@@ -51,7 +51,7 @@ export const AtomicAuthProvider = ({ children }: AtomicAuthProviderProps) => {
         // Set up auth state change listener first
         const { data: { subscription } } = supabase.auth.onAuthStateChange(
           (event, session) => {
-            // Auth state changed
+            console.log('🔄 Auth state changed:', event, session?.user?.email);
             
             if (isMounted) {
               setSession(session);
@@ -110,22 +110,20 @@ export const AtomicAuthProvider = ({ children }: AtomicAuthProviderProps) => {
   const signIn = async (email: string, password: string) => {
     try {
       setError(null);
-      setLoading(true);
-      // Sign in attempt
+      // Don't set loading to true during sign-in to prevent user state reset
       
       const data = await AuthService.signIn(email, password);
       
       if (data.user) {
-        // Authentication successful
+        // Authentication successful - auth state listener will handle user update
+        console.log('✅ Sign in successful for:', email);
       }
       
-      setLoading(false);
       return { error: null };
     } catch (error) {
       console.error('❌ Sign in failed:', error);
       const errorMessage = error instanceof Error ? error.message : 'Sign in failed';
       setError(errorMessage);
-      setLoading(false);
       return { error: error as Error };
     }
   };

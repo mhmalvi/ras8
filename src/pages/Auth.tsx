@@ -10,6 +10,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2, ArrowRight, Shield, Users, Zap } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
 
 const Auth = () => {
   const { signIn, signUp, user, loading: authLoading } = useAtomicAuth();
@@ -38,6 +39,34 @@ const Auth = () => {
   // Handle redirect when user is authenticated with Shopify context preservation
   useEffect(() => {
     if (user && !authLoading) {
+      // Save any pending embedded context to database
+      const pendingContext = localStorage.getItem('pending_embedded_context');
+      if (pendingContext) {
+        try {
+          const context = JSON.parse(pendingContext);
+          // Only process if timestamp is recent (within 5 minutes)
+          if (Date.now() - context.timestamp < 5 * 60 * 1000) {
+            supabase.rpc('update_embedded_context_from_auth', {
+              p_user_id: user.id,
+              p_shop_domain: context.shopDomain,
+              p_host_param: context.hostParam,
+              p_is_embedded: context.isEmbedded
+            }).then(({ error: contextError }) => {
+              if (contextError) {
+                console.warn('⚠️ Could not save embedded context:', contextError.message);
+              } else {
+                console.log('💾 Embedded context saved to database for user:', user.id);
+              }
+            });
+          }
+          // Clear the pending context
+          localStorage.removeItem('pending_embedded_context');
+        } catch (e) {
+          console.warn('Could not parse pending embedded context');
+          localStorage.removeItem('pending_embedded_context');
+        }
+      }
+
       // Check if we need to preserve Shopify context from the original URL
       const searchParams = new URLSearchParams(window.location.search);
       const shopifyParams = new URLSearchParams();
@@ -53,38 +82,105 @@ const Auth = () => {
         shopifyParams.set('embedded', searchParams.get('embedded')!);
       }
       
-      // Try to get shop from localStorage if not in URL (for embedded apps)
+      // Try to get shop from database or localStorage if not in URL (for embedded apps)
       if (!searchParams.get('shop')) {
-        const lastDecision = localStorage.getItem('last_landing_decision');
-        if (lastDecision) {
-          try {
-            const decision = JSON.parse(lastDecision);
-            if (decision.context?.shopDomain) {
-              shopifyParams.set('shop', decision.context.shopDomain);
-              shopifyParams.set('embedded', '1');
+        // First try database for this user
+        let shopFromStorage = null;
+        try {
+          const { data, error } = await supabase
+            .rpc('get_embedded_context', { p_user_id: user.id })
+            .single();
+          
+          if (!error && data?.shop_domain) {
+            shopFromStorage = data.shop_domain;
+            console.log('🗄️ Retrieved shop from database:', shopFromStorage);
+            
+            // Also get host param if available
+            if (data.host_param) {
+              searchParams.set('host', data.host_param);
+              console.log('🗄️ Retrieved host param from database:', data.host_param);
             }
-          } catch (e) {
-            console.log('Could not parse last landing decision');
+          }
+        } catch (e) {
+          console.warn('Could not retrieve shop from database:', e);
+        }
+        
+        // Fallback to localStorage
+        if (!shopFromStorage) {
+          const lastDecision = localStorage.getItem('last_landing_decision');
+          if (lastDecision) {
+            try {
+              const decision = JSON.parse(lastDecision);
+              if (decision.context?.shopDomain) {
+                shopFromStorage = decision.context.shopDomain;
+              }
+            } catch (e) {
+              console.log('Could not parse last landing decision');
+            }
+          }
+        }
+        
+        // Also check if we're in a frame (embedded context)
+        const isInFrame = window.self !== window.top;
+        const hasShopifyReferrer = document.referrer && (
+          document.referrer.includes('shopify.com') || 
+          document.referrer.includes('shopifycloud.com')
+        );
+        
+        // If we detect embedded context, use stored shop or try to determine from referrer
+        if (isInFrame || hasShopifyReferrer || shopFromStorage) {
+          if (shopFromStorage) {
+            shopifyParams.set('shop', shopFromStorage);
+            shopifyParams.set('embedded', '1');
+            console.log('🏪 Restored shop from localStorage:', shopFromStorage);
+          } else if (hasShopifyReferrer) {
+            // Try to extract shop from referrer
+            const referrerMatch = document.referrer.match(/store\/([^\/]+)/);
+            if (referrerMatch) {
+              const shopName = referrerMatch[1];
+              const shopDomain = shopName.includes('.myshopify.com') ? shopName : `${shopName}.myshopify.com`;
+              shopifyParams.set('shop', shopDomain);
+              shopifyParams.set('embedded', '1');
+              console.log('🏪 Extracted shop from referrer:', shopDomain);
+            }
           }
         }
       }
       
-      // Build redirect URL with preserved context
-      const redirectUrl = shopifyParams.toString() 
-        ? `${from}?${shopifyParams.toString()}`
-        : from;
+      // For embedded Shopify apps, always redirect to dashboard
+      const isEmbeddedApp = isInFrame || hasShopifyReferrer || shopFromStorage;
+      
+      let redirectUrl;
+      if (isEmbeddedApp) {
+        // Force dashboard redirect for embedded apps with preserved context
+        redirectUrl = shopifyParams.toString() 
+          ? `/dashboard?${shopifyParams.toString()}`
+          : '/dashboard';
+      } else {
+        // Standard redirect for non-embedded apps
+        redirectUrl = shopifyParams.toString() 
+          ? `${from}?${shopifyParams.toString()}`
+          : from;
+      }
       
       console.log('🔄 User authenticated, redirecting with Shopify context:', {
         from,
         redirectUrl,
+        isEmbeddedApp,
         hasShop: shopifyParams.has('shop'),
-        shopDomain: shopifyParams.get('shop')
+        shopDomain: shopifyParams.get('shop'),
+        forceDashboard: isEmbeddedApp
       });
       
-      // Small delay to ensure all auth processes complete
-      setTimeout(() => {
+      // For embedded apps, use immediate redirect
+      if (isEmbeddedApp) {
         navigate(redirectUrl, { replace: true });
-      }, 100);
+      } else {
+        // Small delay for non-embedded apps
+        setTimeout(() => {
+          navigate(redirectUrl, { replace: true });
+        }, 100);
+      }
     }
   }, [user, authLoading, navigate, from]);
 
@@ -106,7 +202,25 @@ const Auth = () => {
           description: error.message,
         });
       } else {
-        console.log('✅ Sign in successful, waiting for redirect...');
+        console.log('✅ Sign in successful, saving embedded context...');
+        
+        // Save embedded app context to database if available
+        const searchParams = new URLSearchParams(window.location.search);
+        const shopDomain = searchParams.get('shop');
+        const hostParam = searchParams.get('host');
+        const isEmbedded = Boolean(shopDomain || hostParam || window.self !== window.top);
+        
+        // Store embedded context for later use (user might not be available yet)
+        if (isEmbedded && shopDomain) {
+          localStorage.setItem('pending_embedded_context', JSON.stringify({
+            shopDomain,
+            hostParam,
+            isEmbedded,
+            timestamp: Date.now()
+          }));
+          console.log('💾 Stored pending embedded context for user authentication');
+        }
+        
         toast({
           title: "Welcome back!",
           description: "You've successfully signed in.",

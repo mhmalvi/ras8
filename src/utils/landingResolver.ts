@@ -57,6 +57,22 @@ export async function resolveLandingRoute(context: LandingContext): Promise<Land
       shopDomain: context.shopDomain
     });
 
+    // Quick check: If embedded and has previous session, go to dashboard
+    if (context.isEmbedded && typeof window !== 'undefined') {
+      const lastDecision = localStorage.getItem('last_landing_decision');
+      if (lastDecision) {
+        try {
+          const decision = JSON.parse(lastDecision);
+          if (decision.decision === 'integrated-active') {
+            console.log('🚀 Fast-track: Using cached integrated-active decision for embedded app');
+            return { route: "/dashboard", reason: "integrated-active" };
+          }
+        } catch (e) {
+          // Ignore parsing errors
+        }
+      }
+    }
+
     // 1. Get user profile
     const profile = await getUserProfile(context.userId);
     if (!profile) {
@@ -192,8 +208,16 @@ async function validateMerchantIntegrationFallback(userId: string): Promise<Merc
       };
     }
 
-    // For embedded Shopify apps, if we have an active merchant, treat as integrated
-    if (detectEmbeddedContext() && merchant.status === 'active') {
+    // For embedded Shopify apps OR existing merchants with active status, treat as integrated
+    const isEmbeddedOrExistingMerchant = detectEmbeddedContext() || 
+      (merchant.status === 'active' && merchant.shop_domain);
+    
+    if (isEmbeddedOrExistingMerchant && merchant.status === 'active') {
+      console.log('🏪 Treating existing merchant as integrated-active:', {
+        isEmbedded: detectEmbeddedContext(),
+        merchantStatus: merchant.status,
+        shopDomain: merchant.shop_domain
+      });
       return {
         has_merchant_link: true,
         merchant_status: 'active',
@@ -225,8 +249,12 @@ async function validateMerchantIntegrationFallback(userId: string): Promise<Merc
 
   } catch (error) {
     console.error('Error in fallback validation:', error);
-    // Return safe fallback for embedded apps
-    if (detectEmbeddedContext()) {
+    // Return safe fallback for embedded apps or existing users
+    const isEmbeddedOrExistingUser = detectEmbeddedContext() || 
+      (typeof window !== 'undefined' && localStorage.getItem('last_landing_decision'));
+    
+    if (isEmbeddedOrExistingUser) {
+      console.log('🚀 Using fallback integrated-active for embedded/existing user');
       return {
         has_merchant_link: true,
         merchant_status: 'active',
@@ -379,9 +407,9 @@ export function detectEmbeddedContext(): boolean {
 }
 
 /**
- * Extract shop domain from URL parameters or localStorage
+ * Extract shop domain from URL parameters, database, or localStorage
  */
-export function extractShopDomain(): string | undefined {
+export async function extractShopDomain(userId?: string): Promise<string | undefined> {
   if (typeof window === 'undefined') return undefined;
   
   const urlParams = new URLSearchParams(window.location.search);
@@ -390,6 +418,22 @@ export function extractShopDomain(): string | undefined {
   // If we have shop from URL, use that
   if (shopFromUrl) {
     return shopFromUrl;
+  }
+  
+  // If we have a user ID, try to get shop domain from database
+  if (userId) {
+    try {
+      const { data, error } = await supabase
+        .rpc('get_embedded_context', { p_user_id: userId })
+        .single();
+      
+      if (!error && data?.shop_domain) {
+        console.log('🗄️ Retrieved shop domain from database:', data.shop_domain);
+        return data.shop_domain;
+      }
+    } catch (e) {
+      console.warn('Could not retrieve shop domain from database:', e);
+    }
   }
   
   // Otherwise, try to get it from localStorage for embedded apps
@@ -410,11 +454,44 @@ export function extractShopDomain(): string | undefined {
 }
 
 /**
+ * Extract host parameter from URL parameters, database, or localStorage  
+ */
+export async function extractHostParam(userId?: string): Promise<string | undefined> {
+  if (typeof window === 'undefined') return undefined;
+  
+  const urlParams = new URLSearchParams(window.location.search);
+  const hostFromUrl = urlParams.get('host');
+  
+  // If we have host from URL, use that
+  if (hostFromUrl) {
+    return hostFromUrl;
+  }
+  
+  // If we have a user ID, try to get host param from database
+  if (userId) {
+    try {
+      const { data, error } = await supabase
+        .rpc('get_embedded_context', { p_user_id: userId })
+        .single();
+      
+      if (!error && data?.host_param) {
+        console.log('🗄️ Retrieved host param from database:', data.host_param);
+        return data.host_param;
+      }
+    } catch (e) {
+      console.warn('Could not retrieve host param from database:', e);
+    }
+  }
+  
+  return undefined;
+}
+
+/**
  * Simplified landing resolver for React components
  */
 export async function resolveUserLanding(userId: string): Promise<LandingDecision> {
   const isEmbedded = detectEmbeddedContext();
-  const shopDomain = extractShopDomain();
+  const shopDomain = await extractShopDomain(userId);
   const userAgent = typeof navigator !== 'undefined' ? navigator.userAgent : undefined;
 
   return resolveLandingRoute({

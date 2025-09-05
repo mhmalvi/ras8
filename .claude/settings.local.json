@@ -33,7 +33,21 @@
       "Bash(npm run build:*)",
       "mcp__vercel__deploy_to_vercel",
       "mcp__vercel__get_deployment",
-      "Bash(npm run test:*)"
+      "Bash(npm run test:*)",
+      "WebSearch",
+      "Bash(curl:*)",
+      "Bash(claude --version)",
+      "Bash(claude mcp add filesystem --scope user -- npx -y @modelcontextprotocol/server-filesystem:*)",
+      "Bash(claude mcp add playwright:*)",
+      "Bash(claude mcp add perplexity:*)",
+      "Bash(claude mcp add sequential-thinking:*)",
+      "Bash(claude mcp:*)",
+      "Bash(supabase:*)",
+      "mcp__github__list_commits",
+      "mcp__github__list_issues",
+      "mcp__github__list_pull_requests",
+      "mcp__github__search_repositories",
+      "mcp__github__get_file_contents"
     ],
     "defaultMode": "acceptEdits",
     "additionalDirectories": [
