@@ -410,6 +410,20 @@ export function detectEmbeddedContext(): boolean {
     // Ignore localStorage errors
   }
   
+  // Quaternary check: preserved embedded context from logout
+  try {
+    const preservedContext = localStorage.getItem('preserved_embedded_context');
+    if (preservedContext) {
+      const context = JSON.parse(preservedContext);
+      if (context.isEmbedded && context.shopDomain) {
+        console.log('📦 Detected embedded context from preserved context:', context.shopDomain);
+        return true;
+      }
+    }
+  } catch (e) {
+    // Ignore localStorage errors
+  }
+  
   return false;
 }
 
@@ -451,6 +465,20 @@ export async function extractShopDomain(userId?: string): Promise<string | undef
       if (decision.context?.shopDomain) {
         console.log('📦 Retrieved shop domain from localStorage:', decision.context.shopDomain);
         return decision.context.shopDomain;
+      }
+    }
+  } catch (e) {
+    // Ignore localStorage errors
+  }
+  
+  // Final fallback: check preserved embedded context from logout
+  try {
+    const preservedContext = localStorage.getItem('preserved_embedded_context');
+    if (preservedContext) {
+      const context = JSON.parse(preservedContext);
+      if (context.shopDomain) {
+        console.log('📦 Retrieved shop domain from preserved context:', context.shopDomain);
+        return context.shopDomain;
       }
     }
   } catch (e) {

@@ -58,10 +58,35 @@ export class AuthService {
    * Sign out user
    */
   static async signOut() {
+    // Preserve embedded context before logout
+    let embeddedContext = null;
+    try {
+      const lastDecision = localStorage.getItem('last_landing_decision');
+      if (lastDecision) {
+        const decision = JSON.parse(lastDecision);
+        if (decision.context?.isEmbedded && decision.context?.shopDomain) {
+          embeddedContext = {
+            shopDomain: decision.context.shopDomain,
+            isEmbedded: decision.context.isEmbedded,
+            preservedAt: new Date().toISOString()
+          };
+          console.log('💾 Preserving embedded context for re-login:', embeddedContext);
+        }
+      }
+    } catch (e) {
+      console.warn('Could not preserve embedded context:', e);
+    }
+
     const { error } = await supabase.auth.signOut();
     
     if (error) {
       throw new Error(error.message);
+    }
+
+    // Restore preserved embedded context after logout
+    if (embeddedContext) {
+      localStorage.setItem('preserved_embedded_context', JSON.stringify(embeddedContext));
+      console.log('✅ Embedded context preserved for next login');
     }
   }
 
