@@ -1,4 +1,5 @@
 
+// Force cache invalidation - v1.0.1
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAtomicAuth } from '@/contexts/AtomicAuthContext';
