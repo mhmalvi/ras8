@@ -63,8 +63,10 @@ export const AppBridgeProvider: React.FC<AppBridgeProviderProps> = ({ children }
           // Validate and construct host parameter
           let validHost = host;
           if (!validHost && shop) {
-            validHost = btoa(shop + '/admin').replace(/=/g, '');
-            console.log('🔧 Constructed host from shop:', { shop, host: validHost });
+            // Ensure shop has .myshopify.com domain
+            const shopDomain = shop.includes('.myshopify.com') ? shop : `${shop}.myshopify.com`;
+            validHost = btoa(`admin.shopify.com/store/${shop.replace('.myshopify.com', '')}`).replace(/=/g, '');
+            console.log('🔧 Constructed host from shop:', { shop, shopDomain, host: validHost });
           }
           
           if (!validHost) {

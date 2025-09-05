@@ -346,6 +346,21 @@ export function detectEmbeddedContext(): boolean {
     return true;
   }
   
+  // Enhanced check: shop parameter with frame context
+  if (hasShopParam && isInFrame) {
+    console.log('📦 Detected embedded context from shop param + frame');
+    return true;
+  }
+  
+  // Check referrer for Shopify domains
+  if (document.referrer && (
+    document.referrer.includes('shopify.com') || 
+    document.referrer.includes('shopifycloud.com')
+  )) {
+    console.log('📦 Detected embedded context from Shopify referrer');
+    return true;
+  }
+  
   // Tertiary check: localStorage indicates this was an embedded app
   try {
     const lastDecision = localStorage.getItem('last_landing_decision');
