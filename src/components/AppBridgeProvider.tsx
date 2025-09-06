@@ -39,14 +39,63 @@ export const AppBridgeProvider: React.FC<AppBridgeProviderProps> = ({ children }
         
         // Check if we're running inside Shopify Admin
         const urlParams = new URLSearchParams(window.location.search);
-        const host = urlParams.get('host');
-        const shop = urlParams.get('shop');
+        let host = urlParams.get('host');
+        let shop = urlParams.get('shop');
+        
+        // CRITICAL FIX: If URL parameters are missing, try to restore from localStorage
+        if (!shop || !host) {
+          console.log('🔧 Missing shop/host parameters, attempting to restore from storage...');
+          
+          // Try preserved embedded context first
+          try {
+            const preservedContext = localStorage.getItem('preserved_embedded_context');
+            if (preservedContext) {
+              const context = JSON.parse(preservedContext);
+              if (context.shopDomain && !shop) {
+                shop = context.shopDomain;
+                console.log('🏪 Restored shop from preserved context:', shop);
+              }
+              if (context.hostParam && !host) {
+                host = context.hostParam;
+                console.log('🔗 Restored host from preserved context:', host);
+              }
+            }
+          } catch (e) {
+            console.warn('Could not parse preserved embedded context:', e);
+          }
+          
+          // Try pending embedded context as fallback
+          if (!shop || !host) {
+            try {
+              const pendingContext = localStorage.getItem('pending_embedded_context');
+              if (pendingContext) {
+                const context = JSON.parse(pendingContext);
+                if (context.shopDomain && !shop) {
+                  shop = context.shopDomain;
+                  console.log('🏪 Restored shop from pending context:', shop);
+                }
+                if (context.hostParam && !host) {
+                  host = context.hostParam;
+                  console.log('🔗 Restored host from pending context:', host);
+                }
+              }
+            } catch (e) {
+              console.warn('Could not parse pending embedded context:', e);
+            }
+          }
+        }
         
         // Don't initialize App Bridge on installation pages
         const isInstallationPage = window.location.pathname.includes('/install') || 
                                    window.location.pathname.includes('/auth/');
         
-        if ((host || shop) && !isInstallationPage) {
+        // Enhanced condition: also check for frame context or preserved context
+        const hasContext = host || shop || 
+                          window.self !== window.top ||
+                          localStorage.getItem('preserved_embedded_context') ||
+                          localStorage.getItem('pending_embedded_context');
+        
+        if (hasContext && !isInstallationPage) {
           setIsEmbedded(true);
           
           // Use the configured Shopify Client ID from environment

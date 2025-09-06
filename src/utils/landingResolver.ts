@@ -468,11 +468,13 @@ export function detectEmbeddedContext(): boolean {
   
   // Primary check: URL parameters
   if (hasShopParam && (hasHostParam || isInFrame)) {
+    console.log('📦 Detected embedded context from shop + host params');
     return true;
   }
   
   // Secondary check: embedded parameter
   if (hasEmbeddedParam) {
+    console.log('📦 Detected embedded context from embedded param');
     return true;
   }
   
@@ -480,6 +482,22 @@ export function detectEmbeddedContext(): boolean {
   if (hasShopParam && isInFrame) {
     console.log('📦 Detected embedded context from shop param + frame');
     return true;
+  }
+  
+  // CRITICAL: Frame context alone (for post-auth situations)
+  if (isInFrame) {
+    // Check if we have any indication this is a Shopify iframe
+    const hasShopifyIndicators = document.referrer.includes('shopify') ||
+                                 window.location.hostname.includes('vercel.app') ||
+                                 window.location.hostname.includes('myshopify.com') ||
+                                 localStorage.getItem('last_landing_decision') ||
+                                 localStorage.getItem('preserved_embedded_context') ||
+                                 localStorage.getItem('pending_embedded_context');
+    
+    if (hasShopifyIndicators) {
+      console.log('📦 Detected embedded context from frame + Shopify indicators');
+      return true;
+    }
   }
   
   // Check referrer for Shopify domains
@@ -497,7 +515,35 @@ export function detectEmbeddedContext(): boolean {
     if (lastDecision) {
       const decision = JSON.parse(lastDecision);
       if (decision.context?.isEmbedded && decision.context?.shopDomain) {
-        console.log('📦 Detected embedded context from localStorage');
+        console.log('📦 Detected embedded context from last landing decision');
+        return true;
+      }
+    }
+  } catch (e) {
+    // Ignore localStorage errors
+  }
+  
+  // ENHANCED: Check for any preserved embedded context
+  try {
+    const preservedContext = localStorage.getItem('preserved_embedded_context');
+    if (preservedContext) {
+      const context = JSON.parse(preservedContext);
+      if (context.isEmbedded && context.shopDomain) {
+        console.log('📦 Detected embedded context from preserved context');
+        return true;
+      }
+    }
+  } catch (e) {
+    // Ignore localStorage errors
+  }
+  
+  // FINAL FALLBACK: Check for pending embedded context (post-auth)
+  try {
+    const pendingContext = localStorage.getItem('pending_embedded_context');
+    if (pendingContext) {
+      const context = JSON.parse(pendingContext);
+      if (context.isEmbedded && context.shopDomain) {
+        console.log('📦 Detected embedded context from pending context');
         return true;
       }
     }
