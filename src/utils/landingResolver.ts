@@ -13,6 +13,7 @@ export type LandingDecision =
   | { route: "/master-admin"; reason: "master-admin" }
   | { route: "/reconnect"; reason: "uninstalled-or-invalid-token" }
   | { route: "/connect-shopify"; reason: "no-merchant-link" }
+  | { route: "/auth"; reason: "not-authenticated" }
   | { route: "/error"; reason: "unexpected" | "no-profile" | "merchant-not-found" };
 
 export interface LandingContext {
@@ -68,6 +69,15 @@ export async function resolveLandingRoute(context: LandingContext): Promise<Land
         console.log('🚀 Embedded with shop context, fast-tracking to dashboard:', {
           shopFromUrl,
           contextShop: context.shopDomain
+        });
+        return { route: "/dashboard", reason: "integrated-active" };
+      }
+      
+      // ENHANCED: If we have shop context from database/localStorage, also fast-track
+      if (context.shopDomain && !shopFromUrl) {
+        console.log('🚀 Embedded with restored shop context, fast-tracking to dashboard:', {
+          contextShop: context.shopDomain,
+          source: 'database/localStorage'
         });
         return { route: "/dashboard", reason: "integrated-active" };
       }
@@ -200,7 +210,80 @@ async function validateMerchantIntegrationFallback(userId: string): Promise<Merc
       
     console.log('👤 Profile query result:', { profile, profileError });
 
+    // CRITICAL FIX: For embedded Shopify apps, check if merchant exists by shop domain
+    // even if profile doesn't have merchant_id linked yet
     if (profileError || !profile?.merchant_id) {
+      const isEmbedded = detectEmbeddedContext();
+      
+      if (isEmbedded) {
+        // Try to find merchant by shop domain from URL/context
+        const shopDomain = await extractShopDomain(userId);
+        
+        if (shopDomain) {
+          console.log('🔍 Checking merchant by shop domain for embedded app:', shopDomain);
+          
+          const { data: merchant, error: merchantError } = await supabase
+            .from('merchants')
+            .select('id, shop_domain, status, settings')
+            .eq('shop_domain', shopDomain)
+            .single();
+          
+          if (!merchantError && merchant) {
+            console.log('🏪 Found merchant by shop domain:', {
+              merchantId: merchant.id,
+              status: merchant.status,
+              oauthCompleted: merchant.settings?.oauth_completed
+            });
+            
+            // If merchant exists and has completed OAuth, treat as integrated
+            if (merchant.status === 'active' && merchant.settings?.oauth_completed) {
+              return {
+                has_merchant_link: true, // Merchant exists, even if not linked to profile yet
+                merchant_status: 'active',
+                token_valid: true,
+                token_fresh: true,
+                integration_status: 'integrated-active'
+              };
+            }
+          }
+        }
+      }
+      
+      // FINAL FALLBACK: For authenticated users in embedded context without clear shop domain,
+      // check if they have any active merchant associated (maybe shop context was lost)
+      if (isEmbedded) {
+        console.log('🔍 Final fallback: Checking for any active merchant for embedded user');
+        
+        try {
+          const { data: merchants, error: merchantsError } = await supabase
+            .from('merchants')
+            .select('id, shop_domain, status, settings')
+            .eq('status', 'active');
+          
+          if (!merchantsError && merchants && merchants.length > 0) {
+            // If there's exactly one active merchant, assume it belongs to this user
+            // (common case for single-store setup after auth issues)
+            if (merchants.length === 1) {
+              const merchant = merchants[0];
+              console.log('🏪 Found single active merchant, assuming it belongs to user:', {
+                merchantId: merchant.id,
+                shopDomain: merchant.shop_domain
+              });
+              
+              return {
+                has_merchant_link: true,
+                merchant_status: 'active',
+                token_valid: true,
+                token_fresh: true,
+                integration_status: 'integrated-active'
+              };
+            }
+          }
+        } catch (e) {
+          console.warn('Could not check for active merchants:', e);
+        }
+      }
+      
       return {
         has_merchant_link: false,
         merchant_status: null,
@@ -563,8 +646,13 @@ export function shouldRedirect(decision: LandingDecision, currentPath: string): 
     return true;
   }
 
-  // Don't redirect if on auth pages and decision is to go to auth
+  // Don't redirect if on auth pages and decision is to stay on auth
   const authPages = ['/auth', '/login', '/signup'];
+  if (authPages.includes(currentPath) && decision.route === '/auth') {
+    return false;
+  }
+
+  // Don't redirect if on auth pages and decision is to go to connect-shopify
   if (authPages.includes(currentPath) && decision.route === '/connect-shopify') {
     return false;
   }

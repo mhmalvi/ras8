@@ -76,11 +76,22 @@ const Auth = () => {
         console.warn('🛑 Redirect loop detected, staying on auth page');
         return;
       }
+
+      // Check if we're coming from a landing decision that should keep us on auth
+      const landingReason = location.state?.reason;
+      if (landingReason === 'no-merchant-link' || landingReason === 'not-authenticated') {
+        console.log('🔄 Staying on auth page due to landing decision:', landingReason);
+        return;
+      }
+      
       // Check if we're in a frame (embedded context) - now using component scope
       const hasShopifyReferrer = document.referrer && (
         document.referrer.includes('shopify.com') || 
         document.referrer.includes('shopifycloud.com')
       );
+
+      // Declare shopFromStorage at function scope to avoid reference errors
+      let shopFromStorage = null;
 
       if (user && !authLoading) {
         // CRITICAL FIX: Check if user actually needs to connect Shopify first
@@ -124,11 +135,10 @@ const Auth = () => {
         }
 
         // Check if we need to preserve Shopify context - now using component scope
-        const searchParams = new URLSearchParams(window.location.search);
+        const urlParams = new URLSearchParams(window.location.search);
         
         // Try to get shop from database or localStorage if not in URL (for embedded apps)
-        let shopFromStorage = null;
-        if (!searchParams.get('shop')) {
+        if (!urlParams.get('shop')) {
           // First try to get merchant data directly (fallback approach)
           try {
             const { data: profile, error: profileError } = await supabase
@@ -208,42 +218,57 @@ const Auth = () => {
         }
       }
       
-      // For embedded Shopify apps, always redirect to dashboard
-      const isEmbeddedApp = isInFrame || hasShopifyReferrer || shopFromStorage;
-      
-      let redirectUrl;
-      if (isEmbeddedApp) {
-        // Force dashboard redirect for embedded apps with preserved context
-        redirectUrl = shopifyParams.toString() 
-          ? `/dashboard?${shopifyParams.toString()}`
-          : '/dashboard';
-      } else {
-        // Standard redirect for non-embedded apps
-        redirectUrl = shopifyParams.toString() 
-          ? `${from}?${shopifyParams.toString()}`
-          : from;
-      }
-      
-      console.log('🔄 User authenticated, redirecting with Shopify context:', {
+      // CRITICAL FIX: Redirect with preserved shop parameters after authentication
+      console.log('✅ Authentication complete, redirecting with preserved context:', {
         from,
-        redirectUrl,
-        isEmbeddedApp,
+        isEmbeddedApp: isInFrame || hasShopifyReferrer || shopFromStorage,
         hasShop: shopifyParams.has('shop'),
-        shopDomain: shopifyParams.get('shop'),
-        forceDashboard: isEmbeddedApp
+        shopDomain: shopifyParams.get('shop')
       });
       
-      // Increment redirect counter before redirecting
-      setRedirectCount(prev => prev + 1);
+      // Build redirect URL with preserved Shopify parameters
+      let redirectUrl = from;
       
-      // For embedded apps, use immediate redirect
-      if (isEmbeddedApp) {
+      // For embedded apps or apps with shop context, ensure dashboard gets shop params
+      if ((isInFrame || hasShopifyReferrer || shopFromStorage) && (shopifyParams.has('shop') || shopFromStorage)) {
+        const shopParam = shopifyParams.get('shop') || shopFromStorage;
+        const hostParam = shopifyParams.get('host');
+        const embeddedParam = shopifyParams.get('embedded') || '1';
+        
+        // Always redirect to dashboard for embedded apps, preserving all parameters
+        if (redirectUrl === '/dashboard' || redirectUrl === '/') {
+          redirectUrl = '/dashboard';
+          const params = new URLSearchParams();
+          if (shopParam) params.set('shop', shopParam);
+          if (hostParam) params.set('host', hostParam);
+          params.set('embedded', embeddedParam);
+          
+          if (params.toString()) {
+            redirectUrl += `?${params.toString()}`;
+          }
+          
+          console.log('🏪 Redirecting embedded app to dashboard with preserved params:', redirectUrl);
+        }
+      }
+      
+      // Store current context for future reference
+      if (shopFromStorage || shopifyParams.has('shop')) {
+        localStorage.setItem('last_landing_decision', JSON.stringify({
+          decision: 'integrated-active',
+          context: {
+            shopDomain: shopFromStorage || shopifyParams.get('shop'),
+            isEmbedded: isInFrame || hasShopifyReferrer || Boolean(shopFromStorage),
+            timestamp: Date.now()
+          }
+        }));
+      }
+      
+      // Perform the redirect with preserved context
+      if (redirectUrl !== location.pathname + location.search) {
+        console.log('🚀 Redirecting to:', redirectUrl);
+        setRedirectCount(prev => prev + 1);
         navigate(redirectUrl, { replace: true });
-      } else {
-        // Small delay for non-embedded apps
-        setTimeout(() => {
-          navigate(redirectUrl, { replace: true });
-        }, 100);
+        return;
       }
     };
 
@@ -285,6 +310,15 @@ const Auth = () => {
             timestamp: Date.now()
           }));
           console.log('💾 Stored pending embedded context for user authentication');
+          
+          // Also immediately store in preserved context format for immediate use
+          localStorage.setItem('preserved_embedded_context', JSON.stringify({
+            shopDomain,
+            hostParam,
+            isEmbedded,
+            timestamp: Date.now()
+          }));
+          console.log('💾 Stored preserved embedded context for immediate use');
         }
         
         toast({
