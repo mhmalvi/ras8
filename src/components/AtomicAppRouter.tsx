@@ -172,8 +172,8 @@ const AppBridgeAwareRoute = ({ children }: { children: React.ReactNode }) => {
     return <>{children}</>;
   }
   
-  // IMPORTANT: Only show "Installation Required" for truly fresh installations
-  // Don't interfere with existing apps where users have signed out
+  // ENHANCED: Only show "Installation Required" for truly fresh installations
+  // Don't interfere with existing apps where users have signed out or completed authentication
   if (isEmbedded && currentPath === '/' && !shop) {
     // Check if this might be a signed-out user vs a fresh install
     // If we have any indication this is an existing app (stored data, etc.), 
@@ -182,12 +182,33 @@ const AppBridgeAwareRoute = ({ children }: { children: React.ReactNode }) => {
                              sessionStorage.getItem('supabase.auth.token') ||
                              document.cookie.includes('sb-');
     
-    if (hasSessionHistory) {
-      console.log('🔄 Detected existing app session history, allowing auth flow instead of install screen');
+    // CRITICAL FIX: Also check for preserved/pending embedded context
+    const hasEmbeddedContext = localStorage.getItem('preserved_embedded_context') ||
+                              localStorage.getItem('pending_embedded_context') ||
+                              window.self !== window.top; // We're in an iframe
+    
+    if (hasSessionHistory || hasEmbeddedContext) {
+      console.log('🔄 Detected existing app session or embedded context, allowing auth flow instead of install screen:', {
+        hasSessionHistory: Boolean(hasSessionHistory),
+        hasEmbeddedContext: Boolean(hasEmbeddedContext),
+        isInFrame: window.self !== window.top
+      });
+      return <>{children}</>;
+    }
+    
+    // Final check: If we're definitely in a Shopify iframe but missing shop param,
+    // this is likely a post-auth scenario, not a fresh install
+    if (window.self !== window.top && (
+      document.referrer.includes('shopify.com') ||
+      document.referrer.includes('shopifycloud.com') ||
+      window.location.hostname.includes('vercel.app')
+    )) {
+      console.log('🔄 Detected Shopify iframe without shop param - allowing auth flow (likely post-auth)');
       return <>{children}</>;
     }
     
     // Only show install screen for truly fresh installations
+    console.log('🚫 Showing installation screen for fresh install');
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="text-center max-w-md p-6">

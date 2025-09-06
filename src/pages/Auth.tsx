@@ -232,8 +232,31 @@ const Auth = () => {
       // For embedded apps or apps with shop context, ensure dashboard gets shop params
       if ((isInFrame || hasShopifyReferrer || shopFromStorage) && (shopifyParams.has('shop') || shopFromStorage)) {
         const shopParam = shopifyParams.get('shop') || shopFromStorage;
-        const hostParam = shopifyParams.get('host');
+        let hostParam = shopifyParams.get('host');
         const embeddedParam = shopifyParams.get('embedded') || '1';
+        
+        // CRITICAL FIX: If host param is missing, try to restore from localStorage
+        if (!hostParam && shopParam) {
+          try {
+            const preservedContext = localStorage.getItem('preserved_embedded_context');
+            if (preservedContext) {
+              const context = JSON.parse(preservedContext);
+              if (context.hostParam) {
+                hostParam = context.hostParam;
+                console.log('🔗 Restored host param from preserved context:', hostParam);
+              }
+            }
+          } catch (e) {
+            console.warn('Could not parse preserved context for host param:', e);
+          }
+          
+          // If still no host, construct it from shop domain
+          if (!hostParam && shopParam) {
+            const shopName = shopParam.replace('.myshopify.com', '');
+            hostParam = btoa(`admin.shopify.com/store/${shopName}`).replace(/=/g, '');
+            console.log('🔧 Constructed host param from shop:', { shopParam, hostParam });
+          }
+        }
         
         // Always redirect to dashboard for embedded apps, preserving all parameters
         if (redirectUrl === '/dashboard' || redirectUrl === '/') {
@@ -266,6 +289,15 @@ const Auth = () => {
       // Perform the redirect with preserved context
       if (redirectUrl !== location.pathname + location.search) {
         console.log('🚀 Redirecting to:', redirectUrl);
+        
+        // CRITICAL FIX: For embedded apps with shop context, use window.location instead of navigate
+        // This ensures the full URL with parameters is properly loaded
+        if (redirectUrl.includes('shop=') && (isInFrame || hasShopifyReferrer || shopFromStorage)) {
+          console.log('🌐 Using window.location for embedded app redirect to ensure URL parameters');
+          window.location.href = redirectUrl;
+          return;
+        }
+        
         setRedirectCount(prev => prev + 1);
         navigate(redirectUrl, { replace: true });
         return;
