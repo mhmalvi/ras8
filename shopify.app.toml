@@ -1,8 +1,8 @@
 # Learn more about configuring your app at https://shopify.dev/docs/apps/tools/cli/configuration
 
-name = "H5"
+name = "RAS8"
 handle = "ras"
-client_id = "2da34c83e89f6645ad1fb2028c7532dd"
+client_id = "4d63e44aba6aa302748ed4ea5340082a"
 application_url = "https://ras-8.vercel.app"
 embedded = true
 
