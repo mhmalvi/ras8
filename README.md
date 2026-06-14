@@ -1,6 +1,8 @@
 <!-- repo-card -->
 ![ras8](docs/assets/social-card.png)
 
+![ras8 — architecture](docs/assets/architecture.png)
+
 # RAS8
 
 > AI-powered returns analytics and automation platform — transform return data into actionable insights with intelligent recommendations, predictive analytics, and real-time monitoring.
