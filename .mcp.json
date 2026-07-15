@@ -1,12 +1,18 @@
 {
   "mcpServers": {
-    "shopify-dev-mcp": {
-      "command": "npx",
-      "args": ["-y", "@shopify/dev-mcp@latest"]
-    },
     "github": {
       "command": "npx",
-      "args": ["-y", "@modelcontextprotocol/server-github"]
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-github"
+      ]
+    },
+    "shopify-dev-mcp": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@shopify/dev-mcp@latest"
+      ]
     }
   }
 }
