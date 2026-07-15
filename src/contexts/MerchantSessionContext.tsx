@@ -75,11 +75,13 @@ export function MerchantSessionProvider({ children }: MerchantSessionProviderPro
 
       // Also add shop parameter from URL
       const shop = new URLSearchParams(window.location.search).get('shop');
+      let url = '/api/session/me';
       if (shop) {
-        headers['Shop'] = shop;
+        headers['shop'] = shop; // Use lowercase to match API expectation
+        url += `?shop=${encodeURIComponent(shop)}`;
       }
 
-      const response = await fetch('/api/session/me', {
+      const response = await fetch(url, {
         method: 'GET',
         credentials: 'include', // Include cookies
         headers

@@ -105,7 +105,7 @@ const UnifiedProtectedRoute = ({
       if (!user) {
         if (isMounted) {
           setState({
-            decision: { route: "/auth", reason: "no-merchant-link" },
+            decision: { route: "/auth", reason: "not-authenticated" },
             loading: false,
             error: null,
             initialized: true
@@ -117,9 +117,32 @@ const UnifiedProtectedRoute = ({
       try {
         setState(prev => ({ ...prev, loading: true, error: null }));
 
-        // Build context for landing resolver
-        const shopDomain = await extractShopDomain(user.id);
+        // Build context for landing resolver with enhanced shop domain detection
+        let shopDomain = await extractShopDomain(user.id);
         const isEmbeddedContext = detectEmbeddedContext();
+        
+        // CRITICAL FIX: If no shop domain from database, try to get from URL or storage
+        if (!shopDomain && isEmbeddedContext) {
+          const urlParams = new URLSearchParams(window.location.search);
+          shopDomain = urlParams.get('shop');
+          
+          // Try preserved context if URL doesn't have shop
+          if (!shopDomain) {
+            try {
+              const preservedContext = localStorage.getItem('preserved_embedded_context');
+              if (preservedContext) {
+                const context = JSON.parse(preservedContext);
+                if (context.shopDomain && (Date.now() - context.timestamp < 10 * 60 * 1000)) {
+                  shopDomain = context.shopDomain;
+                  console.log('🏪 UnifiedProtectedRoute: Restored shop domain from preserved context:', shopDomain);
+                }
+              }
+            } catch (e) {
+              // Ignore parsing errors
+            }
+          }
+        }
+        
         const context: LandingContext = {
           userId: user.id,
           isEmbedded: isEmbeddedContext,
@@ -138,12 +161,20 @@ const UnifiedProtectedRoute = ({
 
         const decision = await resolveLandingRoute(context);
 
+        console.log('🎯 Landing decision resolved:', {
+          route: decision.route,
+          reason: decision.reason,
+          currentPath: location.pathname,
+          willRedirect: shouldRedirect(decision, location.pathname)
+        });
+
         if (isMounted) {
           setState({
             decision,
             loading: false,
             error: null,
-            initialized: true
+            initialized: true,
+            redirectCount: 0 // Reset redirect count on successful resolution
           });
         }
 
@@ -230,7 +261,13 @@ const UnifiedProtectedRoute = ({
     // Clean old entries
     localStorage.setItem(REDIRECT_HISTORY_KEY, JSON.stringify(recentRedirects));
     
-    return recentRedirects.length >= MAX_REDIRECTS;
+    // Check for specific loop patterns that should be broken
+    const loopPatterns = recentRedirects.filter((entry: any) => 
+      (entry.from === '/dashboard' && entry.to === '/auth') ||
+      (entry.from === '/auth' && entry.to === '/dashboard')
+    );
+    
+    return recentRedirects.length >= MAX_REDIRECTS || loopPatterns.length >= 2;
   };
   
   const addRedirectToHistory = (from: string, to: string, reason: string) => {

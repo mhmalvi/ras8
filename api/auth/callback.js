@@ -1,5 +1,6 @@
 import { createClient } from '@supabase/supabase-js';
 import crypto from 'crypto';
+import { withRateLimit, RATE_LIMITS } from '../_middleware/rateLimit';
 
 const supabaseUrl = process.env.VITE_SUPABASE_URL;
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -69,7 +70,7 @@ function encryptToken(token) {
   }
 }
 
-export default async function handler(req, res) {
+async function handler(req, res) {
   if (req.method !== 'GET') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
@@ -366,3 +367,6 @@ export default async function handler(req, res) {
     return res.status(500).send(errorHtml);
   }
 }
+
+// Export handler with rate limiting
+export default withRateLimit(RATE_LIMITS.callback, handler);

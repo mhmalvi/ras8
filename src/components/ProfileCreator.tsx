@@ -6,10 +6,10 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Loader2, UserPlus, AlertCircle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAtomicAuth } from '@/contexts/AtomicAuthContext';
 
 const ProfileCreator = () => {
-  const { user } = useAuth();
+  const { user } = useAtomicAuth();
   const [loading, setLoading] = useState(false);
   const [profileExists, setProfileExists] = useState<boolean | null>(null);
   const { toast } = useToast();

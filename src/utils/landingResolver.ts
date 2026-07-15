@@ -492,11 +492,45 @@ export function detectEmbeddedContext(): boolean {
                                  window.location.hostname.includes('myshopify.com') ||
                                  localStorage.getItem('last_landing_decision') ||
                                  localStorage.getItem('preserved_embedded_context') ||
-                                 localStorage.getItem('pending_embedded_context');
+                                 localStorage.getItem('pending_embedded_context') ||
+                                 sessionStorage.getItem('embedded_shop_context');
     
     if (hasShopifyIndicators) {
       console.log('📦 Detected embedded context from frame + Shopify indicators');
       return true;
+    }
+  }
+  
+  // ENHANCED: Check for preserved embedded context even without frame (for auth flow)
+  if (!isInFrame) {
+    // Check if we have recently stored embedded context that might indicate an embedded auth flow
+    const preservedContext = localStorage.getItem('preserved_embedded_context');
+    const sessionContext = sessionStorage.getItem('embedded_shop_context');
+    
+    if (preservedContext) {
+      try {
+        const context = JSON.parse(preservedContext);
+        // If context was stored recently and marked as from auth, it's likely embedded
+        if (context.fromAuth && (Date.now() - context.timestamp < 2 * 60 * 1000)) {
+          console.log('📦 Detected embedded context from recent auth flow storage');
+          return true;
+        }
+      } catch (e) {
+        // Ignore parsing errors
+      }
+    }
+    
+    if (sessionContext) {
+      try {
+        const context = JSON.parse(sessionContext);
+        // Session context is temporary and indicates recent embedded activity
+        if (Date.now() - context.timestamp < 60 * 1000) {
+          console.log('📦 Detected embedded context from recent session storage');
+          return true;
+        }
+      } catch (e) {
+        // Ignore parsing errors
+      }
     }
   }
   

@@ -1,13 +1,16 @@
 /**
  * Refresh Token Verification Endpoint
- * 
+ *
  * Updates the last_verified_at timestamp for a user's token to mark it as fresh.
  * This is useful when tokens are valid but marked as stale due to time.
  */
 
 import { createClient } from '@supabase/supabase-js';
+import { withRateLimit, RATE_LIMITS } from '../_middleware/rateLimit';
+import { withErrorHandler } from '../_middleware/errorHandler';
+import { logger, authLogger, dbLogger } from '../_middleware/logger';
 
-export default async function handler(req, res) {
+async function handler(req, res) {
   // Only allow POST requests
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
@@ -17,7 +20,10 @@ export default async function handler(req, res) {
   const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
   if (!supabaseUrl || !supabaseServiceKey) {
-    console.error('❌ Missing Supabase configuration');
+    logger.error('Missing Supabase configuration', {
+      hasUrl: !!supabaseUrl,
+      hasServiceKey: !!supabaseServiceKey
+    });
     return res.status(500).json({ error: 'Server configuration error' });
   }
 
@@ -28,7 +34,7 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: 'User ID is required' });
     }
 
-    console.log('🔄 Refreshing token verification for user:', userId);
+    logger.debug('Refreshing token verification for user', { userId });
 
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
@@ -37,10 +43,20 @@ export default async function handler(req, res) {
       .rpc('refresh_user_token_verification', { p_user_id: userId });
 
     if (refreshError) {
-      console.error('⚠️ Database function error:', refreshError);
+      dbLogger.queryError('refresh_user_token_verification', 'users', refreshError.message, {
+        userId,
+        code: refreshError.code
+      });
       // Continue anyway - might be missing function
     } else {
-      console.log('✅ Token verification refreshed:', refreshResult);
+      logger.debug('Token verification refreshed', {
+        userId,
+        result: refreshResult
+      });
+      authLogger.tokenRefresh(userId, {
+        method: 'refresh-token-endpoint',
+        result: refreshResult
+      });
     }
 
     // Get updated integration status
@@ -49,7 +65,10 @@ export default async function handler(req, res) {
       .single();
 
     if (statusError) {
-      console.error('⚠️ Integration status error:', statusError);
+      dbLogger.queryError('validate_merchant_integration', 'merchants', statusError.message, {
+        userId,
+        code: statusError.code
+      });
       // Return a safe default if functions don't exist
       return res.status(200).json({
         success: true,
@@ -71,7 +90,11 @@ export default async function handler(req, res) {
     });
 
   } catch (error) {
-    console.error('❌ Refresh token error:', error);
+    logger.error('Refresh token error', {
+      userId: req.body?.userId,
+      error: error.message,
+      stack: error.stack
+    });
     // Return safe default on error
     return res.status(200).json({
       success: true,
@@ -86,3 +109,6 @@ export default async function handler(req, res) {
     });
   }
 }
+
+// Export handler with rate limiting and error handling
+export default withRateLimit(RATE_LIMITS.auth, withErrorHandler(handler));

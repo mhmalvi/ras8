@@ -42,29 +42,59 @@ export const AppBridgeProvider: React.FC<AppBridgeProviderProps> = ({ children }
         let host = urlParams.get('host');
         let shop = urlParams.get('shop');
         
-        // CRITICAL FIX: If URL parameters are missing, try to restore from localStorage
+        // CRITICAL FIX: If URL parameters are missing, try to restore from multiple sources
         if (!shop || !host) {
           console.log('🔧 Missing shop/host parameters, attempting to restore from storage...');
           
-          // Try preserved embedded context first
+          // Try preserved embedded context first (most recent)
           try {
             const preservedContext = localStorage.getItem('preserved_embedded_context');
             if (preservedContext) {
               const context = JSON.parse(preservedContext);
-              if (context.shopDomain && !shop) {
-                shop = context.shopDomain;
-                console.log('🏪 Restored shop from preserved context:', shop);
-              }
-              if (context.hostParam && !host) {
-                host = context.hostParam;
-                console.log('🔗 Restored host from preserved context:', host);
+              // Check if context is recent (within 10 minutes)
+              if (Date.now() - context.timestamp < 10 * 60 * 1000) {
+                if (context.shopDomain && !shop) {
+                  shop = context.shopDomain;
+                  console.log('🏪 Restored shop from preserved context:', shop);
+                }
+                if (context.hostParam && !host) {
+                  host = context.hostParam;
+                  console.log('🔗 Restored host from preserved context:', host);
+                }
+              } else {
+                console.log('⏰ Preserved context is stale, clearing');
+                localStorage.removeItem('preserved_embedded_context');
               }
             }
           } catch (e) {
             console.warn('Could not parse preserved embedded context:', e);
+            localStorage.removeItem('preserved_embedded_context');
           }
           
-          // Try pending embedded context as fallback
+          // Try sessionStorage embedded context as secondary source
+          if (!shop || !host) {
+            try {
+              const sessionContext = sessionStorage.getItem('embedded_shop_context');
+              if (sessionContext) {
+                const context = JSON.parse(sessionContext);
+                // Session storage context is more temporary, only use if very recent
+                if (Date.now() - context.timestamp < 2 * 60 * 1000) {
+                  if (context.shopDomain && !shop) {
+                    shop = context.shopDomain;
+                    console.log('🏪 Restored shop from session context:', shop);
+                  }
+                  if (context.hostParam && !host) {
+                    host = context.hostParam;
+                    console.log('🔗 Restored host from session context:', host);
+                  }
+                }
+              }
+            } catch (e) {
+              console.warn('Could not parse session embedded context:', e);
+            }
+          }
+          
+          // Try pending embedded context as tertiary fallback
           if (!shop || !host) {
             try {
               const pendingContext = localStorage.getItem('pending_embedded_context');

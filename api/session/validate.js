@@ -1,6 +1,9 @@
 import { createClient } from '@supabase/supabase-js';
 import jwt from 'jsonwebtoken';
 import crypto from 'crypto';
+import { withRateLimit, RATE_LIMITS } from '../_middleware/rateLimit';
+import { withErrorHandler } from '../_middleware/errorHandler';
+import { logger, authLogger, dbLogger } from '../_middleware/logger';
 
 const supabaseUrl = process.env.VITE_SUPABASE_URL;
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -17,25 +20,37 @@ function verifySessionToken(token, shop) {
     
     // Verify the shop domain matches
     if (decoded.dest !== `https://${shop}`) {
-      console.error('Shop domain mismatch in session token');
+      logger.warn('Shop domain mismatch in session token', {
+        shop,
+        expectedDest: `https://${shop}`,
+        actualDest: decoded.dest
+      });
       return null;
     }
-    
+
     // Verify token is not expired
     const now = Math.floor(Date.now() / 1000);
     if (decoded.exp < now) {
-      console.error('Session token expired');
+      logger.warn('Session token expired', {
+        shop,
+        exp: decoded.exp,
+        now,
+        expiredAt: new Date(decoded.exp * 1000).toISOString()
+      });
       return null;
     }
-    
+
     return decoded;
   } catch (error) {
-    console.error('Session token verification failed:', error.message);
+    logger.warn('Session token verification failed', {
+      shop,
+      error: error.message
+    });
     return null;
   }
 }
 
-export default async function handler(req, res) {
+async function handler(req, res) {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
@@ -45,7 +60,7 @@ export default async function handler(req, res) {
     const authHeader = req.headers.authorization;
     const shopHeader = req.headers.shop;
 
-    console.log('🔍 Session validation request:', {
+    logger.debug('Session validation request', {
       shop: shop || shopHeader,
       embedded,
       hasAuthHeader: !!authHeader,
@@ -72,13 +87,20 @@ export default async function handler(req, res) {
         const decodedToken = verifySessionToken(token, shopDomain);
         
         if (decodedToken) {
-          console.log('✅ App Bridge session token validated');
+          logger.debug('App Bridge session token validated', { shop: shopDomain });
+          authLogger.tokenRefresh(decodedToken.sub || shopDomain, {
+            shop: shopDomain,
+            method: 'app-bridge',
+            exp: new Date(decodedToken.exp * 1000).toISOString()
+          });
           sessionValid = true;
         } else {
-          console.log('❌ App Bridge session token validation failed');
+          logger.warn('App Bridge session token validation failed', { shop: shopDomain });
         }
       } else {
-        console.warn('⚠️ Cannot verify session token: SHOPIFY_CLIENT_SECRET not configured');
+        logger.warn('Cannot verify session token: SHOPIFY_CLIENT_SECRET not configured', {
+          shop: shopDomain
+        });
       }
     }
 
@@ -94,21 +116,30 @@ export default async function handler(req, res) {
           .single();
 
         if (merchantError && merchantError.code !== 'PGRST116') {
-          console.error('Database query error:', merchantError);
+          dbLogger.queryError('get_merchant_with_token', 'merchants', merchantError.message, {
+            shop: shopDomain,
+            code: merchantError.code
+          });
         } else if (merchantWithToken) {
           merchantData = merchantWithToken;
-          
+
           // Check if merchant is active and token is valid
           const isActive = merchantData.status === 'active';
           const hasValidToken = merchantData.token_is_valid === true;
-          const isTokenFresh = merchantData.last_verified_at && 
+          const isTokenFresh = merchantData.last_verified_at &&
             new Date(merchantData.last_verified_at) > new Date(Date.now() - 24 * 60 * 60 * 1000);
 
           if (isActive && hasValidToken && isTokenFresh) {
             sessionValid = true;
-            console.log('✅ Merchant database validation passed');
+            logger.debug('Merchant database validation passed', {
+              merchantId: merchantData.merchant_id,
+              shop: shopDomain,
+              status: merchantData.status
+            });
           } else {
-            console.log('❌ Merchant database validation failed:', {
+            logger.debug('Merchant database validation failed', {
+              merchantId: merchantData.merchant_id,
+              shop: shopDomain,
               isActive,
               hasValidToken,
               isTokenFresh
@@ -116,7 +147,10 @@ export default async function handler(req, res) {
           }
         }
       } catch (dbError) {
-        console.error('Database validation error:', dbError);
+        dbLogger.queryError('session_validate', 'merchants', dbError.message, {
+          shop: shopDomain,
+          stack: dbError.stack
+        });
       }
     }
 
@@ -130,10 +164,20 @@ export default async function handler(req, res) {
           
           if (decoded.shopDomain === shopDomain) {
             sessionValid = true;
-            console.log('✅ Session cookie validation passed');
+            logger.debug('Session cookie validation passed', {
+              shop: shopDomain,
+              merchantId: decoded.merchantId
+            });
+            authLogger.tokenRefresh(decoded.merchantId, {
+              shop: shopDomain,
+              method: 'session-cookie'
+            });
           }
         } catch (cookieError) {
-          console.log('❌ Session cookie validation failed:', cookieError.message);
+          logger.warn('Session cookie validation failed', {
+            shop: shopDomain,
+            error: cookieError.message
+          });
         }
       }
     }
@@ -150,7 +194,7 @@ export default async function handler(req, res) {
       } : null
     };
 
-    console.log('📋 Session validation result:', {
+    logger.debug('Session validation result', {
       shop: shopDomain,
       valid: sessionValid,
       embedded,
@@ -160,10 +204,17 @@ export default async function handler(req, res) {
     return res.status(200).json(response);
 
   } catch (error) {
-    console.error('❌ Session validation error:', error);
-    return res.status(500).json({ 
-      valid: false, 
-      error: 'Internal server error' 
+    logger.error('Session validation error', {
+      shop: req.body?.shop || req.headers?.shop,
+      error: error.message,
+      stack: error.stack
+    });
+    return res.status(500).json({
+      valid: false,
+      error: 'Internal server error'
     });
   }
 }
+
+// Export handler with rate limiting and error handling
+export default withRateLimit(RATE_LIMITS.api, withErrorHandler(handler));

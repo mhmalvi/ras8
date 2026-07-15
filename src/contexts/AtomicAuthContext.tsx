@@ -53,10 +53,55 @@ export const AtomicAuthProvider = ({ children }: AtomicAuthProviderProps) => {
           (event, session) => {
             console.log('🔄 Auth state changed:', event, session?.user?.email);
             
+            // CRITICAL FIX: Prevent unexpected sign-out in embedded Shopify apps
+            if (event === 'SIGNED_OUT' && !session) {
+              const urlParams = new URLSearchParams(window.location.search);
+              const hasEmbeddedContext = window.self !== window.top || 
+                                       urlParams.has('shop') || 
+                                       urlParams.has('embedded') ||
+                                       document.referrer.includes('shopify.com') ||
+                                       localStorage.getItem('preserved_embedded_context') ||
+                                       localStorage.getItem('pending_embedded_context');
+              
+              // Check if we have a current valid user from component state
+              const hasCurrentUser = user && user.id;
+              
+              // Also check recent sign-in activity (within last 5 seconds)
+              const recentSignIn = localStorage.getItem('recent_sign_in');
+              const isRecentSignIn = recentSignIn && (Date.now() - parseInt(recentSignIn)) < 5000;
+              
+              // Block unexpected SIGNED_OUT events in embedded context 
+              if (hasEmbeddedContext && (hasCurrentUser || isRecentSignIn)) {
+                console.warn('🚫 BLOCKING unexpected SIGNED_OUT in embedded Shopify context', {
+                  currentUser: user?.email,
+                  isEmbedded: hasEmbeddedContext,
+                  hasShop: urlParams.has('shop'),
+                  hasCurrentUser,
+                  isRecentSignIn,
+                  referrer: document.referrer.substring(0, 100),
+                  preservedContext: !!localStorage.getItem('preserved_embedded_context')
+                });
+                // Don't process this sign-out event - it's likely a race condition
+                return;
+              }
+              
+              console.log('✅ Allowing SIGNED_OUT:', {
+                hasEmbeddedContext,
+                hasCurrentUser,
+                isRecentSignIn,
+                reason: !hasEmbeddedContext ? 'not-embedded' : 'no-blocking-conditions'
+              });
+            }
+            
             if (isMounted) {
               setSession(session);
               setUser(session?.user ?? null);
               setError(null);
+              
+              // Clean up sign-in timestamp on legitimate sign-out
+              if (event === 'SIGNED_OUT' && !session) {
+                localStorage.removeItem('recent_sign_in');
+              }
               
               // Only set loading to false after first auth event
               if (!initialized) {
@@ -117,6 +162,8 @@ export const AtomicAuthProvider = ({ children }: AtomicAuthProviderProps) => {
       if (data.user) {
         // Authentication successful - auth state listener will handle user update
         console.log('✅ Sign in successful for:', email);
+        // Track recent sign-in to help with SIGNED_OUT blocking
+        localStorage.setItem('recent_sign_in', Date.now().toString());
       }
       
       return { error: null };

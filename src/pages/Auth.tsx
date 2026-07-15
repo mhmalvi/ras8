@@ -291,10 +291,37 @@ const Auth = () => {
         console.log('🚀 Redirecting to:', redirectUrl);
         
         // CRITICAL FIX: For embedded apps with shop context, use window.location instead of navigate
-        // This ensures the full URL with parameters is properly loaded
+        // This ensures the full URL with parameters is properly loaded and context is preserved
         if (redirectUrl.includes('shop=') && (isInFrame || hasShopifyReferrer || shopFromStorage)) {
           console.log('🌐 Using window.location for embedded app redirect to ensure URL parameters');
-          window.location.href = redirectUrl;
+          
+          // ADDITIONAL FIX: Store the context in multiple places for maximum reliability
+          const shopParam = shopFromStorage || shopifyParams.get('shop');
+          const hostParam = shopifyParams.get('host');
+          
+          if (shopParam) {
+            localStorage.setItem('preserved_embedded_context', JSON.stringify({
+              shopDomain: shopParam,
+              hostParam: hostParam,
+              isEmbedded: true,
+              timestamp: Date.now(),
+              fromAuth: true // Flag to indicate this came from auth flow
+            }));
+            
+            // Also store in sessionStorage as additional backup
+            sessionStorage.setItem('embedded_shop_context', JSON.stringify({
+              shopDomain: shopParam,
+              hostParam: hostParam,
+              timestamp: Date.now()
+            }));
+            
+            console.log('💾 Stored embedded context before redirect:', { shopParam, hostParam });
+          }
+          
+          // Add a small delay to ensure localStorage is written before redirect
+          setTimeout(() => {
+            window.location.href = redirectUrl;
+          }, 50);
           return;
         }
         

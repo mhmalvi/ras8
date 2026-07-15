@@ -51,6 +51,46 @@ export class AuthService {
     }
 
     console.log('✅ Sign in successful for:', email);
+    
+    // Ensure profile exists for this user (for legacy users who might not have profiles)
+    if (data.user) {
+      try {
+        const { data: existingProfile, error: profileError } = await supabase
+          .from('profiles')
+          .select('id')
+          .eq('id', data.user.id)
+          .maybeSingle();
+          
+        if (profileError && profileError.code !== 'PGRST116') {
+          console.warn('⚠️ Error checking profile existence:', profileError);
+        }
+        
+        // If no profile exists, create one
+        if (!existingProfile) {
+          console.log('🔧 Creating missing profile for user:', data.user.email);
+          const { error: createError } = await supabase
+            .from('profiles')
+            .insert({
+              id: data.user.id,
+              email: data.user.email || '',
+              first_name: data.user.user_metadata?.first_name || null,
+              last_name: data.user.user_metadata?.last_name || null,
+              role: 'merchant_admin'
+            });
+            
+          if (createError) {
+            console.error('❌ Failed to create profile:', createError);
+            // Don't throw here - user should still be able to sign in
+          } else {
+            console.log('✅ Profile created successfully for:', data.user.email);
+          }
+        }
+      } catch (profileErr) {
+        console.error('❌ Profile check/creation failed:', profileErr);
+        // Don't throw here - user should still be able to sign in
+      }
+    }
+    
     return data;
   }
 

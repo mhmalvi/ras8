@@ -10,8 +10,8 @@
  * 4. Test logout and re-login scenarios
  */
 
-const { execSync } = require('child_process');
-const fs = require('fs');
+import { execSync } from 'child_process';
+import fs from 'fs';
 
 console.log('🧪 Starting Automated Authentication Flow Test...\n');
 

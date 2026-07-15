@@ -1,5 +1,8 @@
 import { createClient } from '@supabase/supabase-js';
 import jwt from 'jsonwebtoken';
+import { withRateLimit, RATE_LIMITS } from '../_middleware/rateLimit';
+import { withErrorHandler } from '../_middleware/errorHandler';
+import { logger, authLogger, dbLogger } from '../_middleware/logger';
 
 // Simple cookie parser utility
 function parseCookies(cookieString) {
@@ -19,7 +22,7 @@ const supabaseUrl = process.env.VITE_SUPABASE_URL;
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const shopifyClientSecret = process.env.SHOPIFY_CLIENT_SECRET;
 
-export default async function handler(req, res) {
+async function handler(req, res) {
   // Only allow GET requests
   if (req.method !== 'GET') {
     return res.status(405).json({ error: 'Method not allowed' });
@@ -32,8 +35,8 @@ export default async function handler(req, res) {
     const cookies = parseCookies(req.headers.cookie);
     const sessionCookie = cookies.sessionToken;
     
-    console.log('🔍 Session validation request:', {
-      shop: !!shop,
+    logger.debug('Session validation request', {
+      shop: shop || 'none',
       hasAuthHeader: !!authHeader,
       authHeaderType: authHeader ? authHeader.split(' ')[0] : 'none',
       hasSessionCookie: !!sessionCookie
@@ -54,10 +57,10 @@ export default async function handler(req, res) {
       try {
         // Decode the Shopify session token (it's a JWT signed by Shopify)
         const decoded = jwt.decode(sessionToken, { complete: true });
-        console.log('📋 Session token decoded:', {
+        logger.debug('Session token decoded', {
+          shop,
           iss: decoded?.payload?.iss,
           dest: decoded?.payload?.dest,
-          aud: decoded?.payload?.aud,
           exp: decoded?.payload?.exp
         });
         
@@ -75,6 +78,10 @@ export default async function handler(req, res) {
               .single();
 
             if (merchant) {
+              authLogger.tokenRefresh(merchant.id, {
+                shop: merchant.shop_domain,
+                method: 'app-bridge'
+              });
               return res.status(200).json({
                 authenticated: true,
                 session: {
@@ -100,7 +107,10 @@ export default async function handler(req, res) {
           });
         }
       } catch (tokenError) {
-        console.error('❌ Session token validation failed:', tokenError);
+        logger.warn('Session token validation failed', {
+          shop,
+          error: tokenError.message
+        });
       }
     }
 
@@ -114,7 +124,7 @@ export default async function handler(req, res) {
         })();
         const decoded = jwt.verify(sessionCookie, jwtSecret);
         
-        console.log('🍪 Session cookie validated:', {
+        logger.debug('Session cookie validated', {
           merchantId: decoded.merchantId,
           shopDomain: decoded.shopDomain,
           exp: new Date(decoded.exp * 1000).toISOString()
@@ -133,10 +143,16 @@ export default async function handler(req, res) {
             note: 'Session validated from OAuth callback cookie'
           });
         } else {
-          console.warn('⚠️ Shop domain mismatch in session cookie');
+          logger.warn('Shop domain mismatch in session cookie', {
+            cookieShop: decoded.shopDomain,
+            requestedShop: shop
+          });
         }
       } catch (cookieError) {
-        console.error('❌ Session cookie validation failed:', cookieError.message);
+        logger.warn('Session cookie validation failed', {
+          shop,
+          error: cookieError.message
+        });
       }
     }
 
@@ -175,7 +191,7 @@ export default async function handler(req, res) {
     // This allows the system to work immediately after OAuth without waiting for App Bridge
     if (shop && req.headers['user-agent']?.includes('Mozilla')) {
       // This appears to be a browser request for a fresh OAuth completion
-      console.log('🔄 Detected potential OAuth completion, creating temporary session');
+      logger.debug('Detected potential OAuth completion, creating temporary session', { shop });
       
       return res.status(200).json({
         authenticated: true,
@@ -198,8 +214,12 @@ export default async function handler(req, res) {
     });
 
   } catch (error) {
-    console.error('❌ Session validation error:', error);
-    return res.status(500).json({ 
+    logger.error('Session validation error', {
+      shop: req.query.shop,
+      error: error.message,
+      stack: error.stack
+    });
+    return res.status(500).json({
       error: 'Internal server error',
       authenticated: false,
       session: null,
@@ -207,3 +227,6 @@ export default async function handler(req, res) {
     });
   }
 }
+
+// Export handler with rate limiting and error handling
+export default withRateLimit(RATE_LIMITS.api, withErrorHandler(handler));

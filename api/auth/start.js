@@ -1,11 +1,13 @@
 import { createClient } from '@supabase/supabase-js';
+import { withRateLimit, RATE_LIMITS } from '../_middleware/rateLimit';
+import { authLogger, logger } from '../_middleware/logger';
 
 const supabaseUrl = process.env.VITE_SUPABASE_URL;
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const shopifyClientId = process.env.VITE_SHOPIFY_CLIENT_ID;
 const appUrl = process.env.VITE_APP_URL || 'https://ras-8.vercel.app';
 
-export default async function handler(req, res) {
+async function handler(req, res) {
   // Only allow GET requests
   if (req.method !== 'GET') {
     return res.status(405).json({ error: 'Method not allowed' });
@@ -45,7 +47,10 @@ export default async function handler(req, res) {
             expires_at: new Date(Date.now() + 10 * 60 * 1000).toISOString() // 10 minutes
           });
       } catch (dbError) {
-        console.warn('⚠️ Could not store OAuth state in database:', dbError.message);
+        logger.warn('Could not store OAuth state in database', {
+          shop: shopDomain,
+          error: dbError.message
+        });
         // Continue without database storage for fallback
       }
     }
@@ -69,8 +74,7 @@ export default async function handler(req, res) {
     oauthUrl.searchParams.set('redirect_uri', redirectUri);
     oauthUrl.searchParams.set('state', state);
 
-    console.log('🔐 Starting top-level OAuth for:', {
-      shop: shopDomain,
+    authLogger.oauthStart(shopDomain, {
       redirectUri,
       state: state.substring(0, 8) + '...'
     });
@@ -144,7 +148,11 @@ export default async function handler(req, res) {
     return res.status(200).send(breakoutHtml);
 
   } catch (error) {
-    console.error('❌ OAuth start error:', error);
+    logger.error('OAuth start error', {
+      shop: req.query.shop,
+      error: error.message,
+      stack: error.stack
+    });
     
     const errorHtml = `
     <!DOCTYPE html>
@@ -168,3 +176,6 @@ export default async function handler(req, res) {
     return res.status(500).send(errorHtml);
   }
 }
+
+// Export handler with rate limiting
+export default withRateLimit(RATE_LIMITS.auth, handler);
