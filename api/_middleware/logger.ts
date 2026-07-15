@@ -73,8 +73,10 @@ const createLogger = () => {
     );
   }
 
-  // File transports (production only, or if ENABLE_FILE_LOGS is set)
-  if (isProduction || process.env.ENABLE_FILE_LOGS === 'true') {
+  // File transports (production only, or if ENABLE_FILE_LOGS is set).
+  // Never on Vercel: its filesystem is read-only, so file logging crashes
+  // every function at boot — console transport goes to Vercel's log drain.
+  if (!process.env.VERCEL && (isProduction || process.env.ENABLE_FILE_LOGS === 'true')) {
     // Error logs
     transports.push(
       new DailyRotateFile({
