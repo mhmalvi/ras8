@@ -38,7 +38,8 @@ export function initSentry(): void {
     // Integrations
     integrations: [
       // Automatically instrument Node.js libraries and frameworks
-      new Sentry.Integrations.Http({ tracing: true }),
+      // (@sentry/node v8+ removed the Integrations namespace)
+      Sentry.httpIntegration(),
     ],
 
     // Filter out sensitive data
