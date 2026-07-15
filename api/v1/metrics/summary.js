@@ -1,9 +1,12 @@
 import { createClient } from '@supabase/supabase-js';
+import { withRateLimit, RATE_LIMITS } from '../../_middleware/rateLimit';
+import { withErrorHandler } from '../../_middleware/errorHandler';
+import { logger, dbLogger } from '../../_middleware/logger';
 
 const supabaseUrl = process.env.VITE_SUPABASE_URL;
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
-export default async function handler(req, res) {
+async function handler(req, res) {
   if (req.method !== 'GET') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
@@ -11,8 +14,11 @@ export default async function handler(req, res) {
   try {
     // Check environment variables
     if (!supabaseUrl || !supabaseServiceKey) {
-      console.error('❌ Missing environment variables for metrics API');
-      return res.status(500).json({ 
+      logger.error('Missing environment variables for metrics API', {
+        hasUrl: !!supabaseUrl,
+        hasServiceKey: !!supabaseServiceKey
+      });
+      return res.status(500).json({
         error: 'Server configuration error',
         details: 'Missing SUPABASE_SERVICE_ROLE_KEY environment variable'
       });
@@ -22,8 +28,8 @@ export default async function handler(req, res) {
     const shop = req.query.shop || req.headers.shop;
     const authHeader = req.headers.authorization;
 
-    console.log('📊 Metrics API request:', {
-      shop: !!shop,
+    logger.debug('Metrics API request', {
+      shop: shop || 'none',
       hasAuth: !!authHeader
     });
 
@@ -45,7 +51,10 @@ export default async function handler(req, res) {
       .single();
 
     if (merchantError || !merchant) {
-      console.error('❌ Merchant not found for metrics:', merchantError);
+      dbLogger.queryError('select', 'merchants', merchantError?.message || 'Merchant not found', {
+        shop,
+        code: merchantError?.code
+      });
       return res.status(401).json({
         error: 'Shop not authorized',
         authenticated: false
@@ -90,10 +99,17 @@ export default async function handler(req, res) {
     });
 
   } catch (error) {
-    console.error('❌ Metrics API error:', error);
+    logger.error('Metrics API error', {
+      shop: req.query?.shop || req.headers?.shop,
+      error: error.message,
+      stack: error.stack
+    });
     return res.status(500).json({
       error: 'Internal server error',
       details: error.message
     });
   }
 }
+
+// Export handler with rate limiting and error handling
+export default withRateLimit(RATE_LIMITS.apiAuthenticated, withErrorHandler(handler));

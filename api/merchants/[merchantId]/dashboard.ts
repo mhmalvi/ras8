@@ -1,11 +1,14 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { createClient } from '@supabase/supabase-js';
 import { MerchantSessionService } from '../../../src/services/merchantSessionService';
+import { withRateLimit, RATE_LIMITS } from '../../_middleware/rateLimit';
+import { withErrorHandler } from '../../_middleware/errorHandler';
+import { logger, dbLogger } from '../../_middleware/logger';
 
 const supabaseUrl = process.env.VITE_SUPABASE_URL!;
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
 
-export default async function handler(req: VercelRequest, res: VercelResponse) {
+async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== 'GET') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
@@ -72,7 +75,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     ]);
 
     if (merchantData.error) {
-      console.error('Error fetching merchant data:', merchantData.error);
+      dbLogger.queryError('select', 'merchants', merchantData.error.message, {
+        merchantId: merchantId as string,
+        code: merchantData.error.code
+      });
       return res.status(500).json({ error: 'Failed to fetch merchant data' });
     }
 
@@ -113,7 +119,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(200).json(dashboardData);
 
   } catch (error) {
-    console.error('❌ Dashboard API error:', error);
+    logger.error('Dashboard API error', {
+      merchantId: req.query?.merchantId as string,
+      error: error instanceof Error ? error.message : 'Unknown error',
+      stack: error instanceof Error ? error.stack : undefined
+    });
     return res.status(500).json({ error: 'Internal server error' });
   }
 }
+
+// Export handler with rate limiting and error handling
+export default withRateLimit(RATE_LIMITS.apiAuthenticated, withErrorHandler(handler));

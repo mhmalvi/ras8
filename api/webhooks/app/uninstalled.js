@@ -1,5 +1,7 @@
 import { createClient } from '@supabase/supabase-js';
 import crypto from 'crypto';
+import { withRateLimit, RATE_LIMITS } from '../../_middleware/rateLimit';
+import { webhookLogger, businessLogger, logger } from '../../_middleware/logger';
 
 const supabaseUrl = process.env.VITE_SUPABASE_URL;
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -21,7 +23,7 @@ function verifyWebhookHmac(rawBody, signature, secret) {
   );
 }
 
-export default async function handler(req, res) {
+async function handler(req, res) {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
@@ -31,28 +33,32 @@ export default async function handler(req, res) {
     const shopDomain = req.headers['x-shopify-shop-domain'];
     const rawBody = JSON.stringify(req.body);
 
-    console.log('🪝 App uninstall webhook received:', {
-      shop: shopDomain,
+    webhookLogger.received('app/uninstalled', shopDomain || 'unknown', {
       hasSignature: !!signature,
       hasSecret: !!shopifyWebhookSecret
     });
 
     // Verify webhook signature
     if (shopifyWebhookSecret && !verifyWebhookHmac(rawBody, signature, shopifyWebhookSecret)) {
-      console.error('❌ Invalid webhook signature');
+      webhookLogger.hmacInvalid(shopDomain || 'unknown', {
+        endpoint: 'app/uninstalled'
+      });
       return res.status(403).json({ error: 'Invalid signature' });
     }
+
+    webhookLogger.hmacValid(shopDomain || 'unknown');
 
     // Extract shop domain from payload or header
     const payload = req.body;
     const shop = shopDomain || payload?.shop_domain || payload?.myshopify_domain;
 
     if (!shop) {
-      console.error('❌ No shop domain found in webhook');
+      logger.error('No shop domain found in webhook', {
+        headers: req.headers,
+        payload: payload
+      });
       return res.status(400).json({ error: 'Shop domain required' });
     }
-
-    console.log('🔄 Processing app uninstall for shop:', shop);
 
     // Store webhook event for observability
     if (supabaseUrl && supabaseServiceKey) {
@@ -76,7 +82,7 @@ export default async function handler(req, res) {
           .rpc('mark_merchant_uninstalled', { p_shop_domain: shop });
 
         if (uninstalled.data) {
-          console.log('✅ Merchant marked as uninstalled:', shop);
+          businessLogger.appUninstalled(uninstalled.data, shop);
 
           // Log analytics event
           const { data: merchant } = await supabase
@@ -113,7 +119,7 @@ export default async function handler(req, res) {
             .limit(1);
 
         } else {
-          console.warn('⚠️ Merchant not found for uninstall:', shop);
+          logger.warn('Merchant not found for uninstall', { shop });
           
           // Still mark webhook as processed
           await supabase
@@ -130,7 +136,9 @@ export default async function handler(req, res) {
         }
 
       } catch (dbError) {
-        console.error('❌ Database error processing uninstall:', dbError);
+        webhookLogger.failed('app/uninstalled', shop, dbError.message, {
+          stack: dbError.stack
+        });
         
         // Log the error but don't fail the webhook
         if (supabaseUrl && supabaseServiceKey) {
@@ -156,7 +164,7 @@ export default async function handler(req, res) {
 
     // Always return success to Shopify (even if our processing failed)
     // This prevents Shopify from retrying the webhook indefinitely
-    console.log('✅ App uninstall webhook processed successfully');
+    webhookLogger.processed('app/uninstalled', shop);
     
     return res.status(200).json({ 
       success: true,
@@ -165,7 +173,11 @@ export default async function handler(req, res) {
     });
 
   } catch (error) {
-    console.error('❌ Webhook processing error:', error);
+    logger.error('Webhook processing error', {
+      shop: req.headers['x-shopify-shop-domain'],
+      error: error.message,
+      stack: error.stack
+    });
 
     // Log error webhook if possible
     if (supabaseUrl && supabaseServiceKey && req.headers['x-shopify-shop-domain']) {
@@ -188,9 +200,12 @@ export default async function handler(req, res) {
       }
     }
 
-    return res.status(500).json({ 
+    return res.status(500).json({
       error: 'Webhook processing failed',
-      details: error.message 
+      details: error.message
     });
   }
 }
+
+// Export handler with rate limiting
+export default withRateLimit(RATE_LIMITS.webhooks, handler);
