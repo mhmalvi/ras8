@@ -1,8 +1,8 @@
 import { createClient } from '@supabase/supabase-js';
 import jwt from 'jsonwebtoken';
-import { withRateLimit, RATE_LIMITS } from '../_middleware/rateLimit';
-import { withErrorHandler } from '../_middleware/errorHandler';
-import { logger, authLogger, dbLogger } from '../_middleware/logger';
+import { withRateLimit, RATE_LIMITS } from '../_middleware/rateLimit.js';
+import { withErrorHandler } from '../_middleware/errorHandler.js';
+import { logger, authLogger, dbLogger } from '../_middleware/logger.js';
 
 // Simple cookie parser utility
 function parseCookies(cookieString) {

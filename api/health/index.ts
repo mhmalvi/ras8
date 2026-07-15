@@ -1,8 +1,8 @@
 import { createClient } from '@supabase/supabase-js';
-import { withRateLimit, RATE_LIMITS } from '../_middleware/rateLimit';
-import { withErrorHandler } from '../_middleware/errorHandler';
-import { logger } from '../_middleware/logger';
-import { getPerformanceSnapshot, formatPerformanceSnapshot } from '../_middleware/performanceMonitoring';
+import { withRateLimit, RATE_LIMITS } from '../_middleware/rateLimit.js';
+import { withErrorHandler } from '../_middleware/errorHandler.js';
+import { logger } from '../_middleware/logger.js';
+import { getPerformanceSnapshot, formatPerformanceSnapshot } from '../_middleware/performanceMonitoring.js';
 
 const supabaseUrl = process.env.VITE_SUPABASE_URL;
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;

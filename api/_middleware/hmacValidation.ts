@@ -1,6 +1,6 @@
 import crypto from 'crypto';
 import type { VercelRequest } from '@vercel/node';
-import { ForbiddenError, BadRequestError } from './errorHandler';
+import { ForbiddenError, BadRequestError } from './errorHandler.js';
 
 /**
  * Validate Shopify OAuth callback HMAC

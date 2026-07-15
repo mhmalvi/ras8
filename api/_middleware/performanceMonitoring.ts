@@ -1,6 +1,6 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { logger } from './logger';
-import { addBreadcrumb, setTag, setContext } from './sentry';
+import { logger } from './logger.js';
+import { addBreadcrumb, setTag, setContext } from './sentry.js';
 
 /**
  * Performance metrics interface

@@ -1,9 +1,9 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { createClient } from '@supabase/supabase-js';
-import { MerchantSessionService } from '../../../src/services/merchantSessionService';
-import { withRateLimit, RATE_LIMITS } from '../../_middleware/rateLimit';
-import { withErrorHandler } from '../../_middleware/errorHandler';
-import { logger, dbLogger } from '../../_middleware/logger';
+import { MerchantSessionService } from '../../../src/services/merchantSessionService.js';
+import { withRateLimit, RATE_LIMITS } from '../../_middleware/rateLimit.js';
+import { withErrorHandler } from '../../_middleware/errorHandler.js';
+import { logger, dbLogger } from '../../_middleware/logger.js';
 
 const supabaseUrl = process.env.VITE_SUPABASE_URL!;
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;

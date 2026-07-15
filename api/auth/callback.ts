@@ -1,6 +1,6 @@
 import { createClient } from '@supabase/supabase-js';
 import crypto from 'crypto';
-import { withRateLimit, RATE_LIMITS } from '../_middleware/rateLimit';
+import { withRateLimit, RATE_LIMITS } from '../_middleware/rateLimit.js';
 
 const supabaseUrl = process.env.VITE_SUPABASE_URL;
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;

@@ -1,6 +1,6 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { logger } from './logger';
-import { captureException, setContext, setTag } from './sentry';
+import { logger } from './logger.js';
+import { captureException, setContext, setTag } from './sentry.js';
 
 /**
  * Standard error response structure
